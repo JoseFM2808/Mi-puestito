@@ -1,0 +1,45 @@
+/* ============================================================
+   tokens.css — Fuente de verdad visual del proyecto
+   Generado desde Design-System.md (Paleta A — "Mercado")
+   Al iniciar el frontend, este archivo se importa una sola vez
+   y ningún componente define colores/tamaños "a mano".
+   ============================================================ */
+
+:root {
+  /* ---- Colores ---- */
+  --fondo: #FAF7F2;
+  --texto: #2B2620;
+  --texto-suave: #6E6357;
+  --primario: #1E6E42;
+  --pendiente: #B45F06;
+  --deuda: #A33A2E;
+  --superficie: #FFFFFF;
+  --borde: #E8E0D4;
+  --borde-fuerte: #C9BFAF;
+  --ia: #1A5A8A;
+
+  /* ---- Espaciado (base 8px) ---- */
+  --esp-1: 0.4rem;
+  --esp-2: 0.8rem;
+  --esp-3: 1.2rem;
+  --esp-4: 1.6rem;
+
+  /* ---- Radios y control táctil ---- */
+  --radio: 14px;
+  --radio-chico: 11px;
+  --tactil-min: 3.2rem;   /* >= 56px en Normal */
+
+  /* ---- Tipografía ---- */
+  --fuente: 'Lexend', sans-serif;
+}
+
+/* El tamaño de letra vive en la raíz: cambiarlo re-escala TODA la UI.
+   El selector de tamaño de letra cambia este valor y lo persiste en la sesión. */
+html { font-size: 20px; }          /* Normal (por defecto) */
+html[data-letra="grande"]    { font-size: 23px; }
+html[data-letra="muygrande"] { font-size: 27px; }
+
+body { font-family: var(--fuente); background: var(--fondo); color: var(--texto); }
+
+/* Montos: siempre números tabulares */
+.monto, .monto-orden { font-variant-numeric: tabular-nums; }

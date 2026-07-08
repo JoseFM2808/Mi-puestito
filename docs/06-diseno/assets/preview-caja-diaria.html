@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview Paleta A — Caja Diaria</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html { font-size: 20px; } /* Normal por defecto. Toda la UI escala desde aquí */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --fondo: #FAF7F2;
+    --texto: #2B2620;
+    --texto-suave: #6E6357;
+    --primario: #1E6E42;
+    --pendiente: #B45F06;
+    --deuda: #A33A2E;
+    --superficie: #FFFFFF;
+    --borde: #E8E0D4;
+    --borde-fuerte: #C9BFAF;
+    --ia: #1A5A8A;
+  }
+
+  body {
+    font-family: 'Lexend', sans-serif;
+    background: var(--fondo);
+    color: var(--texto);
+  }
+
+  /* ===== Barra superior fija, en su propia franja ===== */
+  .barra-superior {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--superficie);
+    border-bottom: 1.5px solid var(--borde-fuerte);
+    box-shadow: 0 2px 10px rgba(43,38,32,0.06);
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.6rem 1.1rem;
+    flex-wrap: wrap;
+  }
+  .barra-izq { display: flex; gap: 0.6rem; align-items: center; }
+  .barra-der { display: flex; gap: 0.6rem; align-items: center; margin-left: auto; }
+
+  .btn-barra {
+    font-family: 'Lexend', sans-serif; font-weight: 600;
+    font-size: 1.05rem; border-radius: 11px; cursor: pointer;
+    min-height: 2.9rem; padding: 0.3rem 1.1rem;
+    border: 1.5px solid var(--borde-fuerte); background: var(--fondo); color: var(--texto);
+  }
+  .btn-barra.asistente { background: var(--ia); border-color: var(--ia); color: #FFFFFF; }
+
+  .grupo-letra { display: flex; align-items: center; gap: 0.45rem; }
+  .grupo-letra .rotulo { font-size: 0.92rem; font-weight: 600; color: var(--texto-suave); }
+  .grupo-letra .opciones { display: flex; gap: 0.3rem; }
+  .grupo-letra button {
+    font-family: 'Lexend', sans-serif; border: 1.5px solid var(--borde);
+    background: var(--fondo); color: var(--texto); border-radius: 9px;
+    min-height: 2.9rem; min-width: 3.1rem; cursor: pointer; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; padding: 0.2rem;
+  }
+  .grupo-letra button .nombre { font-size: 0.55rem; font-weight: 500; color: var(--texto-suave); margin-top: 0.15rem; }
+  .grupo-letra button[data-tam="normal"]    { font-size: 0.85rem; }
+  .grupo-letra button[data-tam="grande"]    { font-size: 1.05rem; }
+  .grupo-letra button[data-tam="muygrande"] { font-size: 1.3rem; }
+  .grupo-letra button.activo { background: var(--primario); border-color: var(--primario); color: #FFFFFF; }
+  .grupo-letra button.activo .nombre { color: #FFFFFF; }
+
+  /* ===== Contenido ===== */
+  .pantalla { max-width: 920px; margin: 0 auto; padding: 1.4rem 1.2rem 3rem; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.3rem; flex-wrap: wrap; gap: 0.4rem; }
+  .topbar .titulo { font-size: 1.8rem; font-weight: 700; }
+  .topbar .fecha  { font-size: 1.1rem; font-weight: 500; color: var(--texto-suave); }
+
+  .resumen { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 1.1rem; }
+  @media (max-width: 760px) { .resumen { grid-template-columns: 1fr; } }
+
+  .card { border-radius: 14px; padding: 1.2rem 1.3rem; background: var(--superficie); border: 1px solid var(--borde); }
+  .card .etiqueta { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.35rem; }
+  .card .monto { font-size: 2.5rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; line-height: 1.1; }
+  .card .nota { font-size: 1.05rem; margin-top: 0.4rem; color: var(--texto-suave); }
+
+  .seccion-titulo { font-size: 1.45rem; font-weight: 700; margin: 1.5rem 0 0.8rem; }
+
+  .ordenes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
+  @media (max-width: 760px) { .ordenes { grid-template-columns: 1fr; } }
+  .orden .cliente { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .orden .estado  { font-size: 1.05rem; margin-bottom: 0.6rem; }
+  .orden .monto-orden { font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .estado-abierta { color: var(--pendiente); font-weight: 500; }
+  .estado-fiado   { color: var(--deuda); font-weight: 500; }
+  .monto-ingreso  { color: var(--primario); }
+  .monto-pendiente{ color: var(--pendiente); }
+
+  .acciones { display: flex; gap: 0.8rem; margin-top: 1.5rem; flex-wrap: wrap; }
+  .btn { border: none; cursor: pointer; font-family: 'Lexend', sans-serif; font-size: 1.2rem; font-weight: 600; border-radius: 12px; min-height: 3.2rem; padding: 0.4rem 1.5rem; flex: 1; min-width: 230px; }
+  .btn-primario   { background: var(--primario); color: #FFFFFF; }
+  .btn-secundario { background: var(--superficie); border: 2px solid var(--primario); color: var(--primario); }
+
+  .zona-escritura { margin-top: 1.5rem; }
+  .campo-label { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .campo-texto {
+    width: 100%; font-family: 'Lexend', sans-serif; font-size: 1.3rem; color: var(--texto);
+    background: var(--superficie); border: 2px solid var(--borde-fuerte); border-radius: 12px;
+    padding: 1rem 1.1rem; min-height: 3.4rem;
+  }
+  .campo-texto:focus { outline: none; border-color: var(--primario); }
+  .campo-ayuda { font-size: 0.95rem; color: var(--texto-suave); margin-top: 0.4rem; }
+
+  .alerta-ia { margin-top: 1.4rem; border-radius: 14px; padding: 1rem 1.2rem; font-size: 1.15rem; line-height: 1.55; border: 1px dashed var(--borde-fuerte); background: var(--superficie); }
+  .alerta-ia strong { font-weight: 600; }
+
+  @media (max-width: 760px) {
+    .barra-der { width: 100%; margin-left: 0; justify-content: space-between; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Barra superior fija: Menú + Asistente a la izquierda, tamaño de letra a la derecha -->
+<div class="barra-superior">
+  <div class="barra-izq">
+    <button class="btn-barra" onclick="alert('Menú de navegación: Ventas, Compras, Inventario, Caja…')">Menú</button>
+    <button class="btn-barra asistente" onclick="alert('Asistente listo para guiar, responder o llenar formularios.')">Asistente</button>
+  </div>
+  <div class="barra-der">
+    <div class="grupo-letra">
+      <span class="rotulo">Tamaño de letra</span>
+      <div class="opciones">
+        <button data-tam="normal" class="activo" onclick="cambiarTam('normal', this)">Aa<span class="nombre">Normal</span></button>
+        <button data-tam="grande" onclick="cambiarTam('grande', this)">Aa<span class="nombre">Grande</span></button>
+        <button data-tam="muygrande" onclick="cambiarTam('muygrande', this)">Aa<span class="nombre">Muy grande</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pantalla">
+  <div class="topbar">
+    <div class="titulo">Caja de hoy</div>
+    <div class="fecha">Viernes 12 de junio</div>
+  </div>
+
+  <div class="resumen">
+    <div class="card">
+      <div class="etiqueta">Vendiste hoy</div>
+      <div class="monto monto-ingreso">S/ 485.50</div>
+      <div class="nota">12 ventas cerradas</div>
+    </div>
+    <div class="card">
+      <div class="etiqueta">Mañana necesitas en caja</div>
+      <div class="monto monto-pendiente">S/ 320.00</div>
+      <div class="nota">Llega pedido de Distribuidora Norte</div>
+    </div>
+  </div>
+
+  <div class="seccion-titulo">Órdenes abiertas ahora</div>
+  <div class="ordenes">
+    <div class="card orden">
+      <div class="cliente">Restaurante Doña Carmen</div>
+      <div class="estado estado-abierta">Sigue pidiendo</div>
+      <div class="monto-orden">S/ 86.00</div>
+    </div>
+    <div class="card orden">
+      <div class="cliente">Orden 2</div>
+      <div class="estado estado-abierta">Sigue pidiendo</div>
+      <div class="monto-orden">S/ 23.50</div>
+    </div>
+    <div class="card orden">
+      <div class="cliente">Sra. Flora</div>
+      <div class="estado estado-fiado">Fiado · debe S/ 45</div>
+      <div class="monto-orden">S/ 12.00</div>
+    </div>
+  </div>
+
+  <div class="acciones">
+    <button class="btn btn-primario">Registrar venta</button>
+    <button class="btn btn-secundario">Venta rápida</button>
+    <button class="btn btn-secundario">Llegó un pedido</button>
+  </div>
+
+  <div class="zona-escritura">
+    <div class="campo-label">Nombre del cliente</div>
+    <input class="campo-texto" type="text" placeholder="Toca aquí para escribir…">
+    <div class="campo-ayuda">Al tocar el campo aparece el teclado propio de la tablet, con el tamaño que tenga configurado el sistema.</div>
+  </div>
+
+  <div class="alerta-ia">
+    <strong>Asistente:</strong> Tienes 3 ventas rápidas sin completar. ¿Quieres que te ayude a registrarlas ahora?
+  </div>
+</div>
+
+<script>
+  var tamanos = { normal: '20px', grande: '23px', muygrande: '27px' };
+  function cambiarTam(tam, boton) {
+    document.documentElement.style.fontSize = tamanos[tam];
+    document.querySelectorAll('.grupo-letra button').forEach(function(b){ b.classList.remove('activo'); });
+    boton.classList.add('activo');
+  }
+</script>
+
+</body>
+</html>
