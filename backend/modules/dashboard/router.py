@@ -1,28 +1,29 @@
 """Router del Dashboard / Caja Diaria.
 
-Demo 1: devuelve datos ficticios coherentes con los del frontend para
-demostrar el contrato del API. En demos siguientes agregará las cifras
-reales desde las tablas de Ventas y Compras (lee de otros módulos pero no
-bloquea su funcionamiento).
+Cada proyecto ve su propio resumen (autenticado por token, ver seguridad.py):
+- **demo**: la información ficticia de siempre (Restaurante Doña Carmen,
+  Sra. Flora, Distribuidora Norte…), fija, para mostrar la app sin arriesgar
+  datos reales.
+- **anita** (y cualquier proyecto real futuro): arranca en cero. En demos
+  siguientes estas cifras se calcularán desde las tablas reales de Ventas y
+  Compras de ese proyecto (lee de otros módulos pero no bloquea su
+  funcionamiento).
 """
 
 from datetime import timedelta
 from decimal import Decimal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from fechas import dia_peruano
+from seguridad import proyecto_autenticado
 
 from .schemas import OrdenActivaResumen, PedidoPorLlegar, ResumenDashboard
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
-@router.get("/resumen", response_model=ResumenDashboard)
-def obtener_resumen() -> ResumenDashboard:
-    """Resumen del día actual y proyección del día siguiente."""
-    # El día del vendedor es el de Lima, no el del reloj del servidor
-    hoy = dia_peruano()
+def _resumen_demo(hoy) -> ResumenDashboard:
     return ResumenDashboard(
         ventas_hoy=Decimal("485.50"),
         ventas_cerradas=12,
@@ -59,3 +60,27 @@ def obtener_resumen() -> ResumenDashboard:
             ),
         ],
     )
+
+
+def _resumen_vacio() -> ResumenDashboard:
+    """Una empresa real que recién empieza: cero en todo, sin datos inventados."""
+    return ResumenDashboard(
+        ventas_hoy=Decimal("0"),
+        ventas_cerradas=0,
+        proyeccion_manana=Decimal("0"),
+        motivo_proyeccion="Aún no hay pedidos por llegar",
+        ordenes_activas=[],
+        fiados_por_cobrar=Decimal("0"),
+        clientes_con_fiado=0,
+        ventas_rapidas_pendientes=0,
+        pedidos_por_llegar=[],
+    )
+
+
+@router.get("/resumen", response_model=ResumenDashboard)
+def obtener_resumen(proyecto: str = Depends(proyecto_autenticado)) -> ResumenDashboard:
+    """Resumen del día actual y proyección del día siguiente."""
+    if proyecto == "demo":
+        # El día del vendedor es el de Lima, no el del reloj del servidor
+        return _resumen_demo(dia_peruano())
+    return _resumen_vacio()

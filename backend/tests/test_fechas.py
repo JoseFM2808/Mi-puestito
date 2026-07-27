@@ -7,14 +7,13 @@ volverían "ingenuas" y compararlas con fechas con zona rompe al sincronizar.
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from database import Base, SesionLocal, engine
+from database import sesion_para
 from modules.compras.models import Proveedor
 from modules.ventas.models import TipoVenta, Venta
 
 
 def test_fechas_vuelven_con_zona_utc():
-    Base.metadata.create_all(bind=engine)
-    sesion = SesionLocal()
+    sesion = sesion_para("demo")
     try:
         venta = Venta(tipo=TipoVenta.VENTA_RAPIDA, monto_total=Decimal("5.00"))
         proveedor = Proveedor(nombre="Distribuidora de prueba")

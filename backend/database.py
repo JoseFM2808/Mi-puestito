@@ -1,42 +1,25 @@
 """Conexión a la base de datos.
 
-SQLite en local/desarrollo; el mismo código funciona con PostgreSQL en nube
-cambiando solo la URL (ver docs/02-arquitectura/Stack-Tecnologico.md).
+Cada proyecto (demo / anita) tiene su propio archivo SQLite: nunca comparten
+motor ni sesión, así un dato de práctica jamás puede aparecer mezclado con
+los datos reales de una empresa. El mismo código funciona con PostgreSQL en
+la nube cambiando solo la URL (ver docs/02-arquitectura/Stack-Tecnologico.md).
 """
 
 import os
 from datetime import datetime, timezone
 
+from fastapi import Depends
 from sqlalchemy import DateTime, TypeDecorator, create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from rutas import ruta_base_datos
-
-# En desarrollo: ./mi_puestito.db. En el ejecutable: carpeta de datos del
-# usuario (ver rutas.py). Siempre se puede forzar con MI_PUESTITO_BD.
-URL_BASE_DATOS = os.environ.get("MI_PUESTITO_BD", f"sqlite:///{ruta_base_datos()}")
-
-engine = create_engine(
-    URL_BASE_DATOS,
-    # SQLite: FastAPI atiende cada petición en su propio hilo
-    connect_args={"check_same_thread": False} if URL_BASE_DATOS.startswith("sqlite") else {},
-)
-
-if URL_BASE_DATOS.startswith("sqlite"):
-
-    @event.listens_for(engine, "connect")
-    def _activar_claves_foraneas(conexion, _registro):
-        """SQLite ignora las claves foráneas salvo que se activen por conexión.
-
-        Sin esto, los `ondelete="CASCADE"` de los modelos no se aplicarían y
-        borrar una venta dejaría sus items y pagos huérfanos.
-        """
-        cursor = conexion.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+from seguridad import proyecto_autenticado
 
 
-SesionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+class Base(DeclarativeBase):
+    """Base declarativa común a todos los módulos."""
 
 
 class FechaHoraUTC(TypeDecorator):
@@ -68,13 +51,83 @@ class FechaHoraUTC(TypeDecorator):
         return value.astimezone(timezone.utc)
 
 
-class Base(DeclarativeBase):
-    """Base declarativa común a todos los módulos."""
+def _url_para(proyecto: str) -> str:
+    # MI_PUESTITO_BD fuerza la URL de un único proyecto (usado en tests)
+    forzada = os.environ.get("MI_PUESTITO_BD")
+    if forzada:
+        return forzada
+    return f"sqlite:///{ruta_base_datos(proyecto)}"
 
 
-def obtener_sesion():
-    """Dependencia de FastAPI: entrega una sesión y la cierra al terminar."""
-    sesion: Session = SesionLocal()
+def _crear_motor(proyecto: str) -> Engine:
+    url = _url_para(proyecto)
+    motor = create_engine(
+        url,
+        # SQLite: FastAPI atiende cada petición en su propio hilo
+        connect_args={"check_same_thread": False} if url.startswith("sqlite") else {},
+    )
+    if url.startswith("sqlite"):
+
+        @event.listens_for(motor, "connect")
+        def _activar_claves_foraneas(conexion, _registro):
+            """SQLite ignora las claves foráneas salvo que se activen por conexión.
+
+            Sin esto, los `ondelete="CASCADE"` de los modelos no se aplicarían
+            y borrar una venta dejaría sus items y pagos huérfanos.
+            """
+            cursor = conexion.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
+    return motor
+
+
+_motores: dict[str, Engine] = {}
+_fabricas_sesion: dict[str, sessionmaker] = {}
+
+
+def motor_de(proyecto: str) -> Engine:
+    """Motor de un proyecto, creado y cacheado la primera vez que se pide."""
+    if proyecto not in _motores:
+        _motores[proyecto] = _crear_motor(proyecto)
+    return _motores[proyecto]
+
+
+def crear_tablas_de(proyecto: str) -> None:
+    Base.metadata.create_all(bind=motor_de(proyecto))
+
+
+def crear_tablas_todos_los_proyectos() -> None:
+    from proyectos import PROYECTOS
+
+    for clave in PROYECTOS:
+        crear_tablas_de(clave)
+
+
+def _fabrica_de(proyecto: str) -> sessionmaker:
+    if proyecto not in _fabricas_sesion:
+        _fabricas_sesion[proyecto] = sessionmaker(
+            bind=motor_de(proyecto), autocommit=False, autoflush=False
+        )
+    return _fabricas_sesion[proyecto]
+
+
+def sesion_para(proyecto: str) -> Session:
+    """Sesión directa de un proyecto, para scripts y tests fuera de FastAPI.
+
+    Quien la usa es responsable de cerrarla (a diferencia de `obtener_sesion`,
+    que es una dependencia y se encarga sola).
+    """
+    return _fabrica_de(proyecto)()
+
+
+def obtener_sesion(proyecto: str = Depends(proyecto_autenticado)):
+    """Dependencia de FastAPI: sesión del proyecto autenticado en el token.
+
+    Cada request solo puede tocar la base de datos del proyecto al que su
+    token le da acceso — nunca la de otro.
+    """
+    sesion: Session = _fabrica_de(proyecto)()
     try:
         yield sesion
     finally:

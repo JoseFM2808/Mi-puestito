@@ -26,13 +26,16 @@ def app_con_ventas_rota(monkeypatch):
 
 
 def test_un_modulo_roto_no_tumba_a_los_demas(app_con_ventas_rota):
+    from seguridad import crear_token
+
     cliente = TestClient(app_con_ventas_rota)
+    cabeceras = {"Authorization": f"Bearer {crear_token('demo')}"}
 
     # Ventas cayó: sus rutas no existen...
-    assert cliente.get("/api/ventas/").status_code == 404
+    assert cliente.get("/api/ventas/", headers=cabeceras).status_code == 404
     # ...pero Compras y el Dashboard siguen respondiendo
-    assert cliente.get("/api/compras/proveedores").status_code == 200
-    assert cliente.get("/api/dashboard/resumen").status_code == 200
+    assert cliente.get("/api/compras/proveedores", headers=cabeceras).status_code == 200
+    assert cliente.get("/api/dashboard/resumen", headers=cabeceras).status_code == 200
 
 
 def test_el_modulo_caido_queda_registrado(app_con_ventas_rota):

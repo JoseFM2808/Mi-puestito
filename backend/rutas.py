@@ -54,5 +54,15 @@ def directorio_datos() -> Path:
     return carpeta
 
 
-def ruta_base_datos() -> Path:
-    return directorio_datos() / "mi_puestito.db"
+def ruta_base_datos(proyecto: str) -> Path:
+    """Cada proyecto (demo / anita) tiene su propio archivo de base de datos.
+
+    Nunca comparten archivo: un proyecto de práctica no debe poder mezclar
+    ni un solo registro con los datos reales de una empresa.
+    """
+    return directorio_datos() / f"mi_puestito_{proyecto}.db"
+
+
+def ruta_usuarios() -> Path:
+    """Archivo con las credenciales de acceso (PIN con hash, nunca en claro)."""
+    return directorio_datos() / "usuarios.json"

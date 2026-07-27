@@ -18,9 +18,9 @@ def test_el_servidor_solo_escucha_en_la_maquina_local():
 
 def test_la_base_de_datos_no_vive_junto_al_ejecutable():
     # En el ejecutable la ruta va a la carpeta de datos del usuario;
-    # en desarrollo, junto al backend
-    ruta = rutas.ruta_base_datos()
-    assert ruta.name == "mi_puestito.db"
+    # en desarrollo, junto al backend. Cada proyecto tiene su propio archivo.
+    ruta = rutas.ruta_base_datos("demo")
+    assert ruta.name == "mi_puestito_demo.db"
     assert ruta.parent.is_dir()
 
 

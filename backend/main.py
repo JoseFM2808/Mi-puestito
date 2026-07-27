@@ -14,12 +14,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import Base, engine
+from database import crear_tablas_todos_los_proyectos
 from rutas import directorio_web
+from seguridad import asegurar_usuarios_iniciales
 
 # Módulos que se montan al arrancar. Cada entrada es independiente: si uno
 # falla al importarse, los demás siguen operativos (ver cargar_modulos).
-MODULOS = ("dashboard", "ventas", "compras")
+# "auth" va sin autenticar (es la puerta de entrada); los demás exigen login.
+MODULOS = ("auth", "dashboard", "ventas", "compras", "asistente")
 
 # Módulos que no pudieron cargarse, para que el Dashboard informe la degradación
 modulos_degradados: dict[str, str] = {}
@@ -49,7 +51,8 @@ def cargar_modulos(app: FastAPI) -> None:
 @asynccontextmanager
 async def ciclo_de_vida(app: FastAPI):
     # Demo 1: create_all directo; Alembic llegará cuando el esquema se estabilice
-    Base.metadata.create_all(bind=engine)
+    crear_tablas_todos_los_proyectos()
+    asegurar_usuarios_iniciales()
     yield
 
 

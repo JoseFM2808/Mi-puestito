@@ -45,6 +45,12 @@ export default defineConfig({
   server: {
     // Permite servir tokens.css desde docs/, fuera de la raíz del frontend
     fs: { allow: ['..'] },
+    // En desarrollo el backend corre aparte (puerto 8000); en la app de
+    // escritorio empaquetada comparten origen. Este proxy hace que el
+    // frontend siempre pueda llamar a fetch('/api/...') igual en los dos casos.
+    proxy: {
+      '/api': 'http://127.0.0.1:8000',
+    },
   },
   test: {
     environment: 'jsdom',

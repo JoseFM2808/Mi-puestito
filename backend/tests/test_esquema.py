@@ -2,6 +2,9 @@
 
 Estas reglas son baratas hoy y caras después: añadirlas cuando ya existan
 ventas reales obligaría a migrar la base de datos del vendedor.
+
+Se prueban contra el proyecto "demo": el esquema es idéntico para todos los
+proyectos (demo, anita, o cualquier otro que se registre después).
 """
 
 from decimal import Decimal
@@ -10,14 +13,14 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from database import SesionLocal
+from database import sesion_para
 from modules.compras.models import ItemOrdenCompra, OrdenCompra, Proveedor
 from modules.ventas.models import Cliente, ItemVenta, Pago, TipoVenta, Venta
 
 
 @pytest.fixture()
 def sesion():
-    s = SesionLocal()
+    s = sesion_para("demo")
     try:
         yield s
     finally:
