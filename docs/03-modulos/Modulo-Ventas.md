@@ -34,3 +34,11 @@ Registra ventas al contado, cuentas corrientes del día, fiado y ventas rápidas
 ## Independencia
 
 Funciona **sin** [[Modulo-Inventario]]: no se valida stock al vender. La información se regulariza después si el inventario se activa.
+
+## Estado
+- Fase: **MVP**
+- **Avance (Demo 1):** esquema de base de datos creado en
+  `backend/modules/ventas/models.py` (`clientes`, `ventas`, `items_venta`,
+  `pagos`) con endpoints de lectura. La deuda del cliente se deriva
+  (Σ ventas fiado − Σ pagos), no se almacena. Pendiente: UI y operaciones de
+  escritura.

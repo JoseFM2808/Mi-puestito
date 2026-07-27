@@ -2,6 +2,11 @@
 
 #arquitectura
 
+> **Fechas:** todas se guardan en UTC con zona horaria explícita (tipo
+> `FechaHoraUTC` en `backend/database.py`, decisión 21 de
+> [[Decisiones-Tecnicas]]). Es requisito para que la sincronización pueda
+> comparar y ordenar registros entre el dispositivo y la nube sin ambigüedad.
+
 La conectividad en mercados peruanos es variable. El sistema **nunca** puede bloquear una venta o una compra por falta de red.
 
 ## Estrategia

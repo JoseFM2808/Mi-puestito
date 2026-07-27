@@ -1,0 +1,11 @@
+/* Reset mínimo. Colores, tamaños y espaciados vienen SOLO de tokens.css. */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+button,
+input {
+  font-family: var(--fuente);
+}

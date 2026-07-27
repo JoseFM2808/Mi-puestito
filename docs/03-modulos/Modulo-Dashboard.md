@@ -20,3 +20,6 @@ El [[AI-Companion]] puede leer cualquier cifra del dashboard, explicarla en leng
 ## Estado
 - Fase: **MVP**
 - Dependencias: lee datos de Ventas y Compras, pero no bloquea su funcionamiento.
+- **Avance (Demo 1):** pantalla construida con datos ficticios en
+  `frontend/src/modules/dashboard/` y endpoint `GET /api/dashboard/resumen` en
+  `backend/modules/dashboard/`. Pendiente: conectar datos reales.

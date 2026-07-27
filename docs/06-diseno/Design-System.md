@@ -63,7 +63,7 @@ Documento de diseño centralizado y **fuente de verdad visual** del proyecto: si
 
 ## 6. Barra superior fija
 
-- Franja propia (`sticky top`), fondo `--superficie`, separada del contenido por borde y sombra sutil. No invade contenido.
+- Franja propia (`sticky top`), fondo `--superficie`, separada del contenido por borde y sombra sutil (token `--sombra-barra`). No invade contenido.
 - **Izquierda:** botones de texto **Menú** (navegación) y **Asistente** ([[AI-Companion]], en color `--ia`), siempre visibles.
 - **Derecha:** rótulo "Tamaño de letra" + los tres tamaños.
 - En pantalla angosta, el selector de letra baja a una segunda fila sin pisar los botones.
@@ -82,7 +82,7 @@ Documento de diseño centralizado y **fuente de verdad visual** del proyecto: si
 
 - Los tokens se materializan en `tokens.css` (en esta misma carpeta), importado una vez al iniciar el frontend ([[Stack-Tecnologico]]).
 - Cada componente expone su `data-ai-id` para el [[AI-Companion]].
-- Decisiones registradas en [[Decisiones-Tecnicas]] (entradas 11–17).
+- Decisiones registradas en [[Decisiones-Tecnicas]] (entradas 11–17 y 19–20).
 
 ## Estado
 - Paleta, tipografía, escala, reglas de UX: **definidas y aprobadas**.

@@ -1,0 +1,22 @@
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/dev-dist/
+
+# Python / backend
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# Base de datos local y puerto recordado por la app de escritorio
+*.db
+backend/puerto.txt
+
+# Empaquetado del ejecutable (PyInstaller)
+backend/build/
+backend/dist/
+backend/dist-app/
+
+# Editores / SO
+.DS_Store

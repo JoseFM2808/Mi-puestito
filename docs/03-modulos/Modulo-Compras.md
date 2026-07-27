@@ -31,3 +31,10 @@ Al llegar la orden, se abre el checklist:
 ## Independencia
 
 Funciona **sin** [[Modulo-Inventario]]. Cuando el inventario se active, las compras alimentarán el costo de los productos automáticamente.
+
+## Estado
+- Fase: **MVP**
+- **Avance (Demo 1):** esquema de base de datos creado en
+  `backend/modules/compras/models.py` (`proveedores`, `ordenes_compra`,
+  `items_orden_compra`, con estados y checklist de recepción) y endpoints de
+  lectura. Pendiente: UI, auto-registro de proveedores y checklist.

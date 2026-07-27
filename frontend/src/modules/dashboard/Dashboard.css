@@ -1,0 +1,180 @@
+/* Estilos del Dashboard. Solo tokens de tokens.css, nada "a mano". */
+
+.pantalla {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.4rem 1.2rem 3rem;
+}
+
+.cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.3rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cabecera .titulo {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.cabecera .fecha {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+}
+
+.resumen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  margin-bottom: 1.1rem;
+}
+
+.resumen-secundario {
+  margin-top: 1.5rem;
+}
+
+.card {
+  border-radius: var(--radio);
+  padding: 1.2rem 1.3rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  text-align: left;
+}
+
+.card .etiqueta {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--texto);
+}
+
+.card .monto {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.card .nota,
+.nota {
+  font-size: 1.05rem;
+  margin-top: 0.4rem;
+  color: var(--texto-suave);
+}
+
+.seccion-titulo {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.8rem;
+}
+
+.cuadricula-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+}
+
+.orden {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  font-family: var(--fuente);
+}
+
+.orden .cliente,
+.pedido .cliente {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: var(--texto);
+}
+
+.orden .estado {
+  font-size: 1.05rem;
+  margin-bottom: 0.6rem;
+}
+
+.monto-orden {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--texto);
+}
+
+/* Regla del color: el color solo comunica dinero y siempre va con palabra */
+.estado-abierta {
+  color: var(--pendiente);
+  font-weight: 500;
+}
+.estado-fiado {
+  color: var(--deuda);
+  font-weight: 500;
+}
+.monto-ingreso {
+  color: var(--primario);
+}
+.monto-pendiente {
+  color: var(--pendiente);
+}
+.monto-deuda {
+  color: var(--deuda);
+}
+
+.nota-atrasada {
+  color: var(--deuda);
+  font-weight: 600;
+}
+
+.lista-pedidos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.pedido {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.acciones {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+/* Botones siempre con texto completo (regla dura del Design System) */
+.btn {
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border-radius: 12px;
+  min-height: var(--tactil-min);
+  padding: 0.4rem 1.5rem;
+  flex: 1;
+  min-width: 230px;
+}
+
+.btn-primario {
+  background: var(--primario);
+  color: var(--superficie);
+}
+
+.btn-secundario {
+  background: var(--superficie);
+  border: 2px solid var(--primario);
+  color: var(--primario);
+}
+
+@media (max-width: 760px) {
+  .resumen,
+  .cuadricula-3 {
+    grid-template-columns: 1fr;
+  }
+}

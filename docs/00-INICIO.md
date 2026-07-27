@@ -15,6 +15,7 @@ App web tablet-first para vendedores informales en Perú, con un AI Companion in
 ### 2. Arquitectura
 - [[Stack-Tecnologico]] — tecnologías elegidas y por qué
 - [[Sincronizacion-Offline]] — estrategia offline-first
+- [[Distribucion-Escritorio]] — el ejecutable para computadora (Windows)
 - [[Decisiones-Tecnicas]] — registro histórico de decisiones
 
 ### 3. Módulos
@@ -31,6 +32,7 @@ App web tablet-first para vendedores informales en Perú, con un AI Companion in
 - [[Conexion-Agnostica]] — independencia del proveedor de modelo
 
 ### 5. Metodología de desarrollo
+- [[Plan-De-Trabajo]] — **tablero de avance por fases** (empezar aquí)
 - [[Metodologia-Desarrollo]] — cómo se construye este proyecto
 - [[Agentes-De-Desarrollo]] — roles de agentes IA en el desarrollo
 

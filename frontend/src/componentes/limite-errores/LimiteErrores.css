@@ -1,0 +1,36 @@
+/* Aviso de módulo caído. Solo tokens de tokens.css, nada "a mano". */
+
+.limite-errores {
+  max-width: 920px;
+  margin: var(--esp-4) auto;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-left: var(--esp-1) solid var(--deuda);
+  border-radius: var(--radio);
+  padding: var(--esp-3) var(--esp-4);
+}
+
+.limite-errores .titulo-error {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--deuda);
+  margin-bottom: var(--esp-1);
+}
+
+.limite-errores .nota-error {
+  font-size: 1.05rem;
+  color: var(--texto-suave);
+  margin-bottom: var(--esp-3);
+}
+
+.limite-errores .btn-reintentar {
+  font-size: 1.2rem;
+  font-weight: 600;
+  min-height: var(--tactil-min);
+  padding: 0.4rem 1.5rem;
+  border-radius: var(--radio-chico);
+  background: var(--superficie);
+  border: 2px solid var(--primario);
+  color: var(--primario);
+  cursor: pointer;
+}
