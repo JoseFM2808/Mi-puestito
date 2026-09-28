@@ -1,22 +1,112 @@
-# Node / frontend
+# ============================================================
+# .gitignore — Mi Puestito (repositorio PÚBLICO)
+# Regla: ningún secreto, credencial, dato real del vendedor ni
+# discusión interna del equipo entra al repo. Ver
+# .ai-context/05-deuda-tecnica-higiene.md para el estado de control.
+# El test backend/tests/test_higiene_repo.py falla si algo de esto
+# llega a estar versionado.
+# ============================================================
+
+# ---- Secretos y variables de entorno ----
+# Solo se versionan las plantillas sin valores (*.example)
+.env
+.env.*
+*.env
+!.env.example
+!**/.env.example
+config/*
+!config/.env.example
+!config/README.md
+secrets/
+*.secret
+*.secrets
+
+# ---- Llaves y certificados ----
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+
+# ---- Credenciales de acceso de la app (PIN con hash + sal) ----
+# En desarrollo se crean junto al backend (rutas.directorio_datos)
+usuarios.json
+backend/usuarios.json
+
+# ---- Base de datos local (datos reales del vendedor) ----
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+backups/
+
+# ---- Datos de negocio / clientes (nunca públicos) ----
+data/raw/
+data/processed/
+data/vector_store/
+*.csv
+*.xlsx
+*.xls
+
+# ---- Discusiones internas, acuerdos y actas ----
+docs/meetings/
+docs/privado/
+docs/acuerdos/
+.ai-context/privado/
+*.private.md
+*-privado.md
+
+# ---- Node / frontend ----
 node_modules/
 frontend/dist/
 frontend/dev-dist/
+frontend/coverage/
+*.tsbuildinfo
+npm-debug.log*
 
-# Python / backend
+# ---- Python / backend ----
 __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+venv/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
-# Base de datos local y puerto recordado por la app de escritorio
-*.db
+# Puerto recordado por la app de escritorio
 backend/puerto.txt
+puerto.txt
 
-# Empaquetado del ejecutable (PyInstaller)
+# ---- Empaquetado del ejecutable (PyInstaller) ----
 backend/build/
 backend/dist/
 backend/dist-app/
 
-# Editores / SO
+# ---- Logs (pueden contener el PIN impreso en el primer arranque) ----
+*.log
+logs/
+
+# ---- Herramientas locales de IA y editores ----
+.claude/settings.local.json
+.obsidian/workspace*.json
+.obsidian/cache
+.vscode/
+.idea/
+
+# ---- SO y Google Drive ----
 .DS_Store
+Thumbs.db
+desktop.ini
+*.gdoc
+*.gsheet

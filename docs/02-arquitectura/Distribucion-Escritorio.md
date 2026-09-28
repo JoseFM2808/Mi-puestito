@@ -36,12 +36,14 @@ en `backend/rutas.py`:
 
 | Sistema | Carpeta de datos |
 |---|---|
-| Windows | `%LOCALAPPDATA%\MiPuestito\mi_puestito.db` |
+| Windows | `%LOCALAPPDATA%\MiPuestito\` |
 | macOS | `~/Library/Application Support/MiPuestito/` |
 | Linux | `~/.local/share/MiPuestito/` |
 
-El programa muestra esa ruta al arrancar, para que el vendedor sepa qué
-archivo respaldar. Son datos sensibles (ventas, fiados, clientes): viven solo
+Dentro hay un archivo por proyecto (`mi_puestito_demo.db`,
+`mi_puestito_anita.db`), `usuarios.json` (PIN con hash) y `puerto.txt`.
+El programa muestra esa carpeta al arrancar, para que el vendedor sepa qué
+respaldar. Son datos sensibles (ventas, fiados, clientes): viven solo
 en su computadora.
 
 ## Cómo se genera
@@ -52,10 +54,15 @@ cd ../backend && pip install -r requirements.txt -r requirements-empaquetado.txt
 pyinstaller MiPuestito.spec --noconfirm      # → dist/MiPuestito.exe
 ```
 
+`main.py` carga los módulos por nombre, así que el spec los recoge con
+`collect_submodules("modules")`: un módulo nuevo entra al ejecutable sin
+editar el spec.
+
 **El ejecutable de Windows debe construirse en Windows:** PyInstaller no
 compila para otro sistema operativo. Por eso existe el flujo
 `.github/workflows/ejecutable-windows.yml`, que lo construye en una máquina
-Windows, comprueba que arranca y responde, y publica el `.exe` como artefacto
+Windows, comprueba que arranca, que `/api/salud` responde y que **ningún
+módulo quedó degradado** (decisión 29 de [[Decisiones-Tecnicas]]), y publica el `.exe` como artefacto
 descargable (o adjunto a la Release al publicar una etiqueta `v*`).
 
 ## Estado

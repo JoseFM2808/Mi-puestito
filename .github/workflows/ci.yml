@@ -26,7 +26,12 @@ jobs:
       - run: npm run test
 
   backend:
-    runs-on: ubuntu-latest
+    # Windows además de Linux: el ejecutable corre en Windows, y fallos como
+    # la falta de tzdata solo aparecen ahí (Linux trae la base de zonas)
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: backend

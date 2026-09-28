@@ -104,7 +104,17 @@ def verificar_credenciales(nombre_usuario: str, pin: str) -> str | None:
 # Firmado con HMAC (sin librerías externas): suficiente para una app de
 # escritorio de un solo dispositivo, que solo escucha en 127.0.0.1.
 
-_SECRETO = os.environ.get("MI_PUESTITO_SECRETO", secrets.token_hex(32)).encode()
+def _secreto_de_firma() -> bytes:
+    """Llave HMAC de los tokens.
+
+    `or` y no el default de `get`: una variable definida pero vacía (como
+    en config/.env.example) devolvería "" y los tokens se firmarían con una
+    llave vacía, falsificables por cualquiera.
+    """
+    return (os.environ.get("MI_PUESTITO_SECRETO") or secrets.token_hex(32)).encode()
+
+
+_SECRETO = _secreto_de_firma()
 
 
 def crear_token(proyecto: str) -> str:

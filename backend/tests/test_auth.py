@@ -71,3 +71,16 @@ def test_token_con_formato_invalido_es_rechazado(cliente):
         "/api/dashboard/resumen", headers={"Authorization": "Bearer basura-sin-formato"}
     )
     assert respuesta.status_code == 401
+
+
+def test_secreto_vacio_en_el_entorno_no_deja_firmar_con_llave_vacia(monkeypatch):
+    # config/.env.example trae MI_PUESTITO_SECRETO= vacío: con el default de
+    # os.environ.get la llave HMAC sería "" y cualquiera falsificaría tokens
+    import seguridad
+
+    monkeypatch.setenv("MI_PUESTITO_SECRETO", "")
+    llave = seguridad._secreto_de_firma()
+    assert len(llave) == 64
+
+    monkeypatch.setenv("MI_PUESTITO_SECRETO", "llave-de-produccion")
+    assert seguridad._secreto_de_firma() == b"llave-de-produccion"

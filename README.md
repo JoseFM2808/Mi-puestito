@@ -29,8 +29,8 @@ No hace falta instalar nada: se descarga **un solo archivo** y se abre con doble
 2. Abrir la última ejecución y descargar el artefacto `MiPuestito-windows`.
 3. Descomprimir y ejecutar `MiPuestito.exe`. Se abre solo en el navegador.
 
-Los datos se guardan en `%LOCALAPPDATA%\MiPuestito\mi_puestito.db` (la ruta se
-muestra al arrancar). Detalles en [`docs/02-arquitectura/Distribucion-Escritorio.md`](./docs/02-arquitectura/Distribucion-Escritorio.md).
+Los datos se guardan en `%LOCALAPPDATA%\MiPuestito\` (un archivo por proyecto;
+la carpeta se muestra al arrancar). Detalles en [`docs/02-arquitectura/Distribucion-Escritorio.md`](./docs/02-arquitectura/Distribucion-Escritorio.md).
 
 Para generarlo uno mismo, en la máquina destino:
 
@@ -55,6 +55,10 @@ pytest            # tests
 ```
 
 ## Variables de entorno (opcionales)
+
+Plantilla completa y sin valores en [`config/.env.example`](./config/.env.example).
+Copiarla a `config/.env.staging` (ignorado por git) y arrancar con
+`uvicorn main:app --reload --env-file ../config/.env.staging`.
 
 | Variable | Default | Para qué |
 |---|---|---|
