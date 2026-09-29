@@ -1,0 +1,16 @@
+# Linter del backend (Fase 2: "nada hace cumplir las reglas"). Corre en CI.
+target-version = "py311"
+line-length = 110
+
+[lint]
+# Errores reales (F), estilo básico (E, W), imports ordenados (I), bugs probables (B)
+select = ["E", "F", "W", "I", "B"]
+ignore = [
+    "B008",  # Depends()/Query() en argumentos es el patrón oficial de FastAPI
+]
+
+[lint.per-file-ignores]
+# Migraciones: el DDL es más legible en una línea que partido
+"migraciones/versions/*" = ["E501"]
+# Tests: una petición completa en una línea se lee mejor que partida
+"tests/*" = ["E501"]

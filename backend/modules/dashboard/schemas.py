@@ -1,7 +1,7 @@
 """Contrato del resumen del Dashboard / Caja Diaria.
 
-Espejo tipado de lo que consume el frontend
-(frontend/src/modules/dashboard/datos-ficticios.ts).
+El frontend lo consume a través de `frontend/src/api/contrato.ts` (ADR-033):
+montos como string decimal, nombres en snake_case.
 """
 
 from datetime import date
@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 
 class OrdenActivaResumen(BaseModel):
-    id: int
+    uuid: str
     nombre: str
     tipo: str  # "orden_activa" | "fiado"
     monto: Decimal
@@ -35,3 +35,5 @@ class ResumenDashboard(BaseModel):
     clientes_con_fiado: int
     ventas_rapidas_pendientes: int
     pedidos_por_llegar: list[PedidoPorLlegar]
+    # Módulos que no pudieron leerse: su parte sale en cero y se avisa
+    secciones_no_disponibles: list[str] = []

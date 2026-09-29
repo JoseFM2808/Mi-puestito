@@ -1,5 +1,5 @@
-"""Smoke tests de la Demo 1: el esqueleto responde y el ORM funciona
-de punta a punta (create_all + consultas sobre la BD vacía).
+"""Pruebas de humo: el servicio responde y el ORM funciona de punta a punta
+(migraciones + consultas). Demo trae datos de muestra; Anita arranca vacía.
 
 Todas las rutas de datos exigen sesión (login); solo /api/salud es pública.
 """
@@ -21,7 +21,7 @@ def test_salud(cliente):
     respuesta = cliente.get("/api/salud")
     assert respuesta.status_code == 200
     # Con todos los módulos sanos, ninguno aparece degradado
-    assert respuesta.json() == {"estado": "ok", "modulos_degradados": []}
+    assert respuesta.json() == {"estado": "ok", "modulos_degradados": [], "eventos_con_fallas": []}
 
 
 def test_las_rutas_de_datos_exigen_haber_iniciado_sesion(cliente):
@@ -35,12 +35,24 @@ def test_resumen_dashboard(cliente, cabeceras_demo):
     respuesta = cliente.get("/api/dashboard/resumen", headers=cabeceras_demo)
     assert respuesta.status_code == 200
     datos = respuesta.json()
+    # Las cifras de siempre de la demo, ahora calculadas desde sus tablas
     assert datos["ventas_hoy"] == "485.50"
     assert datos["ventas_cerradas"] == 12
     assert len(datos["ordenes_activas"]) == 3
-    assert len(datos["pedidos_por_llegar"]) == 2
-    # Coherencia: la proyección de mañana corresponde al pedido que llega mañana
-    assert datos["proyeccion_manana"] == datos["pedidos_por_llegar"][0]["monto"]
+    assert datos["fiados_por_cobrar"] == "132.50"
+    assert datos["clientes_con_fiado"] == 4
+    assert datos["ventas_rapidas_pendientes"] == 3
+    assert datos["secciones_no_disponibles"] == []
+    # Tres pedidos: el atrasado primero (por fecha), luego mañana y pasado
+    assert [p["proveedor"] for p in datos["pedidos_por_llegar"]] == [
+        "Abarrotes El Sol", "Distribuidora Norte", "Avícola San Pedro",
+    ]
+    # Coherencia: la proyección de mañana es exactamente el pedido que llega mañana
+    assert datos["proyeccion_manana"] == datos["pedidos_por_llegar"][1]["monto"] == "320.00"
+    assert datos["motivo_proyeccion"] == "Llega pedido de Distribuidora Norte"
+    # El fiado abierto de la Sra. Flora muestra su deuda ya fiada (no la orden en curso)
+    flora = next(o for o in datos["ordenes_activas"] if o["nombre"] == "Sra. Flora")
+    assert (flora["monto"], flora["deuda_cliente"]) == ("12.00", "45.00")
 
 
 def test_resumen_dashboard_anita_arranca_en_cero(cliente, cabeceras_anita):
@@ -48,30 +60,30 @@ def test_resumen_dashboard_anita_arranca_en_cero(cliente, cabeceras_anita):
     respuesta = cliente.get("/api/dashboard/resumen", headers=cabeceras_anita)
     assert respuesta.status_code == 200
     datos = respuesta.json()
-    assert datos["ventas_hoy"] == "0"
+    assert datos["ventas_hoy"] == "0.00"
     assert datos["ordenes_activas"] == []
     assert datos["pedidos_por_llegar"] == []
 
 
-def test_ventas_vacias(cliente, cabeceras_demo):
-    respuesta = cliente.get("/api/ventas/", headers=cabeceras_demo)
+def test_ventas_vacias(cliente, cabeceras_anita):
+    respuesta = cliente.get("/api/ventas/", headers=cabeceras_anita)
     assert respuesta.status_code == 200
     assert respuesta.json() == []
 
 
-def test_clientes_vacios(cliente, cabeceras_demo):
-    respuesta = cliente.get("/api/ventas/clientes", headers=cabeceras_demo)
+def test_clientes_vacios(cliente, cabeceras_anita):
+    respuesta = cliente.get("/api/ventas/clientes", headers=cabeceras_anita)
     assert respuesta.status_code == 200
     assert respuesta.json() == []
 
 
-def test_proveedores_vacios(cliente, cabeceras_demo):
-    respuesta = cliente.get("/api/compras/proveedores", headers=cabeceras_demo)
+def test_proveedores_vacios(cliente, cabeceras_anita):
+    respuesta = cliente.get("/api/compras/proveedores", headers=cabeceras_anita)
     assert respuesta.status_code == 200
     assert respuesta.json() == []
 
 
-def test_ordenes_compra_vacias(cliente, cabeceras_demo):
-    respuesta = cliente.get("/api/compras/ordenes", headers=cabeceras_demo)
+def test_ordenes_compra_vacias(cliente, cabeceras_anita):
+    respuesta = cliente.get("/api/compras/ordenes", headers=cabeceras_anita)
     assert respuesta.status_code == 200
     assert respuesta.json() == []

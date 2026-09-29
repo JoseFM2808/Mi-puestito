@@ -2,20 +2,18 @@
 
 Sin claves foráneas hacia otros módulos: cada módulo es independiente.
 Fechas en UTC; la zona (America/Lima) se aplica solo al presentar.
+Dinero en céntimos enteros (tipo `Dinero`, ADR-035).
 """
 
 import enum
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, Enum, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import Date, Enum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base, FechaHoraUTC
-
-
-def ahora_utc() -> datetime:
-    return datetime.now(timezone.utc)
+from database import Base, Dinero, FechaHoraUTC
+from fechas import ahora_utc
 
 
 class EstadoOrdenCompra(str, enum.Enum):
@@ -71,9 +69,9 @@ class OrdenCompra(Base):
     )
     # Alimenta la proyección "Mañana necesitas en caja" del Dashboard
     fecha_estimada_llegada: Mapped[date | None] = mapped_column(Date)
-    monto_total: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("0"))
+    monto_total: Mapped[Decimal] = mapped_column(Dinero, default=Decimal("0"))
     # Recalculado tras el checklist según lo efectivamente recibido
-    monto_real: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    monto_real: Mapped[Decimal | None] = mapped_column(Dinero)
     notas: Mapped[str | None] = mapped_column(Text)
     creado_en: Mapped[datetime] = mapped_column(FechaHoraUTC, default=ahora_utc)
     actualizado_en: Mapped[datetime] = mapped_column(FechaHoraUTC, default=ahora_utc, onupdate=ahora_utc)
@@ -96,12 +94,12 @@ class ItemOrdenCompra(Base):
     # monto total por ítem, no precio unitario
     nombre_producto: Mapped[str] = mapped_column(String(120))
     cantidad: Mapped[str | None] = mapped_column(String(60))  # texto libre: "2 packs"
-    monto: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    monto: Mapped[Decimal] = mapped_column(Dinero)
     estado_recepcion: Mapped[EstadoRecepcion] = mapped_column(
         Enum(EstadoRecepcion, native_enum=False, values_callable=lambda e: [x.value for x in e]),
         default=EstadoRecepcion.PENDIENTE,
     )
     producto_sustituto: Mapped[str | None] = mapped_column(String(120))
-    monto_sustituto: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    monto_sustituto: Mapped[Decimal | None] = mapped_column(Dinero)
 
     orden: Mapped[OrdenCompra] = relationship(back_populates="items")

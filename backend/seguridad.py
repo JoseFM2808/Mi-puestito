@@ -15,6 +15,7 @@ import hmac
 import json
 import os
 import secrets
+import threading
 import time
 from dataclasses import dataclass
 
@@ -25,6 +26,16 @@ from rutas import ruta_usuarios
 
 PIN_DEMO_FIJO = "0000"
 DURACION_TOKEN_SEGUNDOS = 12 * 60 * 60  # una jornada de trabajo
+
+# Límite de intentos (D-04): un PIN de 6 dígitos tiene un millón de
+# combinaciones. Tras INTENTOS_LIBRES fallos seguidos, el usuario queda en
+# espera, y cada nuevo fallo duplica la espera (tope: ESPERA_MAXIMA).
+INTENTOS_LIBRES = 5
+ESPERA_INICIAL_SEGUNDOS = 30
+ESPERA_MAXIMA_SEGUNDOS = 15 * 60
+
+# "local" = escritorio y desarrollo; "production" = servidor en la nube
+ENTORNO = os.environ.get("MI_PUESTITO_ENTORNO", "local").strip().lower()
 
 
 def _hash_pin(pin: str, sal: str) -> str:
@@ -88,15 +99,54 @@ def asegurar_usuarios_iniciales() -> None:
         _guardar_usuarios(usuarios)
 
 
+@dataclass
+class _Intentos:
+    fallos: int = 0
+    bloqueado_hasta: float = 0.0
+
+
+_intentos: dict[str, _Intentos] = {}
+_candado_intentos = threading.Lock()
+
+
+class DemasiadosIntentos(Exception):
+    def __init__(self, segundos: int):
+        super().__init__(f"espera {segundos} s")
+        self.segundos = segundos
+
+
+def _registrar_fallo(nombre_usuario: str) -> None:
+    with _candado_intentos:
+        estado = _intentos.setdefault(nombre_usuario, _Intentos())
+        estado.fallos += 1
+        exceso = estado.fallos - INTENTOS_LIBRES
+        if exceso >= 0:
+            espera = min(ESPERA_INICIAL_SEGUNDOS * 2**exceso, ESPERA_MAXIMA_SEGUNDOS)
+            estado.bloqueado_hasta = time.monotonic() + espera
+
+
 def verificar_credenciales(nombre_usuario: str, pin: str) -> str | None:
-    """Devuelve la clave del proyecto si el PIN es correcto; si no, None."""
+    """Devuelve la clave del proyecto si el PIN es correcto; si no, None.
+
+    Lanza `DemasiadosIntentos` si el usuario está en espera por fallos
+    seguidos (el PIN ni se evalúa: no se puede seguir adivinando).
+    """
+    with _candado_intentos:
+        estado = _intentos.get(nombre_usuario)
+        if estado is not None and estado.bloqueado_hasta > time.monotonic():
+            raise DemasiadosIntentos(int(estado.bloqueado_hasta - time.monotonic()) + 1)
+
     usuarios = _cargar_usuarios()
     usuario = usuarios.get(nombre_usuario)
     if usuario is None:
+        _registrar_fallo(nombre_usuario)
         return None
     calculado = _hash_pin(pin, usuario["sal"])
     if not hmac.compare_digest(calculado, usuario["pin_hash"]):
+        _registrar_fallo(nombre_usuario)
         return None
+    with _candado_intentos:
+        _intentos.pop(nombre_usuario, None)
     return usuario["proyecto"]
 
 
@@ -104,14 +154,31 @@ def verificar_credenciales(nombre_usuario: str, pin: str) -> str | None:
 # Firmado con HMAC (sin librerías externas): suficiente para una app de
 # escritorio de un solo dispositivo, que solo escucha en 127.0.0.1.
 
+LARGO_MINIMO_SECRETO = 32
+
+
+class ConfiguracionInsegura(RuntimeError):
+    """Producción sin un secreto de firma propio: no se arranca."""
+
+
 def _secreto_de_firma() -> bytes:
     """Llave HMAC de los tokens.
 
     `or` y no el default de `get`: una variable definida pero vacía (como
     en config/.env.example) devolvería "" y los tokens se firmarían con una
     llave vacía, falsificables por cualquiera.
+
+    En "production" (servidor en la nube, D-09) el secreto es obligatorio: uno
+    al azar cerraría todas las sesiones en cada reinicio o despliegue, y uno
+    corto se adivina. En "local" (escritorio) basta uno al azar por arranque.
     """
-    return (os.environ.get("MI_PUESTITO_SECRETO") or secrets.token_hex(32)).encode()
+    configurado = os.environ.get("MI_PUESTITO_SECRETO") or ""
+    if ENTORNO == "production" and len(configurado) < LARGO_MINIMO_SECRETO:
+        raise ConfiguracionInsegura(
+            f"En producción MI_PUESTITO_SECRETO debe tener al menos {LARGO_MINIMO_SECRETO} "
+            'caracteres. Genera uno con: python -c "import secrets; print(secrets.token_hex(32))"'
+        )
+    return (configurado or secrets.token_hex(32)).encode()
 
 
 _SECRETO = _secreto_de_firma()
@@ -133,7 +200,7 @@ def _verificar_token(token: str) -> str:
     try:
         proyecto, vence, firma = token.split(":")
     except ValueError:
-        raise SesionInvalida("token con formato inválido")
+        raise SesionInvalida("token con formato inválido") from None
 
     cuerpo = f"{proyecto}:{vence}"
     firma_esperada = hmac.new(_SECRETO, cuerpo.encode(), hashlib.sha256).hexdigest()
