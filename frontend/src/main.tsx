@@ -13,7 +13,10 @@ import './estilos-base.css'
 
 import { App } from './App'
 
-createRoot(document.getElementById('raiz')!).render(
+const raiz = document.getElementById('raiz')
+if (!raiz) throw new Error('index.html no tiene el elemento #raiz')
+
+createRoot(raiz).render(
   <StrictMode>
     <App />
   </StrictMode>,

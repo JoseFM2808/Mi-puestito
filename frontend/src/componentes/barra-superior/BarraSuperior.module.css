@@ -1,77 +1,59 @@
-/* Estilos de la barra superior. Solo tokens de tokens.css, nada "a mano". */
+/* Barra superior fija (Design-System §6). CSS Module. Solo tokens. */
 
-.barra-superior {
+.barra {
   position: sticky;
   top: 0;
   z-index: 100;
   background: var(--superficie);
   border-bottom: 1.5px solid var(--borde-fuerte);
   box-shadow: var(--sombra-barra);
-  padding: 0.6rem 1.1rem;
 }
 
-.barra-fila {
+.fila {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--esp-3);
   flex-wrap: wrap;
+  padding: var(--esp-1) var(--esp-3);
 }
 
-.barra-izq {
+.izquierda {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--esp-2);
   align-items: center;
 }
 
-.barra-der {
+.derecha {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--esp-2);
   align-items: center;
   margin-left: auto;
 }
 
-.btn-barra {
-  font-weight: 600;
-  font-size: 1.05rem;
-  border-radius: var(--radio-chico);
-  cursor: pointer;
-  min-height: 2.9rem;
-  padding: 0.3rem 1.1rem;
-  border: 1.5px solid var(--borde-fuerte);
-  background: var(--fondo);
-  color: var(--texto);
-}
-
-/* Identidad del Asistente: azul --ia, único color fuera de la lógica del dinero */
-.btn-barra.asistente {
-  background: var(--ia);
-  border-color: var(--ia);
-  color: var(--superficie);
-}
-
-.grupo-letra {
+.grupoLetra {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: var(--esp-1);
 }
 
-.grupo-letra .rotulo {
-  font-size: 0.92rem;
+.rotulo {
+  font-size: var(--tam-rotulo);
   font-weight: 600;
   color: var(--texto-suave);
 }
 
-.grupo-letra .opciones {
+.opciones {
   display: flex;
-  gap: 0.3rem;
+  gap: var(--esp-1);
 }
 
-.grupo-letra button {
+.opcionLetra {
+  font-family: var(--fuente);
   border: 1.5px solid var(--borde);
   background: var(--fondo);
   color: var(--texto);
-  border-radius: 9px;
-  min-height: 2.9rem;
+  border-radius: var(--radio-chico);
+  min-height: var(--tactil-barra);
   min-width: 3.1rem;
   cursor: pointer;
   font-weight: 700;
@@ -83,7 +65,12 @@
   padding: 0.2rem;
 }
 
-.grupo-letra button .nombre {
+.opcionLetra:focus-visible {
+  outline: 3px solid var(--ia);
+  outline-offset: 2px;
+}
+
+.nombreLetra {
   font-size: 0.55rem;
   font-weight: 500;
   color: var(--texto-suave);
@@ -91,36 +78,48 @@
 }
 
 /* Cada botón muestra "Aa" a su tamaño real */
-.grupo-letra button[data-tam='normal'] {
+.opcionLetra[data-tam='normal'] {
   font-size: 0.85rem;
 }
-.grupo-letra button[data-tam='grande'] {
+.opcionLetra[data-tam='grande'] {
   font-size: 1.05rem;
 }
-.grupo-letra button[data-tam='muygrande'] {
+.opcionLetra[data-tam='muygrande'] {
   font-size: 1.3rem;
 }
 
-.grupo-letra button.activo {
+.activo {
   background: var(--primario);
   border-color: var(--primario);
   color: var(--superficie);
 }
-.grupo-letra button.activo .nombre {
+.activo .nombreLetra {
   color: var(--superficie);
 }
 
-.barra-aviso {
-  margin-top: 0.5rem;
-  font-size: 1.05rem;
-  color: var(--texto-suave);
+.menu {
   border-top: 1px solid var(--borde);
-  padding-top: 0.5rem;
+  padding: var(--esp-2) var(--esp-3) var(--esp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.negocio {
+  font-size: var(--tam-nota);
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.opcionesMenu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
 }
 
 /* En pantalla angosta el selector baja a segunda fila sin pisar los botones */
 @media (max-width: 760px) {
-  .barra-der {
+  .derecha {
     width: 100%;
     margin-left: 0;
     justify-content: space-between;

@@ -137,3 +137,12 @@ def test_produccion_sin_secreto_no_arranca(monkeypatch):
         seguridad._secreto_de_firma()
     monkeypatch.setenv("MI_PUESTITO_SECRETO", "a" * 64)
     assert seguridad._secreto_de_firma() == b"a" * 64
+
+
+def test_la_pantalla_de_ingreso_recibe_las_cuentas_sin_secretos(cliente):
+    respuesta = cliente.get("/api/auth/cuentas")
+    assert respuesta.status_code == 200
+    cuentas = respuesta.json()
+    assert [c["nombre_usuario"] for c in cuentas] == ["demo", "anita"]
+    assert cuentas[1] == {"nombre_usuario": "anita", "nombre_proyecto": "Anita", "es_real": True}
+    assert "pin" not in respuesta.text and "sal" not in respuesta.text

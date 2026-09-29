@@ -1,0 +1,43 @@
+/* Estilos del módulo Fiados. Solo tokens. */
+
+.pantalla {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--esp-4) var(--esp-3) var(--esp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.resumen,
+.cliente,
+.abono {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+}
+
+.etiqueta {
+  font-size: var(--tam-subtitulo);
+  font-weight: 600;
+}
+
+.lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--esp-2);
+  flex-wrap: wrap;
+}
+
+.nombre {
+  font-size: var(--tam-nombre);
+  font-weight: 600;
+}

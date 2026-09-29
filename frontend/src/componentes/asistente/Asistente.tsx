@@ -1,11 +1,17 @@
 import { useState } from 'react'
-import { cabeceraAutorizacion } from '../../stores/sesion'
-import './Asistente.css'
+import { ErrorApi, SinConexion, pedir } from '../../api/cliente'
+import { useSesion } from '../../stores/sesion'
+import { Aviso, Boton, Campo } from '../../ui/componentes'
+import estilos from './Asistente.module.css'
 
 /**
  * Panel del Asistente (AI Companion). Chat simple: el operador escribe y
- * el Asistente responde con el mismo resumen que ve en el Dashboard, nunca
- * con datos de otro proyecto (lo garantiza el backend con el token).
+ * el Asistente responde con el mismo resumen que ve en la Caja de hoy,
+ * nunca con datos de otro proyecto (lo garantiza el backend con el token).
+ *
+ * Privacidad (ADR-034): el backend reemplaza los nombres de clientes y
+ * proveedores antes de enviar la pregunta al servicio de IA externo. En un
+ * negocio real se le dice al operador, en palabras simples.
  */
 
 interface Mensaje {
@@ -14,11 +20,9 @@ interface Mensaje {
 }
 
 export function Asistente() {
+  const esReal = useSesion((estado) => estado.esReal)
   const [mensajes, setMensajes] = useState<Mensaje[]>([
-    {
-      quienHabla: 'asistente',
-      texto: 'Hola, soy tu Asistente. Puedes preguntarme sobre tu caja de hoy.',
-    },
+    { quienHabla: 'asistente', texto: 'Hola, soy tu Asistente. Puedes preguntarme sobre tu caja de hoy.' },
   ])
   const [pregunta, setPregunta] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -31,71 +35,60 @@ export function Asistente() {
     setMensajes((actual) => [...actual, { quienHabla: 'operador', texto }])
     setPregunta('')
     setEnviando(true)
-
     try {
-      const respuesta = await fetch('/api/asistente/preguntar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...cabeceraAutorizacion() },
-        body: JSON.stringify({ mensaje: texto }),
+      const { respuesta } = await pedir<{ respuesta: string }>('POST', '/api/asistente/preguntar', {
+        mensaje: texto,
       })
-      const datos = await respuesta.json()
-      const textoRespuesta = respuesta.ok
-        ? datos.respuesta
-        : (datos.detail ?? 'El Asistente no pudo responder ahora mismo.')
-      setMensajes((actual) => [...actual, { quienHabla: 'asistente', texto: textoRespuesta }])
-    } catch {
-      setMensajes((actual) => [
-        ...actual,
-        {
-          quienHabla: 'asistente',
-          texto: 'No pude conectarme. Revisa tu conexión e intenta de nuevo.',
-        },
-      ])
+      setMensajes((actual) => [...actual, { quienHabla: 'asistente', texto: respuesta }])
+    } catch (error) {
+      const texto =
+        error instanceof SinConexion
+          ? 'No pude conectarme. El Asistente necesita internet; lo demás de la app sigue funcionando.'
+          : error instanceof ErrorApi
+            ? error.detalle
+            : 'El Asistente no pudo responder ahora mismo.'
+      setMensajes((actual) => [...actual, { quienHabla: 'asistente', texto }])
     } finally {
       setEnviando(false)
     }
   }
 
   return (
-    <div className="asistente" data-ai-id="asistente">
-      <div className="asistente-mensajes" role="log" aria-live="polite">
+    <section className={estilos.asistente} data-ai-id="asistente" aria-label="Asistente">
+      {esReal && (
+        <Aviso tipo="info" aiId="asistente.privacidad">
+          Tus preguntas se responden con un servicio de inteligencia artificial por internet. Antes de
+          enviarlas, los nombres de tus clientes y proveedores se cambian por códigos: ese servicio nunca los
+          ve.
+        </Aviso>
+      )}
+      <div className={estilos.mensajes} role="log" aria-live="polite">
         {mensajes.map((mensaje, indice) => (
           <p
             key={indice}
-            className={
-              mensaje.quienHabla === 'asistente'
-                ? 'asistente-burbuja asistente-burbuja-ia'
-                : 'asistente-burbuja asistente-burbuja-operador'
-            }
+            className={`${estilos.burbuja} ${mensaje.quienHabla === 'asistente' ? estilos.burbujaIa : estilos.burbujaOperador}`}
           >
             {mensaje.texto}
           </p>
         ))}
-        {enviando && <p className="asistente-burbuja asistente-burbuja-ia">Pensando…</p>}
+        {enviando && <p className={`${estilos.burbuja} ${estilos.burbujaIa}`}>Pensando…</p>}
       </div>
 
-      <form className="asistente-formulario" onSubmit={(evento) => void enviar(evento)}>
-        <label className="campo-label" htmlFor="asistente-pregunta">
-          Escríbele al Asistente
-        </label>
-        <input
+      <form className={estilos.formulario} onSubmit={(evento) => void enviar(evento)}>
+        <Campo
           id="asistente-pregunta"
-          className="campo-texto"
-          data-ai-id="asistente.pregunta"
-          type="text"
+          aiId="asistente.pregunta"
+          etiqueta="Escríbele al Asistente"
           placeholder="Por ejemplo: ¿cuánto vendí hoy?"
-          value={pregunta}
-          onChange={(evento) => setPregunta(evento.target.value)}
+          valor={pregunta}
+          alCambiar={setPregunta}
+          maxLength={500}
+          autoComplete="off"
         />
-        <button
-          type="submit"
-          className="btn btn-primario"
-          data-ai-id="asistente.enviar"
-          disabled={enviando}
-        >
+        <Boton tipo="submit" aiId="asistente.enviar" variante="ia" deshabilitado={enviando}>
           Enviar
-        </button>
+        </Boton>
       </form>
-    </div>
+    </section>
   )
 }

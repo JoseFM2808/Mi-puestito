@@ -1,104 +1,102 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { CuentaVisibleCable } from '../../api/contrato'
 import { useSesion } from '../../stores/sesion'
-import './Login.css'
+import { Aviso, Boton, Campo, Nota, Tarjeta, TituloPagina } from '../../ui/componentes'
+import estilos from './Login.module.css'
 
 /**
  * Pantalla de ingreso. Login simple por usuario + PIN (AGENTS.md: nada de
  * formularios complejos, el vendedor no tiene experiencia técnica).
  *
- * Dos cuentas hoy: "Demo" (datos de muestra, PIN público 0000) y el negocio
- * real. Cada una abre SOLO su propio proyecto — nunca se mezclan.
+ * Las cuentas vienen del backend (`GET /api/auth/cuentas`): el código del
+ * frontend no tiene escrito el nombre de ningún negocio real (repo público).
+ * Cada cuenta abre SOLO su propio proyecto — nunca se mezclan.
  */
-
-const CUENTAS = [
-  {
-    nombreUsuario: 'demo',
-    etiqueta: 'Demo',
-    descripcion: 'Datos de muestra para conocer la app. PIN: 0000',
-  },
-  {
-    nombreUsuario: 'anita',
-    etiqueta: 'Anita (negocio real)',
-    descripcion: 'Los datos reales del puesto de Anita.',
-  },
-] as const
-
 export function Login() {
   const iniciarSesion = useSesion((estado) => estado.iniciarSesion)
   const cargando = useSesion((estado) => estado.cargando)
   const error = useSesion((estado) => estado.error)
+  const [cuentas, setCuentas] = useState<CuentaVisibleCable[] | null>(null)
+  const [sinConexion, setSinConexion] = useState(false)
   const [cuentaAbierta, setCuentaAbierta] = useState<string | null>(null)
   const [pin, setPin] = useState('')
 
-  const elegirCuenta = (nombreUsuario: string) => {
-    setCuentaAbierta(nombreUsuario)
-    setPin('')
-  }
-
-  const ingresar = async (nombreUsuario: string) => {
-    await iniciarSesion(nombreUsuario, pin)
-  }
+  useEffect(() => {
+    fetch('/api/auth/cuentas')
+      .then((respuesta) => respuesta.json() as Promise<CuentaVisibleCable[]>)
+      .then(setCuentas)
+      .catch(() => setSinConexion(true))
+  }, [])
 
   return (
-    <main className="login" data-ai-id="login">
-      <h1 className="login-titulo">Mi Puestito</h1>
-      <p className="login-subtitulo">¿Con qué negocio quieres entrar?</p>
+    <main className={estilos.login} data-ai-id="login">
+      <TituloPagina>Mi Puestito</TituloPagina>
+      <p className={estilos.subtitulo}>¿Con qué negocio quieres entrar?</p>
 
-      <div className="login-cuentas">
-        {CUENTAS.map((cuenta) => (
-          <div className="card login-cuenta" key={cuenta.nombreUsuario}>
-            <button
-              type="button"
-              className="login-boton-cuenta"
-              data-ai-id={`login.cuenta-${cuenta.nombreUsuario}`}
-              onClick={() => elegirCuenta(cuenta.nombreUsuario)}
+      {sinConexion && (
+        <Aviso tipo="error" aiId="login.sin-conexion">
+          No se pudo conectar con el programa. Revisa que esté abierto.
+        </Aviso>
+      )}
+      {!cuentas && !sinConexion && <Nota>Cargando…</Nota>}
+
+      <div className={estilos.cuentas}>
+        {cuentas?.map((cuenta) => (
+          <Tarjeta key={cuenta.nombre_usuario} className={estilos.cuenta}>
+            <Boton
+              aiId={`login.cuenta-${cuenta.nombre_usuario}`}
+              variante="secundario"
+              anchoCompleto
+              onClick={() => {
+                setCuentaAbierta(cuenta.nombre_usuario)
+                setPin('')
+              }}
             >
-              {cuenta.etiqueta}
-            </button>
-            <p className="login-descripcion">{cuenta.descripcion}</p>
+              {cuenta.es_real ? `${cuenta.nombre_proyecto} (negocio real)` : cuenta.nombre_proyecto}
+            </Boton>
+            <Nota>
+              {cuenta.es_real
+                ? `Los datos reales del negocio ${cuenta.nombre_proyecto}.`
+                : 'Datos de práctica para conocer la app. PIN: 0000'}
+            </Nota>
 
-            {cuentaAbierta === cuenta.nombreUsuario && (
+            {cuentaAbierta === cuenta.nombre_usuario && (
               <form
-                className="login-formulario"
+                className={estilos.formulario}
                 onSubmit={(evento) => {
                   evento.preventDefault()
-                  void ingresar(cuenta.nombreUsuario)
+                  void iniciarSesion(cuenta.nombre_usuario, pin)
                 }}
               >
-                <label className="login-etiqueta-campo" htmlFor={`pin-${cuenta.nombreUsuario}`}>
-                  PIN
-                </label>
-                <input
-                  id={`pin-${cuenta.nombreUsuario}`}
-                  className="login-campo-pin"
-                  data-ai-id={`login.pin-${cuenta.nombreUsuario}`}
+                <Campo
+                  id={`pin-${cuenta.nombre_usuario}`}
+                  aiId={`login.pin-${cuenta.nombre_usuario}`}
+                  etiqueta="PIN"
                   type="password"
                   inputMode="numeric"
-                  value={pin}
-                  onChange={(evento) => setPin(evento.target.value)}
+                  autoComplete="current-password"
+                  valor={pin}
+                  alCambiar={setPin}
                   autoFocus
                 />
-                <button
-                  type="submit"
-                  className="btn btn-primario"
-                  data-ai-id={`login.ingresar-${cuenta.nombreUsuario}`}
-                  disabled={cargando}
+                <Boton
+                  tipo="submit"
+                  aiId={`login.ingresar-${cuenta.nombre_usuario}`}
+                  deshabilitado={cargando}
                 >
                   {cargando ? 'Ingresando…' : 'Ingresar'}
-                </button>
+                </Boton>
               </form>
             )}
-          </div>
+          </Tarjeta>
         ))}
       </div>
 
-      <div role="status" aria-live="polite">
-        {error && (
-          <p className="login-error" data-ai-id="login.error">
-            {error}
-          </p>
-        )}
-      </div>
+      {error && (
+        <Aviso tipo="error" aiId="login.error">
+          {error}
+        </Aviso>
+      )}
     </main>
   )
 }

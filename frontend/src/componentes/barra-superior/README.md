@@ -17,11 +17,11 @@ tamaño de letra.
 
 ## Qué acciones permite
 
-| Acción | Estado en Demo 1 |
-|---|---|
-| **Menú** — abrir navegación entre módulos | Muestra un aviso: se activa cuando existan más módulos |
-| **Asistente** — abrir el AI Companion | Muestra un aviso: llega con la capa de IA |
-| **Tamaño de letra** — cambiar entre los 3 niveles | Funcional y persistente por sesión |
+| Acción                                            | Estado en Demo 1                                       |
+| ------------------------------------------------- | ------------------------------------------------------ |
+| **Menú** — abrir navegación entre módulos         | Muestra un aviso: se activa cuando existan más módulos |
+| **Asistente** — abrir el AI Companion             | Muestra un aviso: llega con la capa de IA              |
+| **Tamaño de letra** — cambiar entre los 3 niveles | Funcional y persistente por sesión                     |
 
 ## Cómo interactúa la IA
 

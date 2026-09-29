@@ -21,9 +21,13 @@ describe('LimiteErrores', () => {
     vi.restoreAllMocks()
   })
 
-  /** El título se arma con varios nodos ("El módulo " + nombre + " tuvo…"). */
+  /** El título se arma con varios nodos ("El módulo " + nombre + " tuvo…"):
+   *  se busca el párrafo cuyo texto completo es el aviso, no una clase CSS. */
   const avisoDeFallo = () =>
-    screen.getByText((_, elemento) => elemento?.className === 'titulo-error')
+    screen.getByText(
+      (_, elemento) =>
+        elemento?.tagName === 'P' && /^El módulo .+ tuvo un problema$/.test(elemento.textContent ?? ''),
+    )
 
   it('muestra el módulo cuando todo va bien', () => {
     fallando = false

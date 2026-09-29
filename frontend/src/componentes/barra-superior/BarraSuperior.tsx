@@ -1,66 +1,55 @@
-import { useState } from 'react'
+import { PANTALLAS, useNavegacion } from '../../stores/navegacion'
 import { TAMANOS_LETRA, usePreferencias } from '../../stores/preferencias'
-import './BarraSuperior.css'
+import { useSesion } from '../../stores/sesion'
+import { Boton } from '../../ui/componentes'
+import { IndicadorConexion } from '../sincronizacion/EstadoSincronizacion'
+import estilos from './BarraSuperior.module.css'
 
 /**
  * Barra superior fija de toda la experiencia (Design-System.md, sección 6).
  * Izquierda: Menú y Asistente. Derecha: selector de tamaño de letra.
- * En Demo 1, Menú y Asistente aún no navegan: muestran un aviso visible.
+ * Debajo, cuando aplica: el estado de conexión y el menú desplegado.
  */
-
-const AVISOS = {
-  menu: 'El Menú de navegación se activa cuando existan más módulos (Ventas, Compras…).',
-  asistente: 'El Asistente llega con la capa de IA. Desde aquí te guiará y responderá.',
-} as const
-
-type Aviso = keyof typeof AVISOS
-
 export function BarraSuperior() {
   const tamanoLetra = usePreferencias((estado) => estado.tamanoLetra)
   const cambiarTamanoLetra = usePreferencias((estado) => estado.cambiarTamanoLetra)
-  const [avisoAbierto, setAvisoAbierto] = useState<Aviso | null>(null)
-
-  const alternarAviso = (aviso: Aviso) => {
-    setAvisoAbierto((actual) => (actual === aviso ? null : aviso))
-  }
+  const { pantalla, menuAbierto, asistenteAbierto, irA, alternarMenu, alternarAsistente } = useNavegacion()
+  const nombreProyecto = useSesion((estado) => estado.nombreProyecto)
+  const esReal = useSesion((estado) => estado.esReal)
+  const cerrarSesion = useSesion((estado) => estado.cerrarSesion)
 
   return (
-    <header className="barra-superior" data-ai-id="barra">
-      <div className="barra-fila">
-        <div className="barra-izq">
-          <button
-            type="button"
-            className="btn-barra"
-            data-ai-id="barra.menu"
-            onClick={() => alternarAviso('menu')}
-          >
+    <header className={estilos.barra} data-ai-id="barra">
+      <div className={estilos.fila}>
+        <div className={estilos.izquierda}>
+          <Boton aiId="barra.menu" variante="discreto" presionado={menuAbierto} onClick={alternarMenu}>
             Menú
-          </button>
-          <button
-            type="button"
-            className="btn-barra asistente"
-            data-ai-id="barra.asistente"
-            onClick={() => alternarAviso('asistente')}
+          </Boton>
+          <Boton
+            aiId="barra.asistente"
+            variante="ia"
+            presionado={asistenteAbierto}
+            onClick={alternarAsistente}
           >
             Asistente
-          </button>
+          </Boton>
         </div>
 
-        <div className="barra-der">
-          <div className="grupo-letra">
-            <span className="rotulo">Tamaño de letra</span>
-            <div className="opciones" role="group" aria-label="Tamaño de letra">
+        <div className={estilos.derecha}>
+          <div className={estilos.grupoLetra}>
+            <span className={estilos.rotulo}>Tamaño de letra</span>
+            <div className={estilos.opciones} role="group" aria-label="Tamaño de letra">
               {TAMANOS_LETRA.map(({ valor, etiqueta }) => (
                 <button
                   key={valor}
                   type="button"
                   data-tam={valor}
                   data-ai-id={`barra.letra-${valor}`}
-                  className={tamanoLetra === valor ? 'activo' : ''}
+                  className={`${estilos.opcionLetra} ${tamanoLetra === valor ? estilos.activo : ''}`}
                   aria-pressed={tamanoLetra === valor}
                   onClick={() => cambiarTamanoLetra(valor)}
                 >
-                  Aa<span className="nombre">{etiqueta}</span>
+                  Aa<span className={estilos.nombreLetra}>{etiqueta}</span>
                 </button>
               ))}
             </div>
@@ -68,13 +57,30 @@ export function BarraSuperior() {
         </div>
       </div>
 
-      <div role="status" aria-live="polite">
-        {avisoAbierto && (
-          <p className="barra-aviso" data-ai-id="barra.aviso">
-            {AVISOS[avisoAbierto]}
+      {menuAbierto && (
+        <nav className={estilos.menu} data-ai-id="barra.menu-abierto" aria-label="Menú principal">
+          <p className={estilos.negocio} data-ai-id="barra.negocio">
+            {esReal ? `Negocio: ${nombreProyecto}` : `${nombreProyecto}: datos de práctica`}
           </p>
-        )}
-      </div>
+          <div className={estilos.opcionesMenu}>
+            {PANTALLAS.map(({ clave, nombre }) => (
+              <Boton
+                key={clave}
+                aiId={`barra.ir-${clave}`}
+                variante={pantalla === clave ? 'primario' : 'secundario'}
+                presionado={pantalla === clave}
+                onClick={() => irA(clave)}
+              >
+                {nombre}
+              </Boton>
+            ))}
+            <Boton aiId="barra.salir" variante="discreto" onClick={cerrarSesion}>
+              Salir de este negocio
+            </Boton>
+          </div>
+        </nav>
+      )}
+      <IndicadorConexion />
     </header>
   )
 }

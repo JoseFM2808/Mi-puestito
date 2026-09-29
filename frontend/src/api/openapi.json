@@ -1,0 +1,519 @@
+{
+  "AbonoEntrada": {
+    "required": [
+      "cliente_uuid",
+      "monto",
+      "uuid"
+    ],
+    "properties": [
+      "cliente_uuid",
+      "metodo_pago",
+      "monto",
+      "ocurrido_en",
+      "uuid"
+    ]
+  },
+  "AbonoSalida": {
+    "required": [
+      "cliente_uuid",
+      "creado_en",
+      "deuda_restante",
+      "metodo_pago",
+      "monto",
+      "uuid"
+    ],
+    "properties": [
+      "avisos",
+      "cliente_uuid",
+      "creado_en",
+      "deuda_restante",
+      "metodo_pago",
+      "monto",
+      "uuid"
+    ]
+  },
+  "AjusteEntrada": {
+    "required": [
+      "contado",
+      "producto_uuid",
+      "uuid"
+    ],
+    "properties": [
+      "contado",
+      "nota",
+      "ocurrido_en",
+      "producto_uuid",
+      "uuid"
+    ]
+  },
+  "AjusteSalida": {
+    "required": [
+      "diferencia",
+      "producto"
+    ],
+    "properties": [
+      "diferencia",
+      "producto"
+    ]
+  },
+  "ClienteCambios": {
+    "required": [],
+    "properties": [
+      "limite_credito",
+      "nombre",
+      "quitar_limite",
+      "telefono"
+    ]
+  },
+  "ClienteConDeuda": {
+    "required": [
+      "creado_en",
+      "deuda",
+      "limite_credito",
+      "nombre",
+      "telefono",
+      "uuid"
+    ],
+    "properties": [
+      "creado_en",
+      "deuda",
+      "limite_credito",
+      "nombre",
+      "telefono",
+      "uuid"
+    ]
+  },
+  "ClienteEntrada": {
+    "required": [
+      "nombre",
+      "uuid"
+    ],
+    "properties": [
+      "limite_credito",
+      "nombre",
+      "ocurrido_en",
+      "telefono",
+      "uuid"
+    ]
+  },
+  "ClienteSalida": {
+    "required": [
+      "creado_en",
+      "limite_credito",
+      "nombre",
+      "telefono",
+      "uuid"
+    ],
+    "properties": [
+      "creado_en",
+      "limite_credito",
+      "nombre",
+      "telefono",
+      "uuid"
+    ]
+  },
+  "CobroEntrada": {
+    "required": [],
+    "properties": [
+      "metodo_pago",
+      "ocurrido_en"
+    ]
+  },
+  "CuentaVisible": {
+    "required": [
+      "es_real",
+      "nombre_proyecto",
+      "nombre_usuario"
+    ],
+    "properties": [
+      "es_real",
+      "nombre_proyecto",
+      "nombre_usuario"
+    ]
+  },
+  "Descuadre": {
+    "required": [
+      "producto",
+      "stock_segun_movimientos"
+    ],
+    "properties": [
+      "producto",
+      "stock_segun_movimientos"
+    ]
+  },
+  "FiarEntrada": {
+    "required": [],
+    "properties": [
+      "cliente_uuid",
+      "ocurrido_en"
+    ]
+  },
+  "HTTPValidationError": {
+    "required": [],
+    "properties": [
+      "detail"
+    ]
+  },
+  "IngresoEntrada": {
+    "required": [
+      "nombre_usuario",
+      "pin"
+    ],
+    "properties": [
+      "nombre_usuario",
+      "pin"
+    ]
+  },
+  "IngresoSalida": {
+    "required": [
+      "es_real",
+      "nombre_proyecto",
+      "proyecto",
+      "token"
+    ],
+    "properties": [
+      "es_real",
+      "nombre_proyecto",
+      "proyecto",
+      "token"
+    ]
+  },
+  "ItemEntrada": {
+    "required": [
+      "monto",
+      "nombre_producto",
+      "uuid"
+    ],
+    "properties": [
+      "cantidad",
+      "cantidad_num",
+      "monto",
+      "nombre_producto",
+      "ocurrido_en",
+      "producto_uuid",
+      "uuid"
+    ]
+  },
+  "ItemOrdenCompraSalida": {
+    "required": [
+      "cantidad",
+      "estado_recepcion",
+      "id",
+      "monto",
+      "monto_sustituto",
+      "nombre_producto",
+      "producto_sustituto"
+    ],
+    "properties": [
+      "cantidad",
+      "estado_recepcion",
+      "id",
+      "monto",
+      "monto_sustituto",
+      "nombre_producto",
+      "producto_sustituto"
+    ]
+  },
+  "ItemVentaSalida": {
+    "required": [
+      "cantidad",
+      "cantidad_num",
+      "monto",
+      "nombre_producto",
+      "producto_uuid",
+      "uuid"
+    ],
+    "properties": [
+      "cantidad",
+      "cantidad_num",
+      "monto",
+      "nombre_producto",
+      "producto_uuid",
+      "uuid"
+    ]
+  },
+  "MermaEntrada": {
+    "required": [
+      "cantidad",
+      "producto_uuid",
+      "uuid"
+    ],
+    "properties": [
+      "cantidad",
+      "nota",
+      "ocurrido_en",
+      "producto_uuid",
+      "uuid"
+    ]
+  },
+  "MovimientoSalida": {
+    "required": [
+      "creado_en",
+      "delta",
+      "motivo",
+      "nota",
+      "origen_tipo"
+    ],
+    "properties": [
+      "creado_en",
+      "delta",
+      "motivo",
+      "nota",
+      "origen_tipo"
+    ]
+  },
+  "OrdenActivaResumen": {
+    "required": [
+      "monto",
+      "nombre",
+      "tipo",
+      "uuid"
+    ],
+    "properties": [
+      "deuda_cliente",
+      "monto",
+      "nombre",
+      "tipo",
+      "uuid"
+    ]
+  },
+  "OrdenCompraSalida": {
+    "required": [
+      "estado",
+      "fecha_estimada_llegada",
+      "id",
+      "items",
+      "monto_real",
+      "monto_total",
+      "notas",
+      "proveedor_id"
+    ],
+    "properties": [
+      "estado",
+      "fecha_estimada_llegada",
+      "id",
+      "items",
+      "monto_real",
+      "monto_total",
+      "notas",
+      "proveedor_id"
+    ]
+  },
+  "PedidoPorLlegar": {
+    "required": [
+      "fecha_estimada",
+      "id",
+      "monto",
+      "proveedor"
+    ],
+    "properties": [
+      "fecha_estimada",
+      "id",
+      "monto",
+      "proveedor"
+    ]
+  },
+  "PreguntaEntrada": {
+    "required": [
+      "mensaje"
+    ],
+    "properties": [
+      "mensaje"
+    ]
+  },
+  "ProductoCambios": {
+    "required": [],
+    "properties": [
+      "codigo_barras",
+      "nombre",
+      "precio_venta",
+      "stock_minimo",
+      "tiene_vencimiento"
+    ]
+  },
+  "ProductoConEstado": {
+    "required": [
+      "bajo_minimo",
+      "codigo_barras",
+      "descuadre",
+      "nombre",
+      "precio_venta",
+      "stock_actual",
+      "stock_minimo",
+      "tiene_vencimiento",
+      "unidad",
+      "uuid"
+    ],
+    "properties": [
+      "bajo_minimo",
+      "codigo_barras",
+      "descuadre",
+      "nombre",
+      "precio_venta",
+      "stock_actual",
+      "stock_minimo",
+      "tiene_vencimiento",
+      "unidad",
+      "uuid"
+    ]
+  },
+  "ProductoEntrada": {
+    "required": [
+      "nombre",
+      "uuid"
+    ],
+    "properties": [
+      "codigo_barras",
+      "nombre",
+      "ocurrido_en",
+      "precio_venta",
+      "stock_inicial",
+      "stock_minimo",
+      "tiene_vencimiento",
+      "unidad",
+      "uuid"
+    ]
+  },
+  "ProductoSalida": {
+    "required": [
+      "codigo_barras",
+      "nombre",
+      "precio_venta",
+      "stock_actual",
+      "stock_minimo",
+      "tiene_vencimiento",
+      "unidad",
+      "uuid"
+    ],
+    "properties": [
+      "codigo_barras",
+      "nombre",
+      "precio_venta",
+      "stock_actual",
+      "stock_minimo",
+      "tiene_vencimiento",
+      "unidad",
+      "uuid"
+    ]
+  },
+  "ProveedorSalida": {
+    "required": [
+      "categoria",
+      "creado_en",
+      "empresa",
+      "id",
+      "nombre",
+      "ruc",
+      "telefono"
+    ],
+    "properties": [
+      "categoria",
+      "creado_en",
+      "empresa",
+      "id",
+      "nombre",
+      "ruc",
+      "telefono"
+    ]
+  },
+  "RespuestaSalida": {
+    "required": [
+      "respuesta"
+    ],
+    "properties": [
+      "respuesta"
+    ]
+  },
+  "ResultadoVenta": {
+    "required": [
+      "venta"
+    ],
+    "properties": [
+      "avisos",
+      "venta"
+    ]
+  },
+  "ResumenDashboard": {
+    "required": [
+      "clientes_con_fiado",
+      "fiados_por_cobrar",
+      "motivo_proyeccion",
+      "ordenes_activas",
+      "pedidos_por_llegar",
+      "proyeccion_manana",
+      "ventas_cerradas",
+      "ventas_hoy",
+      "ventas_rapidas_pendientes"
+    ],
+    "properties": [
+      "clientes_con_fiado",
+      "fiados_por_cobrar",
+      "motivo_proyeccion",
+      "ordenes_activas",
+      "pedidos_por_llegar",
+      "proyeccion_manana",
+      "secciones_no_disponibles",
+      "ventas_cerradas",
+      "ventas_hoy",
+      "ventas_rapidas_pendientes"
+    ]
+  },
+  "ValidationError": {
+    "required": [
+      "loc",
+      "msg",
+      "type"
+    ],
+    "properties": [
+      "ctx",
+      "input",
+      "loc",
+      "msg",
+      "type"
+    ]
+  },
+  "VentaEntrada": {
+    "required": [
+      "tipo",
+      "uuid"
+    ],
+    "properties": [
+      "cliente_uuid",
+      "metodo_pago",
+      "monto",
+      "nombre_orden",
+      "ocurrido_en",
+      "tipo",
+      "uuid"
+    ]
+  },
+  "VentaSalida": {
+    "required": [
+      "abierta_en",
+      "cerrada_en",
+      "cliente_nombre",
+      "cliente_uuid",
+      "estado",
+      "items",
+      "metodo_pago",
+      "monto_total",
+      "nombre_orden",
+      "tipo",
+      "uuid"
+    ],
+    "properties": [
+      "abierta_en",
+      "cerrada_en",
+      "cliente_nombre",
+      "cliente_uuid",
+      "deuda_cliente",
+      "estado",
+      "items",
+      "metodo_pago",
+      "monto_total",
+      "nombre_orden",
+      "tipo",
+      "uuid"
+    ]
+  }
+}

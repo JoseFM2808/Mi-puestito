@@ -1,54 +1,51 @@
-/* Panel del Asistente. Solo tokens de tokens.css, nada "a mano". */
+/* Panel del Asistente. CSS Module. Solo tokens. */
 
 .asistente {
   max-width: 920px;
   margin: 0 auto;
-  padding: var(--esp-3) 1.2rem;
+  padding: var(--esp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  border-bottom: 1px solid var(--borde);
 }
 
-.asistente-mensajes {
+.mensajes {
   display: flex;
   flex-direction: column;
   gap: var(--esp-2);
-  margin-bottom: var(--esp-3);
   max-height: 50vh;
   overflow-y: auto;
 }
 
-.asistente-burbuja {
-  font-size: 1.1rem;
+.burbuja {
+  font-size: var(--tam-subtitulo);
   line-height: 1.5;
-  padding: 0.7rem 1rem;
+  padding: var(--esp-2) var(--esp-3);
   border-radius: var(--radio-chico);
   max-width: 80%;
 }
 
-.asistente-burbuja-ia {
+.burbujaIa {
   background: var(--superficie);
   border: 1px solid var(--borde);
   align-self: flex-start;
 }
 
-.asistente-burbuja-operador {
+.burbujaOperador {
   background: var(--ia);
   color: var(--superficie);
   align-self: flex-end;
 }
 
-.asistente-formulario {
+.formulario {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--esp-2);
-  border-top: 1px solid var(--borde);
-  padding-top: var(--esp-3);
 }
 
-.asistente-formulario .campo-label {
-  width: 100%;
-}
-
-.asistente-formulario .campo-texto {
+.formulario > div {
   flex: 1;
-  min-width: 220px;
+  min-width: 14rem;
 }

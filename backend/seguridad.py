@@ -150,6 +150,15 @@ def verificar_credenciales(nombre_usuario: str, pin: str) -> str | None:
     return usuario["proyecto"]
 
 
+def cuentas_registradas() -> list[tuple[str, str]]:
+    """(usuario, proyecto) de cada cuenta; demo primero. Sin datos secretos."""
+    usuarios = _cargar_usuarios()
+    return sorted(
+        ((nombre, datos["proyecto"]) for nombre, datos in usuarios.items()),
+        key=lambda par: (par[0] != "demo", par[0]),
+    )
+
+
 # ---- Token de sesión ----
 # Firmado con HMAC (sin librerías externas): suficiente para una app de
 # escritorio de un solo dispositivo, que solo escucha en 127.0.0.1.

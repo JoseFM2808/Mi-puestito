@@ -26,12 +26,12 @@ usuario nunca las ingresa.
 
 ## Qué acciones permite
 
-| Acción | Estado en Demo 1 |
-|---|---|
-| Tocar una orden abierta → ir a esa venta | Card presente, sin navegación aún |
-| **Registrar venta** | Botón presente, sin destino aún |
-| **Venta rápida** | Botón presente, sin destino aún |
-| **Llegó un pedido** (checklist de recepción) | Botón presente, sin destino aún |
+| Acción                                       | Estado en Demo 1                  |
+| -------------------------------------------- | --------------------------------- |
+| Tocar una orden abierta → ir a esa venta     | Card presente, sin navegación aún |
+| **Registrar venta**                          | Botón presente, sin destino aún   |
+| **Venta rápida**                             | Botón presente, sin destino aún   |
+| **Llegó un pedido** (checklist de recepción) | Botón presente, sin destino aún   |
 
 ## Cómo interactúa la IA
 

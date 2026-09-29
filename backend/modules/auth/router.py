@@ -7,9 +7,9 @@ negocio real se crean solas en `seguridad.asegurar_usuarios_iniciales()`.
 from fastapi import APIRouter, HTTPException
 
 from proyectos import PROYECTOS
-from seguridad import DemasiadosIntentos, crear_token, verificar_credenciales
+from seguridad import DemasiadosIntentos, crear_token, cuentas_registradas, verificar_credenciales
 
-from .schemas import IngresoEntrada, IngresoSalida
+from .schemas import CuentaVisible, IngresoEntrada, IngresoSalida
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -34,3 +34,21 @@ def ingresar(datos: IngresoEntrada) -> IngresoSalida:
         nombre_proyecto=proyecto.nombre,
         es_real=proyecto.es_real,
     )
+
+
+@router.get("/cuentas", response_model=list[CuentaVisible])
+def cuentas() -> list[CuentaVisible]:
+    """Cuentas que pueden ingresar, para la pantalla de ingreso.
+
+    Así el frontend no tiene escrito en su código el nombre de ningún negocio
+    real (repo público). Nunca incluye PIN, hash ni sal.
+    """
+    return [
+        CuentaVisible(
+            nombre_usuario=usuario,
+            nombre_proyecto=PROYECTOS[proyecto].nombre,
+            es_real=PROYECTOS[proyecto].es_real,
+        )
+        for usuario, proyecto in cuentas_registradas()
+        if proyecto in PROYECTOS
+    ]

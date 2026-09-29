@@ -21,7 +21,7 @@ describe('store de preferencias — tamaño de letra', () => {
     usePreferencias.getState().cambiarTamanoLetra('grande')
     const guardado = sessionStorage.getItem('preferencias-operador')
     expect(guardado).not.toBeNull()
-    expect(JSON.parse(guardado!).state.tamanoLetra).toBe('grande')
+    expect(JSON.parse(guardado ?? '{}').state.tamanoLetra).toBe('grande')
   })
 
   it('volver a Normal quita el atributo data-letra', () => {
