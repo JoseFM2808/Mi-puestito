@@ -11,6 +11,7 @@ Reglas no negociables: offline-first; nunca acoplar a un proveedor de IA (todo p
 - [Base de datos](03-base-de-datos.md): diagrama ER y diccionario de datos (implementado y propuesto)
 - [Decisiones (ADR)](04-decisiones.md): ADR-028 en adelante, con estado Aceptada/Propuesta
 - [Deuda técnica e higiene](05-deuda-tecnica-higiene.md): deuda priorizada y estado de `.gitignore`
+- [API y MCP](06-api-mcp.md): endpoints REST por módulo, autenticación por proyecto, idempotencia y estado de MCP
 
 ## Fuentes del proyecto
 

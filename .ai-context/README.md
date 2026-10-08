@@ -10,6 +10,7 @@ Arquitectura viva de Mi Puestito para agentes de IA (Claude Code y otros). Se ve
 | `03-base-de-datos.md` | ER + diccionario de datos |
 | `04-decisiones.md` | ADRs desde el 028 |
 | `05-deuda-tecnica-higiene.md` | Deuda priorizada + estado de `.gitignore` |
+| `06-api-mcp.md` | Contrato REST por módulo, autenticación y estado de MCP |
 
 **Qué entra aquí**: solo decisiones formales de arquitectura o negocio con impacto técnico.
 **Qué no entra**: actas, acuerdos comerciales, conversaciones de aprendizaje, datos reales de clientes o ventas, secretos. Lo privado del equipo va en `privado/` (ignorado por git y vigilado por `backend/tests/test_higiene_repo.py`).
