@@ -2,17 +2,24 @@
 
 > Solo decisiones formales, técnicas o de negocio. Nada de conversaciones de aprendizaje.
 > Las decisiones 1–27 (anteriores a este registro) viven en `docs/02-arquitectura/Decisiones-Tecnicas.md`.
-> Las **Aceptadas** también se copian allí. Las **Propuestas** esperan aprobación del responsable antes de tocar código.
+> Las **Aceptadas** también se copian allí. Las **Propuestas** esperan aprobación antes de tocar código.
 
 | ADR | Fecha | Estado | Decisión |
 |---|---|---|---|
 | 028 | 2026-09-27 | Aceptada | `tzdata` y `httpx` son dependencias de runtime |
 | 029 | 2026-09-27 | Aceptada | El ejecutable empaqueta los módulos con `collect_submodules` y el humo exige `modulos_degradados == []` |
 | 030 | 2026-09-27 | Aceptada | Higiene del repo público: `.gitignore` por categorías + test que lo hace cumplir + `.ai-context/` solo técnico |
-| 031 | 2026-09-27 | Propuesta | Inventario como libro mayor de movimientos (deltas), no como stock sobreescrito |
-| 032 | 2026-09-27 | Propuesta | Cola offline idempotente: `UNIQUE(dispositivo_id, id_operacion)` |
-| 033 | 2026-09-27 | Propuesta | Contrato de dinero en JSON como string decimal + un único adaptador en el frontend |
-| 034 | 2026-09-27 | Propuesta | Minimizar datos personales en el contexto que va a proveedores de IA externos |
+| 031 | 2026-09-28 | Aceptada | Inventario como libro mayor de movimientos con incremento atómico |
+| 032 | 2026-09-28 | Aceptada | Idempotencia por `uuid` del dispositivo en cada entidad + cola FIFO en IndexedDB |
+| 033 | 2026-09-28 | Aceptada | Dinero como string decimal en el cable y céntimos enteros en el frontend |
+| 034 | 2026-09-28 | Aceptada | Seudonimizar todo lo que sale hacia un proveedor de IA |
+| 035 | 2026-09-28 | Aceptada | Dinero en céntimos enteros en la base de datos (tipos `Dinero` y `Cantidad`) |
+| 036 | 2026-10-08 | Aceptada | Proveedor de IA genérico compatible con OpenAI y orden de modelos verificado con la llave del operador |
+| 037 | 2026-10-08 | Aceptada | El Asistente sugiere acciones con una línea de texto de lista blanca; nunca las ejecuta |
+| 038 | 2026-10-08 | Aceptada | Registro opt-in y seudonimizado de intercambios para entrenar un modelo propio |
+| 039 | 2026-10-08 | Propuesta | Fine-tuning LoRA de un Gemma 4 pequeño para correr en el dispositivo |
+| 040 | 2026-09-28 | Aceptada | Estilos aislados con CSS Modules y piezas base compartidas en `src/ui` |
+| 041 | 2026-09-28 | Aceptada | Migraciones con Alembic, una base por proyecto |
 
 ---
 
@@ -38,28 +45,116 @@
   4. `.ai-context/` contiene **solo** arquitectura técnica. Lo privado va en `.ai-context/privado/` (ignorado).
 - **Implicaciones**: negocio: cumple el deber de confidencialidad de la Ley 29733 sobre datos del vendedor. Técnica: ningún secreto nuevo puede llegar a `main` sin que falle un test.
 
-## ADR-031 · Inventario como libro mayor de movimientos — Propuesta
+## ADR-031 · Inventario como libro mayor de movimientos — Aceptada
 
-- **Contexto**: el módulo Inventario (Fase 7) guardará stock. La regla actual de sincronización es *last-write-wins*. Con LWW, dos dispositivos (o la cola offline) que descuentan stock sobre la misma fila **pierden descuentos**. El patrón leer→restar→escribir en Python también pierde actualizaciones entre peticiones concurrentes.
-- **Decisión propuesta**: tabla `movimientos_inventario` de solo inserción (`delta` ±). `productos.stock_actual` es una caché que se actualiza con `stock_actual = stock_actual + :delta` en la **misma transacción** (`BEGIN IMMEDIATE` en SQLite; `SELECT … FOR UPDATE` o el incremento atómico en PostgreSQL). Una venta **nunca se rechaza** por stock negativo: se marca un "descuadre" (la venta ya ocurrió físicamente). LWW queda solo para datos maestros.
-- **Alternativas**: stock como columna con LWW (pierde datos); bloqueo optimista con `version` (rechaza ventas offline legítimas); CRDT PN-Counter (equivalente, más complejo).
-- **Implicaciones**: técnica: los movimientos son conmutativos e idempotentes, así que la sincronización es segura en cualquier orden. Negocio: la vendedora ve por qué cambió el stock (auditoría) y el conteo físico se vuelve un "ajuste".
-- **Requiere**: actualizar `docs/02-arquitectura/Sincronizacion-Offline.md` (excepción a LWW) y `docs/03-modulos/Modulo-Inventario.md`.
+- **Contexto**: la regla de sincronización era *last-write-wins*. Con LWW, dos dispositivos (o la cola offline) que
+  descuentan stock sobre la misma fila **pierden descuentos**. El patrón leer→restar→escribir en Python también pierde
+  actualizaciones entre peticiones concurrentes.
+- **Decisión**: `movimientos_inventario` de solo inserción (`delta` ±, `UNIQUE(origen_tipo, origen_ref)`).
+  `productos.stock_actual` es una caché que solo cambia `registrar_movimiento`, con `stock_actual = stock_actual + :delta`
+  en la misma transacción. Una venta **nunca se rechaza** por stock negativo: se avisa el descuadre. Ventas avisa a
+  Inventario por `eventos.py`; el suscriptor corre en un SAVEPOINT, así un fallo de Inventario no tumba la venta.
+- **Consecuencias**: sincronización segura en cualquier orden; historial de por qué cambió el stock; el conteo físico es
+  un ajuste. Verificado con 40 ventas en paralelo y control negativo (`tests/test_inventario.py`). LWW queda solo para
+  datos maestros.
 
-## ADR-032 · Cola offline idempotente — Propuesta
+## ADR-032 · Idempotencia por uuid del dispositivo — Aceptada
 
-- **Contexto**: las operaciones hechas sin red se reintentan. Sin clave de idempotencia, un reintento después de un timeout duplica la venta y el dinero en caja.
-- **Decisión propuesta**: cada operación lleva `id_operacion` (UUIDv7, ordenable por tiempo) generado en la tablet + `dispositivo_id`. El servidor guarda `(dispositivo_id, id_operacion)` como PK en `operaciones_aplicadas` dentro de la misma transacción. Un duplicado responde `200 ya_aplicada` sin efectos.
-- **Implicaciones**: "Cerrar orden" responde al instante en la tablet. El servidor es la fuente de verdad sin riesgo de doble conteo.
+- **Contexto**: las operaciones hechas sin red se reintentan; sin clave, un reintento tras un timeout duplica la venta.
+  La propuesta inicial era una tabla `operaciones_aplicadas(dispositivo_id, id_operacion)`.
+- **Decisión**: más simple y sin tabla extra. Cada entidad que crea la tablet (cliente, venta, item, abono, producto,
+  ajuste) lleva un `uuid` generado en el dispositivo, único en su tabla: crear con un uuid existente devuelve la fila
+  existente (`200`); cobrar o fiar algo ya cerrado devuelve el estado actual. El pago de un cobro reutiliza el uuid de la
+  venta. En el frontend, `sincronizacion/cola.ts` guarda cada operación en IndexedDB antes de enviarla y la procesa FIFO.
+- **Consecuencias**: "Cerrar orden" responde al instante; el servidor es la fuente de verdad sin doble conteo. Verificado
+  en navegador con el servidor apagado, recarga de página y sesión vencida.
 
-## ADR-033 · Contrato de dinero en JSON — Propuesta
+## ADR-033 · Contrato de dinero en JSON — Aceptada
 
-- **Contexto**: Pydantic v2 serializa `Decimal` como string (`"485.50"`, verificado en Staging). El frontend tipa `monto: number` en camelCase (`ventasHoy`) y el backend expone snake_case (`ventas_hoy`). Hoy no chocan solo porque el Dashboard aún usa `datos-ficticios.ts`.
-- **Decisión propuesta**: se mantiene el string decimal en el cable, porque `float` redondea céntimos. En el frontend, un único módulo `api/contrato.ts` convierte snake→camel y string→número de céntimos (entero), y todo cálculo se hace en céntimos. Tipos generados desde `/openapi.json` para no desincronizar.
-- **Implicaciones**: se eliminan errores de redondeo en caja y hay una sola frontera de conversión.
+- **Contexto**: Pydantic v2 serializa `Decimal` como string; el frontend tipaba `number` y usaba camelCase.
+- **Decisión**: en el cable, string decimal (`"485.50"`) y snake_case. `frontend/src/api/contrato.ts` es la única
+  frontera: convierte a céntimos enteros y camelCase. Las listas de campos se comparan con `openapi.json` (tests en ambos
+  lados).
+- **Consecuencias**: sin errores de redondeo en caja; un cambio de esquema que no se refleja del otro lado rompe un test.
 
-## ADR-034 · Datos personales en el contexto de IA — Propuesta
+## ADR-034 · Datos personales en el contexto de IA — Aceptada
 
-- **Contexto**: el Asistente envía `ResumenDashboard` a NVIDIA NIM (tercero, fuera del Perú), que incluye nombres de clientes con fiado y montos de deuda. Son datos personales bajo la Ley 29733.
-- **Decisión propuesta**: seudonimizar antes de salir de `ia/` (p. ej. "Cliente A") y re-identificar solo en la respuesta local. Aviso de consentimiento en el primer uso del Asistente en un proyecto `es_real`. Preferir un modelo local cuando exista (ya soportado por el `ProveedorIA` Protocol).
-- **Implicaciones**: se conserva la utilidad del Asistente sin transferir datos identificables de clientes.
+- **Contexto**: el Asistente envía el resumen de caja a un tercero (NVIDIA NIM), con nombres de clientes y deudas
+  (Ley 29733).
+- **Decisión**: `ia/privacidad.py` cambia nombres por alias ("Cliente 1", "Proveedor A") en el resumen, la pregunta y el
+  historial, y los restituye solo en la respuesta local. En negocios reales la UI lo explica en palabras simples.
+- **Consecuencias**: el Asistente sigue siendo útil (las cifras viajan) sin transferir datos identificables.
+
+## ADR-035 · Dinero en céntimos enteros en la base — Aceptada
+
+- **Contexto**: decisión aplazada en el Plan de Trabajo "hasta Ventas real": SQLite guarda `NUMERIC` como coma flotante.
+- **Decisión**: tipos `Dinero` (céntimos) y `Cantidad` (milésimas) en `database.py`: `INTEGER` en SQL, `Decimal` en
+  Python. La migración 0002 convierte los datos existentes antes de cambiar el tipo.
+- **Consecuencias**: sumas exactas también en `SUM()`. `SUM()` hereda el tipo y ya devuelve soles (se cubrió con test tras
+  detectar una doble conversión).
+
+## ADR-036 · Proveedor de IA genérico y modelos verificados — Aceptada
+
+- **Contexto**: el código estaba escrito para NVIDIA y su lista de modelos por defecto ya no existía en el catálogo
+  (verificado el 2026-10-08 con `GET /v1/models`): con una llave real, el Asistente habría fallado. Además, la meta es
+  correr un modelo muy pequeño (familia Gemma 4) en el dispositivo.
+- **Decisión**: `ia/compatible_openai.py` habla con cualquier API compatible con OpenAI (NVIDIA NIM, Ollama, llama.cpp,
+  vLLM) con `httpx`; `ia/configuracion.py` elige proveedor, URL, llave y orden de modelos por variables de entorno.
+  `python -m ia.verificar` prueba los candidatos con la llave del operador **usando el prompt real del Asistente** y
+  guarda en `ia_modelos.json` (solo nombres y latencias): primero los que responden **bien** y en ≤ 600 caracteres, del
+  más rápido al más lento; los que responden mal o devuelven su razonamiento no se usan. Los modelos de razonamiento
+  llevan un ajuste por familia (`AJUSTES_POR_FAMILIA`: Nemotron `enable_thinking: false`, gpt-oss
+  `reasoning_effort: low`) y `compatible_openai.py` descarta cualquier respuesta que sea un borrador.
+- **Medición del 2026-10-08/10 con la llave del owner**: `nemotron-3.5-lightning-30b-a3b` 1.7 s ✅,
+  `gpt-oss-20b` 2.1 s ✅; `gemma-4-31b-it` no respondió en 30 s. Sin ajustes, Nemotron devolvía su borrador en inglés
+  cortado por `max_tokens`, y gpt-oss sumó mal (S/ 75 en vez de S/ 165) con el prompt corto: por eso la verificación
+  exige la respuesta correcta y no solo velocidad.
+- **Consecuencias**: pasar a un modelo local es cambiar `MI_PUESTITO_IA_PROVEEDOR=local` y el nombre del modelo. El
+  catálogo puede cambiar sin tocar código. La llave solo vive en variables de entorno. Gemma 4 queda de respaldo hasta
+  que responda a tiempo (sigue siendo la familia objetivo para el modelo local).
+
+## ADR-037 · Acciones sugeridas por el Asistente — Aceptada
+
+- **Contexto**: la Fase 6 pide que el Asistente guíe y navegue la UI, pero sin ejecutar nada por el operador.
+- **Decisión**: el modelo termina con `ACCION: ir_a <pantalla>`; `ia/acciones.py` acepta solo `caja`, `ventas`, `fiados`
+  (máximo 2) y el frontend los muestra como botones con texto completo. Se prefirió una línea de texto a *tool calling*:
+  los modelos muy pequeños la siguen mejor y es trivial de enseñar con fine-tuning.
+  Red de seguridad (2026-10-10): si el modelo no escribe la línea pero dice "ve a la pantalla fiados", igual se ofrece
+  el botón; Nemotron olvidaba el formato y los modelos pequeños lo harán más.
+- **Consecuencias**: el modelo no puede inducir acciones fuera de la lista; ampliar el catálogo es agregar entradas a
+  `PANTALLAS` y al prompt.
+
+## ADR-038 · Registro para entrenar un modelo propio — Aceptada
+
+- **Contexto**: para que un Gemma pequeño en la tablet responda como el Asistente hacen falta ejemplos reales de uso.
+- **Decisión**: `ia/registro.py` guarda, solo si `MI_PUESTITO_IA_REGISTRO` lo activa (`demo` = solo práctica; `todos`
+  requiere consentimiento del vendedor), cada intercambio en formato chat (system/user/assistant) **ya seudonimizado**,
+  más la valoración "Me sirvió" / "No me sirvió". Vive en la carpeta de datos (`*.jsonl`, ignorado y vigilado).
+- **Consecuencias**: dataset listo para SFT sin datos personales. Staging lo activa en modo `demo`.
+
+## ADR-039 · Fine-tuning de un Gemma 4 pequeño en el dispositivo — Propuesta
+
+- **Contexto**: el puesto puede no tener red; el Asistente hoy la necesita.
+- **Propuesta**: con el dataset de ADR-038 (filtrado por valoraciones positivas), entrenar un LoRA sobre la variante más
+  pequeña de Gemma 4 disponible, cuantizarlo (GGUF de 4 bits) y servirlo con llama.cpp u Ollama mediante
+  `MI_PUESTITO_IA_PROVEEDOR=local`. Evaluar contra un set fijo de preguntas (cifras exactas, uso correcto de `ACCION`,
+  sin inventar) antes de reemplazar a la nube.
+- **Pendiente de decidir**: tamaño mínimo aceptable en la tablet objetivo, licencia del modelo y dónde se entrena.
+
+## ADR-040 · Estilos aislados con CSS Modules — Aceptada
+
+- **Contexto**: la Fase 2 exigía decidir "CSS Modules o prefijo obligatorio": `Dashboard.css` declaraba `.card` y `.btn`
+  globales y `Login.css` dependía de ellos.
+- **Decisión**: CSS Modules en todos los módulos y piezas base compartidas (`Boton`, `Campo`, `Monto`, `Aviso`,
+  `Tarjeta`) en `frontend/src/ui/`, con `aiId` obligatorio por tipo. Un test impide CSS global nuevo y colores escritos a
+  mano.
+- **Consecuencias**: un módulo ya no puede reestilar a otro; la regla "texto sobre íconos" y el tamaño táctil viven en un
+  solo lugar.
+
+## ADR-041 · Migraciones con Alembic, una base por proyecto — Aceptada
+
+- **Contexto**: `create_all` no sirve cuando hay datos reales que preservar.
+- **Decisión**: `backend/migraciones/` con un historial único para todos los módulos; `ejecutar.migrar()` corre al
+  arrancar en cada base, marca en 0001 las bases creadas antes de Alembic y apaga las claves foráneas durante la
+  migración (el modo batch de SQLite recrea tablas y, con FK activas, dispararía `ON DELETE CASCADE`).
+- **Consecuencias**: verificado sobre la carpeta de datos del `.exe` anterior: migra sin perder items.

@@ -62,8 +62,25 @@ Copiarla a `config/.env.staging` (ignorado por git) y arrancar con
 
 | Variable | Default | Para qué |
 |---|---|---|
-| `MI_PUESTITO_BD` | `sqlite:///./mi_puestito.db` | URL de la base de datos (PostgreSQL en nube) |
+| `MI_PUESTITO_BD` | un SQLite por proyecto | URL de la base de datos (PostgreSQL en nube) |
+| `MI_PUESTITO_DATOS` | carpeta del backend / `%LOCALAPPDATA%\MiPuestito` | Dónde se guardan los datos (Staging: fuera del repo) |
 | `MI_PUESTITO_ORIGENES` | `http://localhost:5173,http://127.0.0.1:5173` | Orígenes permitidos por CORS |
+| `MI_PUESTITO_ENTORNO` | `local` | `production` exige `MI_PUESTITO_SECRETO` de 32+ caracteres |
+| `NVIDIA_API_KEY` | — | Llave del Asistente (NVIDIA NIM). Solo en variables de entorno |
+| `MI_PUESTITO_IA_PROVEEDOR` | `nvidia` | `local` para Ollama / llama.cpp |
+
+Todas las de IA están explicadas en `backend/ia/configuracion.py`.
+
+## Asistente con IA (Staging)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\staging-con-ia.ps1
+```
+
+La ventana pide la API Key de NVIDIA sin mostrarla (vive solo en memoria, o en tu usuario de
+Windows si lo eliges), verifica qué modelos responden **bien** con esa llave y arranca la app en
+`http://127.0.0.1:8765` con datos separados de los reales. Entra con la cuenta **Demo** (PIN 0000)
+y toca **Asistente**. Los nombres de clientes se cambian por códigos antes de salir hacia la IA.
 
 ## Estructura
 

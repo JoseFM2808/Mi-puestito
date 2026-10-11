@@ -49,6 +49,9 @@ backend/usuarios.json
 *.sql.gz
 backups/
 
+# ---- Registro de la IA para fine-tuning (ADR-038): vive en el dispositivo ----
+*.jsonl
+
 # ---- Datos de negocio / clientes (nunca públicos) ----
 data/raw/
 data/processed/

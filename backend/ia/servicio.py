@@ -1,76 +1,103 @@
 """Orquestación del Asistente: arma el contexto, prueba modelos por prioridad
-de velocidad y devuelve la primera respuesta que llegue a tiempo.
+y devuelve la primera respuesta que llegue a tiempo.
 
-Prioridad por velocidad: se intenta primero el modelo más chico/rápido; si
-falla o tarda más que `tiempo_limite`, se prueba el siguiente. El operador
-del puesto necesita respuestas rápidas mientras atiende clientes — un modelo
-grande que tarda 20 segundos no sirve aunque responda mejor.
+El operador atiende clientes mientras pregunta: un modelo que tarda demasiado
+no sirve aunque responda mejor. Cada modelo tiene `tiempo_limite` segundos;
+si falla o se pasa, se prueba el siguiente. El orden lo da `configuracion.py`
+(medido con `python -m ia.verificar`).
 
-Los identificadores de modelo son del catálogo de NVIDIA NIM
-(build.nvidia.com) y son configurables por variable de entorno porque ese
-catálogo cambia con el tiempo; no dependas de que esta lista por defecto siga
-existiendo tal cual — conviene confirmarla en el catálogo antes de producción.
+Este archivo no sabe qué proveedor hay detrás (AGENTS.md): habla con
+cualquier API compatible con OpenAI a través de `compatible_openai.py`.
 """
 
-import os
+from dataclasses import dataclass, field
 
-from .nvidia import ProveedorNvidia
+from . import configuracion
+from .acciones import PANTALLAS, extraer
+from .compatible_openai import ProveedorCompatibleOpenAI
 
-# De más rápido/chico a más grande/capaz. Ajustable con NVIDIA_MODELOS_PRIORIDAD
-# (nombres separados por coma) sin tocar código.
-MODELOS_PRIORIDAD_DEFECTO = [
-    "meta/llama-3.2-3b-instruct",
-    "meta/llama-3.1-8b-instruct",
-    "mistralai/mixtral-8x22b-instruct-v0.1",
-]
-
-TIEMPO_LIMITE_SEGUNDOS = float(os.environ.get("MI_PUESTITO_IA_TIMEOUT", "8"))
+# Lo que el Asistente sabe de la app, para guiar al operador (Fase 6:
+# "los MD de módulos como contexto en runtime", en versión compacta).
+GUIA_APP = """\
+- Caja de hoy: cuánto se vendió hoy, órdenes abiertas, fiados por cobrar, ventas rápidas por \
+completar y pedidos de proveedores por llegar. "Mañana necesitas en caja" es lo que hay que \
+pagar por pedidos que llegan mañana.
+- Ventas: "Nueva orden" abre una orden (por ejemplo, una mesa que sigue pidiendo). Se agregan \
+productos con su monto y se cierra con "Cobrar en efectivo", "Cobrar con Yape o Plin" o "Fiar a \
+un cliente". "Venta rápida" registra solo el monto cobrado; el detalle se completa después en \
+"Ventas rápidas por completar". Todo funciona aunque no haya internet.
+- Fiados: quién debe y cuánto. "Registrar un pago" anota lo que el cliente abona."""
 
 PROMPT_SISTEMA = """Eres el Asistente de Mi Puestito, una app para vendedores \
-informales en Perú. Responde SIEMPRE en español, en frases cortas y simples, \
-sin tecnicismos: quien te lee puede tener baja fluidez lectora. Nunca uses \
-solo un color o un ícono para comunicar algo, siempre acompaña con palabras.
+informales en Perú. Responde SIEMPRE en español peruano sencillo, en 1 a 4 frases \
+cortas, sin tecnicismos: quien te lee puede tener baja fluidez lectora. Los montos \
+van en soles con el formato S/ 12.50.
 
-Este es el estado actual del negocio ("Caja de hoy"), en formato de datos:
+Cómo funciona la app:
+{guia}
+
+Estado actual del negocio, en formato de datos (es la única fuente de cifras):
 {contexto}
 
-Si te preguntan algo que no está en esta información, dilo con honestidad y \
-sugiere en qué parte de la app podría revisarlo. No inventes cifras."""
+Reglas:
+- No inventes cifras ni nombres. Si algo no está en los datos, dilo y sugiere dónde revisarlo.
+- Los clientes y proveedores aparecen con códigos ("Cliente 1", "Proveedor A"). Escríbelos sin \
+artículo: di "Cliente 1 debe", no "el Cliente 1 debe".
+- Tú no registras ventas ni cobras: solo explicas y guías. Nunca digas que hiciste algo en la app.
+- Si conviene que el operador vaya a una pantalla, agrega al final UNA línea exacta:
+ACCION: ir_a <pantalla>
+donde <pantalla> es una de: {pantallas}. Si no hace falta, no agregues esa línea."""
+
+MAX_TURNOS_PREVIOS = 6
 
 
 class AsistenteNoDisponible(Exception):
-    """El Asistente no pudo responder (sin llave configurada, o todos los
-    modelos fallaron o tardaron demasiado)."""
+    """El Asistente no pudo responder (sin configurar, o todos los modelos
+    fallaron o tardaron demasiado)."""
 
 
-def _modelos_por_prioridad() -> list[str]:
-    configurados = os.environ.get("NVIDIA_MODELOS_PRIORIDAD")
-    if configurados:
-        return [modelo.strip() for modelo in configurados.split(",") if modelo.strip()]
-    return MODELOS_PRIORIDAD_DEFECTO
+@dataclass
+class RespuestaIA:
+    texto: str
+    modelo: str
+    acciones: list[dict[str, str]] = field(default_factory=list)
 
 
-async def preguntar(mensaje_usuario: str, contexto_json: str) -> str:
-    api_key = os.environ.get("NVIDIA_API_KEY")
-    if not api_key:
+def armar_mensajes(
+    mensaje: str, contexto_json: str, historial: list[tuple[str, str]]
+) -> list[dict[str, str]]:
+    sistema = PROMPT_SISTEMA.format(guia=GUIA_APP, contexto=contexto_json, pantallas=", ".join(PANTALLAS))
+    mensajes = [{"role": "system", "content": sistema}]
+    for rol, texto in historial[-MAX_TURNOS_PREVIOS:]:
+        mensajes.append({"role": "assistant" if rol == "asistente" else "user", "content": texto})
+    mensajes.append({"role": "user", "content": mensaje})
+    return mensajes
+
+
+async def preguntar(
+    mensaje: str, contexto_json: str, historial: list[tuple[str, str]] | None = None
+) -> RespuestaIA:
+    config = configuracion.leer()
+    if not config.lista:
         raise AsistenteNoDisponible(
             "El Asistente todavía no está configurado en esta computadora "
             "(falta la variable de entorno NVIDIA_API_KEY)."
         )
 
-    proveedor = ProveedorNvidia(api_key)
-    mensajes = [
-        {"role": "system", "content": PROMPT_SISTEMA.format(contexto=contexto_json)},
-        {"role": "user", "content": mensaje_usuario},
-    ]
+    proveedor = ProveedorCompatibleOpenAI(config.url_base, config.api_key)
+    mensajes = armar_mensajes(mensaje, contexto_json, historial or [])
 
     ultimo_error: Exception | None = None
-    for modelo in _modelos_por_prioridad():
+    for modelo in config.modelos:
         try:
-            return await proveedor.responder(mensajes, modelo, TIEMPO_LIMITE_SEGUNDOS)
+            texto = await proveedor.responder(
+                mensajes, modelo, config.tiempo_limite, configuracion.ajustes_para(modelo)
+            )
         except Exception as error:  # noqa: BLE001 — se prueba el siguiente modelo
             ultimo_error = error
             continue
+        limpio, acciones = extraer(texto)
+        return RespuestaIA(texto=limpio or texto, modelo=modelo, acciones=acciones)
 
     raise AsistenteNoDisponible(
         "El Asistente no pudo responder ahora mismo. Intenta de nuevo en un momento."

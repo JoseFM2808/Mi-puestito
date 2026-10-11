@@ -23,7 +23,7 @@ PATRONES_PROHIBIDOS = [
     "*.db", "*.db-journal", "*.db-wal", "*.sqlite", "*.sqlite3", "*.dump",
     "docs/meetings/*", "docs/privado/*", "docs/acuerdos/*", ".ai-context/privado/*",
     "*.private.md", "*-privado.md",
-    "*.log", "*puerto.txt",
+    "*.log", "*puerto.txt", "*.jsonl",
     ".claude/settings.local.json", ".obsidian/workspace*.json",
     "data/raw/*", "data/processed/*", "data/vector_store/*",
 ]

@@ -32,6 +32,18 @@
       "uuid"
     ]
   },
+  "AccionSugerida": {
+    "required": [
+      "etiqueta",
+      "pantalla",
+      "tipo"
+    ],
+    "properties": [
+      "etiqueta",
+      "pantalla",
+      "tipo"
+    ]
+  },
   "AjusteEntrada": {
     "required": [
       "contado",
@@ -318,6 +330,7 @@
       "mensaje"
     ],
     "properties": [
+      "historial",
       "mensaje"
     ]
   },
@@ -418,9 +431,14 @@
   },
   "RespuestaSalida": {
     "required": [
+      "id_respuesta",
+      "modelo",
       "respuesta"
     ],
     "properties": [
+      "acciones",
+      "id_respuesta",
+      "modelo",
       "respuesta"
     ]
   },
@@ -458,6 +476,16 @@
       "ventas_rapidas_pendientes"
     ]
   },
+  "TurnoPrevio": {
+    "required": [
+      "rol",
+      "texto"
+    ],
+    "properties": [
+      "rol",
+      "texto"
+    ]
+  },
   "ValidationError": {
     "required": [
       "loc",
@@ -470,6 +498,16 @@
       "loc",
       "msg",
       "type"
+    ]
+  },
+  "ValoracionEntrada": {
+    "required": [
+      "id_respuesta",
+      "util"
+    ],
+    "properties": [
+      "id_respuesta",
+      "util"
     ]
   },
   "VentaEntrada": {

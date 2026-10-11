@@ -25,3 +25,11 @@
 
 - Un producto ↔ uno o más proveedores.
 - Al crear una orden, el sistema sugiere qué pedir a ese proveedor según stock bajo.
+
+## Estado
+
+- Fase: **2 del producto** (base técnica adelantada).
+- **Avance:** backend completo como libro mayor de movimientos (decisión 31 de [[Decisiones-Tecnicas]]): productos,
+  stock que se descuenta solo al vender con `producto_uuid` (si [[Modulo-Ventas]] lo envía), conteo físico, mermas,
+  descuadres y conciliación. Ver `backend/modules/inventario/README.md`.
+- **Pendiente:** pantalla, alertas de vencimiento, costo desde la última compra y sugerencia de pedido por stock bajo.

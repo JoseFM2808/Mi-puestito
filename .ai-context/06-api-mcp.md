@@ -1,6 +1,6 @@
 # 06 · API y MCP
 
-> Contrato HTTP del backend (FastAPI) y estado de MCP. Última revisión: 2026-10-04.
+> Contrato HTTP del backend (FastAPI) y estado de MCP. Última revisión: 2026-10-08.
 > Fuente de verdad: `backend/main.py`, `backend/seguridad.py`, `backend/database.py` y `backend/modules/*/router.py`.
 > Esquemas: `frontend/src/api/openapi.json`, exportado por `backend/exportar_openapi.py` y vigilado por
 > `backend/tests/test_contrato.py`. Con el servidor en marcha, el OpenAPI completo está en `/docs` y `/openapi.json`.
@@ -46,7 +46,7 @@ sequenceDiagram
 - **Paginación:** `limite` y `desde` en los listados (por defecto 50, máximo 200; productos: 100 y 500).
 - **Errores:** `401` sesión, `422` validación de Pydantic, `429` intentos, `503` Asistente no disponible. Las reglas de
   negocio devuelven el código que fija `servicio.py` (`ErrorDeVenta`, `ErrorDeInventario`) con un `detail` legible.
-- **Montos:** en soles; el formato JSON del dinero es la ADR-033 (Propuesta).
+- **Montos:** string decimal en soles (`"485.50"`); el frontend los convierte a céntimos en `api/contrato.ts` (ADR-033).
 
 ## 3. Endpoints REST
 
@@ -112,16 +112,29 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 
 | Método | Ruta | Entrada | Respuesta | Notas |
 |---|---|---|---|---|
-| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje}` (1–500 caracteres) | `RespuestaSalida {respuesta}` | Responde con el mismo resumen que ve el operador. Seudonimiza nombres antes de salir al proveedor y los restituye en la respuesta (D-05, ADR-034). `503` si no hay proveedor configurado |
+| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a, pantalla, etiqueta}], id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta e historial antes de salir al proveedor y restituye los nombres en la respuesta (ADR-034). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
+| POST | `/api/asistente/valoracion` | `ValoracionEntrada {id_respuesta, util}` | `204` | "Me sirvió" / "No me sirvió". Se guarda solo si el registro está activo (ADR-038) |
 
-## 4. MCP
+## 4. Proveedor de IA (salida del backend)
 
-**N/A por ahora.** Mi Puestito no expone un servidor MCP. El Asistente habla con el modelo a través de la capa de
-abstracción `backend/ia/` (`proveedor.py`, con NVIDIA NIM implementado en `nvidia.py`), de modo que nunca se acopla a un
-proveedor. Si se agrega un adaptador MCP, debe construirse sobre los mismos servicios de los módulos (no duplicar reglas),
-heredar la autenticación por proyecto y documentarse aquí con el esquema de cada herramienta.
+No es un endpoint de Mi Puestito, sino lo que el backend consume (ADR-036):
 
-## 5. Cómo se mantiene este contrato
+| Qué | Valor |
+|---|---|
+| Protocolo | `POST {MI_PUESTITO_IA_URL}/chat/completions`, compatible con OpenAI (`model`, `messages`, `max_tokens` 450, `temperature` 0.3) |
+| NVIDIA NIM (hoy) | `https://integrate.api.nvidia.com/v1`, `Authorization: Bearer $NVIDIA_API_KEY` |
+| Local (futuro) | `MI_PUESTITO_IA_PROVEEDOR=local` → `http://127.0.0.1:11434/v1` (Ollama) o la URL de llama.cpp |
+| Orden de modelos | `MI_PUESTITO_IA_MODELOS` > `ia_modelos.json` (de `python -m ia.verificar`) > lista por defecto |
+| Ajustes por familia | Nemotron: `chat_template_kwargs: {enable_thinking: false}` · gpt-oss: `reasoning_effort: low` (`ia/configuracion.py`) |
+| Respuesta | Se quita `<think>…</think>` y el markdown en negrita; si el contenido es un borrador de razonamiento se descarta y se prueba el siguiente modelo; las líneas `ACCION: ir_a <pantalla>` (o la mención "pantalla fiados") se convierten en `acciones` |
+
+## 5. MCP
+
+**N/A por ahora.** Mi Puestito no expone un servidor MCP. Si se agrega un adaptador MCP, debe construirse sobre los
+mismos servicios de los módulos (no duplicar reglas), heredar la autenticación por proyecto y documentarse aquí con el
+esquema de cada herramienta.
+
+## 6. Cómo se mantiene este contrato
 
 1. Cambia un esquema o una ruta en `backend/modules/<modulo>/`.
 2. `cd backend && python exportar_openapi.py` actualiza `frontend/src/api/openapi.json`.

@@ -1,12 +1,11 @@
 # 03 · Base de datos
 
-> Modelo entidad-relación y diccionario de datos. Última revisión: 2026-09-27.
-> Fuente de verdad del esquema: `backend/modules/*/models.py`. Tipos: SQLAlchemy 2.
-> Un archivo SQLite **por proyecto** (`mi_puestito_demo.db`, `mi_puestito_anita.db`); mismo esquema en cada uno.
+> Modelo entidad-relación y diccionario de datos. Última revisión: 2026-10-08.
+> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0003).
+> Un archivo SQLite **por proyecto** (`mi_puestito_demo.db`, `mi_puestito_<real>.db`), mismo esquema en cada uno.
+> `backend/tests/test_migraciones.py` falla si un modelo cambia sin su migración.
 
 ## 1. Diagrama ER
-
-Las entidades marcadas `PROPUESTO` no existen todavía (ADR-031, ADR-032).
 
 ```mermaid
 erDiagram
@@ -16,41 +15,46 @@ erDiagram
     VENTAS ||--o{ PAGOS : "cascade delete"
     PROVEEDORES ||--o{ ORDENES_COMPRA : "emite"
     ORDENES_COMPRA ||--o{ ITEMS_ORDEN_COMPRA : "cascade delete"
-    PRODUCTOS ||--o{ MOVIMIENTOS_INVENTARIO : "PROPUESTO: libro mayor"
-    PRODUCTOS |o--o{ ITEMS_VENTA : "PROPUESTO: producto_id opcional"
-    PRODUCTOS |o--o{ ITEMS_ORDEN_COMPRA : "PROPUESTO: producto_id opcional"
-    OPERACIONES_APLICADAS ||--o| VENTAS : "PROPUESTO: idempotencia"
+    PRODUCTOS ||--o{ MOVIMIENTOS_INVENTARIO : "libro mayor"
+    PRODUCTOS |o..o{ ITEMS_VENTA : "producto_uuid, SIN clave foránea"
 
     CLIENTES {
         int id PK
+        string uuid UK "del dispositivo"
         string nombre "idx"
-        string telefono "PII"
-        numeric limite_credito "NULL = libre"
+        string telefono "dato personal"
+        int limite_credito "céntimos; NULL = libre"
         datetime creado_en "UTC"
+        datetime actualizado_en "UTC; LWW"
     }
     VENTAS {
         int id PK
+        string uuid UK "del dispositivo"
         enum tipo "orden_activa|fiado|venta_rapida"
         int cliente_id FK "obligatorio si fiado"
         string nombre_orden
-        enum estado "abierta|pagada_cerrada|pendiente_formalizar"
-        numeric monto_total "= suma items (servidor)"
+        enum estado "abierta|pagada_cerrada|fiada|pendiente_formalizar"
+        int monto_total "céntimos; Σ items (servidor)"
         enum metodo_pago "efectivo|yape_plin"
         datetime abierta_en "UTC"
         datetime cerrada_en "UTC"
     }
     ITEMS_VENTA {
         int id PK
+        string uuid UK
         int venta_id FK
         string nombre_producto
         string cantidad "texto libre"
-        numeric monto
+        int monto "céntimos"
+        string producto_uuid "opcional, idx"
+        int cantidad_num "milésimas"
     }
     PAGOS {
         int id PK
+        string uuid UK
         int venta_id FK "nullable"
         int cliente_id FK "nullable; uno de los dos"
-        numeric monto
+        int monto "céntimos, > 0"
         enum metodo_pago
         datetime creado_en "UTC"
     }
@@ -68,8 +72,8 @@ erDiagram
         int proveedor_id FK
         enum estado "borrador..cerrada"
         date fecha_estimada_llegada
-        numeric monto_total
-        numeric monto_real "tras checklist"
+        int monto_total "céntimos"
+        int monto_real "céntimos, tras checklist"
         text notas
         datetime creado_en
         datetime actualizado_en
@@ -79,67 +83,77 @@ erDiagram
         int orden_compra_id FK
         string nombre_producto
         string cantidad
-        numeric monto
+        int monto "céntimos"
         enum estado_recepcion "pendiente|recibido|no_recibido|cambiado"
         string producto_sustituto
-        numeric monto_sustituto
+        int monto_sustituto "céntimos"
     }
     PRODUCTOS {
         int id PK
+        string uuid UK
         string nombre UK
         string codigo_barras UK "nullable"
         enum unidad "unidad|kg|litro"
-        numeric precio_venta
-        numeric stock_actual "caché de suma movimientos"
+        int precio_venta "céntimos"
+        int stock_actual "milésimas; caché de Σ movimientos"
+        int stock_minimo "milésimas"
         bool tiene_vencimiento
+        datetime creado_en
+        datetime actualizado_en
     }
     MOVIMIENTOS_INVENTARIO {
         int id PK
         int producto_id FK
-        numeric delta "+ compra, − venta, ± ajuste"
-        enum motivo "compra|venta|ajuste|merma"
-        string origen_tipo "venta|orden_compra|conteo"
-        int origen_id
-        string id_operacion "UUIDv7 del dispositivo"
-        datetime creado_en "UTC"
-    }
-    OPERACIONES_APLICADAS {
-        string dispositivo_id PK
-        string id_operacion PK
-        string tipo
-        datetime aplicada_en
+        int delta "milésimas, distinto de 0"
+        enum motivo "venta|anulacion_venta|compra|ajuste|merma"
+        string origen_tipo "item_venta|ajuste|merma|stock_inicial…"
+        string origen_ref "uuid del origen"
+        string nota
+        datetime creado_en "UTC, idx"
     }
 ```
 
-## 2. Identidad de usuarios (fuera de la BD)
+## 2. Fuera de la base de datos
 
-Los usuarios **no** son una tabla. Viven en `usuarios.json`, en la carpeta de datos (`rutas.ruta_usuarios()`): `{usuario: {proyecto, sal, pin_hash}}`. Hay un usuario por proyecto. El archivo está en `.gitignore` y lo vigila `test_higiene_repo.py`.
+| Qué | Dónde | Contenido | Protección |
+|---|---|---|---|
+| Usuarios | `usuarios.json` en la carpeta de datos | `{usuario: {proyecto, sal, pin_hash}}` | `.gitignore` + `test_higiene_repo.py` |
+| Orden de modelos de IA | `ia_modelos.json` en la carpeta de datos | Nombres de modelos, latencias, fecha. **Nunca la llave** | Se regenera con `python -m ia.verificar` |
+| Registro para fine-tuning | `ia_registro_<proyecto>.jsonl` en la carpeta de datos | Intercambios en formato chat, seudonimizados, y valoraciones (ADR-038) | Opt-in; `*.jsonl` ignorado y vigilado |
+| Cola offline | IndexedDB `mi-puestito-<proyecto>` en el navegador | `operaciones`, `ventasAbiertas`, `clientes`, `instantaneas` | Por proyecto; vive en el dispositivo |
 
 ## 3. Diccionario de datos
 
-| Tabla.columna | Tipo | Nulo | Restricción / índice | Significado |
+| Tabla.columna | Tipo SQL | Nulo | Restricción / índice | Significado |
 |---|---|---|---|---|
-| `clientes.nombre` | VARCHAR(120) | no | `ix` | Búsqueda al registrar fiado |
+| `*.uuid` | VARCHAR(36) | no | `uq_<tabla>_uuid` | Identidad pública y clave de idempotencia (ADR-032) |
+| `clientes.nombre` | VARCHAR(120) | no | `ix_clientes_nombre` | Búsqueda al fiar |
 | `clientes.telefono` | VARCHAR(20) | sí | — | **Dato personal** (Ley 29733) |
-| `clientes.limite_credito` | NUMERIC(10,2) | sí | — | NULL = crédito libre |
-| `ventas.tipo` | VARCHAR enum | no | `ix_ventas_tipo_cliente` | Tipo de venta |
-| `ventas.cliente_id` | INT FK→clientes | sí | `ck_fiado_requiere_cliente` | Obligatorio en fiado |
-| `ventas.estado` | VARCHAR enum | no | `ix_ventas_estado_abierta_en` | Estado del ciclo |
-| `ventas.monto_total` | NUMERIC(10,2) | no | default 0 | Σ items; lo escribe el servidor |
-| `ventas.abierta_en` | `FechaHoraUTC` | no | índice compuesto | Siempre UTC con zona |
-| `items_venta.venta_id` | INT FK | no | `ON DELETE CASCADE`, `ix` | — |
-| `items_venta.cantidad` | VARCHAR(60) | sí | — | Texto libre ("2 packs"); sin inventario |
-| `pagos.venta_id` / `cliente_id` | INT FK | sí | `ck_pago_tiene_destino` | Al menos uno |
-| `proveedores.ruc` | VARCHAR(11) | sí | `UNIQUE` | Evita duplicados al autorregistrarse |
-| `ordenes_compra.estado` + `fecha_estimada_llegada` | enum + DATE | — | `ix_ordenes_estado_llegada` | Proyección "Mañana necesitas en caja" |
-| `ordenes_compra.monto_real` | NUMERIC(10,2) | sí | — | Recalculado tras checklist |
-| `movimientos_inventario.(producto_id)` | INT FK | no | `ix` | **PROPUESTO** |
-| `movimientos_inventario.delta` | NUMERIC(12,3) | no | `CHECK delta <> 0` | **PROPUESTO**. Admite kg con 3 decimales |
-| `operaciones_aplicadas.(dispositivo_id,id_operacion)` | VARCHAR | no | `PRIMARY KEY` compuesta | **PROPUESTO**. Idempotencia de la cola offline |
+| `clientes.limite_credito` | INTEGER | sí | — | Céntimos; NULL = crédito libre. Superarlo avisa, no bloquea |
+| `ventas.estado` | VARCHAR enum | no | `ix_ventas_estado_abierta_en`, `ix_ventas_estado_cerrada_en` | Ciclo de la venta |
+| `ventas.cliente_id` | INT FK | sí | `ck_fiado_requiere_cliente` | Obligatorio en fiado |
+| `ventas.monto_total` | INTEGER | no | `ck_venta_monto_no_negativo` | Céntimos. Orden/fiado: Σ items; venta rápida: lo cobrado |
+| `items_venta.monto` | INTEGER | no | `ck_item_venta_monto_no_negativo` | Céntimos |
+| `items_venta.producto_uuid` | VARCHAR(36) | sí | `ix_items_venta_producto_uuid` | Enlace blando a Inventario: sin FK entre módulos |
+| `items_venta.cantidad_num` | INTEGER | sí | — | Milésimas; lo que se descuenta del stock |
+| `pagos.venta_id` / `cliente_id` | INT FK | sí | `ck_pago_tiene_destino` | Pago de venta o abono a cuenta |
+| `pagos.monto` | INTEGER | no | `ck_pago_monto_positivo` | Céntimos |
+| `proveedores.ruc` | VARCHAR(11) | sí | `uq_proveedores_ruc` | Evita duplicados al autorregistrarse |
+| `ordenes_compra.(estado, fecha_estimada_llegada)` | enum + DATE | — | `ix_ordenes_estado_llegada` | "Mañana necesitas en caja" |
+| `productos.stock_actual` | INTEGER | no | — | Milésimas. Solo lo cambia `registrar_movimiento` (incremento atómico) |
+| `movimientos_inventario.(origen_tipo, origen_ref)` | VARCHAR | no | `uq_movimiento_origen` | Un origen mueve el stock una sola vez |
+| `movimientos_inventario.delta` | INTEGER | no | `ck_movimiento_delta_no_cero` | Milésimas, ± |
 
 ## 4. Convenciones
 
-- **Dinero**: `NUMERIC(10,2)` + `Decimal` en Python. En JSON viaja como **string decimal** (`"485.50"`, comportamiento de Pydantic v2). El frontend lo convierte en un único adaptador (ADR-033).
-- **Fechas**: `FechaHoraUTC` (UTC con zona). La zona `America/Lima` se aplica solo al presentar (`fechas.py`).
-- **Migraciones**: hoy `create_all`. Alembic entra **antes** de la primera tabla nueva con datos reales en `anita` (deuda D-03).
-- **Sin FK entre módulos**: Ventas y Compras no dependen de Inventario. `producto_id` será **nullable**.
+- **Dinero:** columnas `INTEGER` en céntimos vía el tipo `Dinero` (ADR-035); en Python es `Decimal`, en JSON un string
+  decimal (`"485.50"`), en el frontend céntimos enteros. `SUM()` hereda el tipo: ya devuelve soles.
+- **Cantidades:** tipo `Cantidad`, milésimas enteras (kg con 3 decimales).
+- **Fechas:** `FechaHoraUTC` (UTC con zona). `America/Lima` solo al presentar o al definir "hoy".
+- **Nombres de índices y únicos:** convención en `Base.metadata` (`ix_…`, `uq_<tabla>_<columna>`), para que Alembic pueda
+  migrarlos.
+- **Migraciones:** `backend/migraciones/ejecutar.py` migra cada proyecto al arrancar. Una base sin `alembic_version`
+  (creada con `create_all` en la Demo 1) se marca en 0001. Las claves foráneas se apagan durante la migración para que
+  el modo batch de SQLite no dispare `ON DELETE CASCADE`, y `PRAGMA foreign_key_check` lo confirma al final.
+- **Concurrencia:** WAL + `busy_timeout=5000`; sesiones de escritura con `BEGIN IMMEDIATE` (D-02).
+- **Sin FK entre módulos:** Ventas y Compras funcionan sin Inventario.

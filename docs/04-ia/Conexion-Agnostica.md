@@ -8,8 +8,13 @@
 
 - Toda llamada a un modelo pasa por **una capa de abstracción única** (interfaz estándar de chat/completions).
 - Cambiar de proveedor = cambiar configuración, **nunca** refactorizar código.
-- Fase inicial: API comercial (por costo/simplicidad, un solo usuario).
-- Fase futura: modelo local en hardware del usuario — el que sea. La elección concreta **está por definirse** y no condiciona la arquitectura.
+- Fase inicial (implementada): NVIDIA NIM, por medio de un cliente genérico compatible con OpenAI
+  (`backend/ia/compatible_openai.py`). El orden de modelos se mide con la llave del operador
+  (`python -m ia.verificar`): primero los que responden **bien** una suma de prueba, luego por velocidad. Un modelo rápido
+  que suma mal no sirve en una caja.
+- Fase futura: modelo local en el dispositivo (Ollama o llama.cpp) con `MI_PUESTITO_IA_PROVEEDOR=local`, sin cambiar
+  código. La dirección preferida es la familia Gemma 4 en su versión más pequeña, ajustada con fine-tuning a partir de
+  intercambios reales seudonimizados (decisiones 36–39 de [[Decisiones-Tecnicas]]).
 
 ## Por qué importa
 

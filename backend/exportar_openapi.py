@@ -21,7 +21,10 @@ def contrato_actual() -> dict:
     # pueden cambiar sin romper al frontend.
     esquemas = app.openapi()["components"]["schemas"]
     return {
-        nombre: {"required": sorted(esquema.get("required", [])), "properties": sorted(esquema.get("properties", {}))}
+        nombre: {
+            "required": sorted(esquema.get("required", [])),
+            "properties": sorted(esquema.get("properties", {})),
+        }
         for nombre, esquema in sorted(esquemas.items())
         if "properties" in esquema
     }

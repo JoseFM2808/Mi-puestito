@@ -29,9 +29,9 @@ Fechas en UTC (tipo `FechaHoraUTC`, siempre con zona); la zona horaria
 
 | Endpoint | Estado |
 |---|---|
-| `GET /api/compras/proveedores` | Demo 1 — lista proveedores, paginada |
-| `GET /api/compras/ordenes` | Demo 1 — lista órdenes con items, paginada, sin N+1 |
-| Registrar proveedor / crear orden / checklist de recepción | Próxima demo |
+| `GET /api/compras/proveedores` | Lista proveedores, paginada |
+| `GET /api/compras/ordenes` | Lista órdenes con items, paginada, sin N+1 |
+| Registrar proveedor / crear orden / checklist de recepción | Pendiente: Fase 4 (D-16). La recepción publicará un evento para que Inventario sume stock |
 
 ## Cómo interactúa la IA
 

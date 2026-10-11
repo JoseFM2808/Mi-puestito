@@ -46,10 +46,24 @@ class Seudonimos:
         return texto
 
     def reidentificar(self, texto: str) -> str:
-        """Devuelve los nombres reales en la respuesta del modelo."""
+        """Devuelve los nombres reales en la respuesta del modelo.
+
+        El modelo suele escribir "el Cliente 1" o "al Cliente 1": con el nombre
+        real eso daría "el Sra. Flora". El artículo se ajusta al restituir:
+        "el/la X" → "X", "al X" → "a X", "del X" → "de X".
+        """
         # "Cliente 12" antes que "Cliente 1" para no cortar el número
         for real, alias in sorted(self._alias.items(), key=lambda par: len(par[1]), reverse=True):
-            texto = re.sub(rf"\b{re.escape(alias)}\b", real, texto, flags=re.IGNORECASE)
+            patron = rf"\b(?:(?P<art>el|la|al|del)\s+)?{re.escape(alias)}\b"
+
+            def poner_nombre(coincidencia: re.Match, real: str = real) -> str:
+                articulo = coincidencia["art"] or ""
+                prefijo = {"al": "a ", "del": "de "}.get(articulo.lower(), "")
+                if prefijo and articulo[0].isupper():
+                    prefijo = prefijo.capitalize()
+                return prefijo + real
+
+            texto = re.sub(patron, poner_nombre, texto, flags=re.IGNORECASE)
         return texto
 
 
@@ -64,6 +78,11 @@ def seudonimizar_resumen(resumen: dict) -> tuple[dict, Seudonimos]:
         {**pedido, "proveedor": alias.proveedor(pedido["proveedor"])}
         for pedido in resumen.get("pedidos_por_llegar", [])
     ]
+    if "clientes_que_deben" in resumen:
+        copia["clientes_que_deben"] = [
+            {**cliente, "nombre": alias.cliente(cliente["nombre"])}
+            for cliente in resumen["clientes_que_deben"]
+        ]
     motivo = resumen.get("motivo_proyeccion", "")
     copia["motivo_proyeccion"] = alias.ocultar_en_texto(motivo)
     return copia, alias

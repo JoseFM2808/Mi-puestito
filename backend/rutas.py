@@ -38,7 +38,16 @@ def directorio_datos() -> Path:
     Nunca junto al ejecutable: en Windows va a %LOCALAPPDATA%\\MiPuestito para
     que funcione aunque la app esté instalada en una carpeta protegida, y para
     que los datos sobrevivan al reemplazar el .exe por una versión nueva.
+
+    `MI_PUESTITO_DATOS` la fija a mano: Staging la usa para que las bases de
+    prueba no queden dentro de la carpeta del repo (que puede estar en Drive).
     """
+    forzada = os.environ.get("MI_PUESTITO_DATOS")
+    if forzada:
+        carpeta = Path(forzada)
+        carpeta.mkdir(parents=True, exist_ok=True)
+        return carpeta
+
     if not es_ejecutable():
         return Path(__file__).resolve().parent
 

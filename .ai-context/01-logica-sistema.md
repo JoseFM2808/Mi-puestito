@@ -1,95 +1,117 @@
 # 01 · Lógica del sistema
 
-> Flujos transaccionales, lógica de inventario y cobro. Última revisión: 2026-09-27.
-> Leyenda: **[Implementado]** existe en `main` · **[Propuesto]** diseño aprobable, aún sin código.
+> Flujos transaccionales, inventario, cobro offline y Asistente. Última revisión: 2026-10-08.
+> Todo lo descrito aquí está **implementado** salvo lo marcado **[Pendiente]**.
 > Fuente funcional: `docs/03-modulos/Modulo-Ventas.md`, `Modulo-Inventario.md`, `docs/02-arquitectura/Sincronizacion-Offline.md`.
+> Código: `backend/modules/ventas/servicio.py`, `backend/modules/inventario/servicio.py`, `frontend/src/sincronizacion/cola.ts`.
 
-## 1. Ciclo de vida de una venta [Implementado: esquema · Propuesto: escritura]
+## 1. Ciclo de vida de una venta
 
-Tres tipos (`TipoVenta`) comparten tabla `ventas`. El estado vive en `EstadoVenta`.
+Tres tipos (`TipoVenta`) comparten la tabla `ventas`. El estado vive en `EstadoVenta`.
 
 ```mermaid
 stateDiagram-v2
     [*] --> abierta: orden_activa / fiado
-    [*] --> pendiente_formalizar: venta_rapida (solo monto)
-    abierta --> abierta: agregar item (recalcula monto_total)
+    [*] --> pendiente_formalizar: venta_rapida (solo monto, ya cobrada)
+    abierta --> abierta: agregar o quitar item (el servidor recalcula monto_total)
     abierta --> pagada_cerrada: cobrar (efectivo | yape_plin)
-    abierta --> abierta: fiado → queda como deuda derivada
-    pendiente_formalizar --> pagada_cerrada: formalizar (agrega items)
+    abierta --> fiada: fiar (suma a la deuda del cliente)
+    abierta --> [*]: anular (solo si no tiene items)
+    pendiente_formalizar --> pagada_cerrada: formalizar (Σ items = monto cobrado)
     pagada_cerrada --> [*]
+    fiada --> [*]
 ```
 
-Reglas de integridad:
+Principios (los hace cumplir `servicio.py`):
 
-- `monto_total` **siempre** lo calcula el servidor como Σ `items_venta.monto`, en la misma transacción que inserta el item. Nunca se acepta del cliente.
-- Un fiado exige `cliente_id` (`ck_fiado_requiere_cliente`).
-- La deuda de un cliente se **deriva**: Σ ventas fiado − Σ pagos. No existe columna `deuda`.
-- Todo `Pago` tiene destino: venta o cliente (`ck_pago_tiene_destino`).
+1. **Totales en el servidor (D-11):** `monto_total` de orden activa y fiado es SIEMPRE Σ `items_venta.monto`, recalculado
+   en la misma transacción. Un `monto` enviado por el cliente para una orden se rechaza (`422`).
+2. **Lo que ocurrió no se rechaza:** una venta o un fiado son hechos físicos. Superar el límite de crédito o dejar el
+   stock negativo se guarda igual y devuelve un **aviso** en palabras simples. Solo se rechazan errores de captura
+   (formalizar con un detalle que no cuadra) o transiciones imposibles (cobrar una venta ya fiada).
+3. **Deuda derivada:** Σ ventas `fiada` − Σ abonos (`pagos` con `cliente_id` y sin `venta_id`). Negativa = saldo a favor.
+4. **"Vendiste hoy"** = ventas `pagada_cerrada` + `pendiente_formalizar` con `cerrada_en` dentro del día de Lima
+   (`fechas.rango_utc_del_dia`). Un fiado no es dinero en caja: no cuenta.
+5. **La hora la pone el dispositivo** (`ocurrido_en`): una venta hecha sin red a las 10:00 cuenta a las 10:00. Si la hora
+   es imposible (más de 5 min en el futuro o más de 30 días atrás) se usa la del servidor (`fechas.momento_de_operacion`).
 
-## 2. Cobro offline-first con cola idempotente [Propuesto — ADR-032]
+## 2. Cobro offline-first con cola idempotente (ADR-032)
 
-La venta ocurre en la tablet aunque no haya red. El servidor **no puede rechazar** una venta que ya ocurrió en el mundo físico. Solo registra y avisa.
+La venta ocurre en la tablet aunque no haya red. Toda entidad que crea la tablet (cliente, venta, item, abono) lleva un
+`uuid` generado en el dispositivo: es su identidad pública **y** su clave de idempotencia (`UNIQUE` en cada tabla).
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Op as Operadora
-    participant UI as PWA (React)
+    participant UI as PWA (almacen.ts)
     participant IDB as IndexedDB (Dexie)
     participant API as FastAPI /api/ventas
     participant BD as SQLite / PostgreSQL
 
-    Op->>UI: Toca "Cerrar orden" (efectivo)
-    UI->>IDB: guarda venta + id_operacion (UUIDv7) en cola
-    UI-->>Op: "Venta registrada" (sin esperar red)
-    loop Mientras haya pendientes y red
-        IDB->>API: POST /operaciones {id_operacion, dispositivo_id, payload}
-        API->>BD: BEGIN (IMMEDIATE en SQLite)
-        alt id_operacion ya existe (reintento)
-            BD-->>API: UNIQUE(dispositivo_id,id_operacion) choca
-            API-->>IDB: 200 {estado: "ya_aplicada"} → se borra de la cola
+    Op->>UI: Toca "Cobrar en efectivo"
+    UI->>UI: cambia la pantalla al instante (optimista)
+    UI->>IDB: guarda la operación + ocurrido_en en la cola
+    UI-->>Op: la orden sale del panel (sin esperar red)
+    loop FIFO, de a una, mientras haya pendientes y red
+        IDB->>API: POST /api/ventas/{uuid}/cobrar
+        API->>BD: BEGIN IMMEDIATE
+        alt ya estaba cobrada (reintento)
+            API-->>IDB: 200, sin crear otro pago → se borra de la cola
         else nueva
-            API->>BD: INSERT venta + items (monto_total = Σ items)
-            API->>BD: INSERT movimientos_inventario (−cantidad) si hay producto
-            API->>BD: UPDATE productos SET stock_actual = stock_actual + delta
+            API->>BD: estado, cerrada_en, Pago(uuid = uuid de la venta)
             API->>BD: COMMIT
-            API-->>IDB: 201 → se borra de la cola
+            API-->>IDB: 200 + ResultadoVenta (la verdad del servidor)
         end
     end
+    Note over IDB,API: sin red → la cola se detiene y reintenta (evento online + cada 20 s)
+    Note over IDB,API: 4xx → "rechazada", se muestra con su motivo · 5xx → se reintenta
 ```
 
-## 3. Lógica de inventario: libro mayor de movimientos [Propuesto — ADR-031]
+- La respuesta del servidor reemplaza a la versión local **solo si ya no quedan operaciones pendientes de esa venta**
+  (si no, un producto agregado sin red desaparecería un momento de la pantalla).
+- Un `401` (sesión vencida, p. ej. al reiniciar el servidor local) **no** descarta nada: la cola espera al nuevo ingreso.
+- Cada proyecto tiene su propia base IndexedDB (`mi-puestito-<proyecto>`), igual que en el servidor.
 
-El stock **no es un número que se sobreescribe**. Es la suma de un libro de movimientos que solo crece.
+## 3. Inventario: libro mayor de movimientos (ADR-031)
 
-| Evento | Movimiento | Origen |
+El stock **no es un número que se sobreescribe**: es Σ de `movimientos_inventario`, que solo crece.
+
+| Evento | Movimiento | Origen (único) |
 |---|---|---|
-| Compra recibida (checklist) | `+cantidad` por ítem `recibido`/`cambiado` | Compras |
-| Venta con producto | `−cantidad` | Ventas |
-| Conteo físico | `ajuste` = contado − calculado | Inventario |
-| Merma / vencido | `−cantidad` con motivo | Inventario |
+| Item vendido con `producto_uuid` | `−cantidad_num` | `item_venta` + uuid del item |
+| Item quitado de una orden abierta | `+` lo descontado | `item_venta_anulado` + uuid del item |
+| Producto creado con stock inicial | `+stock_inicial` | `stock_inicial` + uuid del producto |
+| Conteo físico | `contado − stock actual` | `ajuste` + uuid del ajuste |
+| Merma / vencido | `−cantidad` | `merma` + uuid |
+| Pedido recibido **[Pendiente: Fase 4 Compras]** | `+cantidad` | `recepcion` + uuid |
 
 ```mermaid
 flowchart TD
-    A[Operación llega con id_operacion] --> B{¿Ya aplicada?<br/>UNIQUE dispositivo_id+id_operacion}
-    B -- Sí --> Z[Responder ya_aplicada<br/>sin tocar stock]
-    B -- No --> C[BEGIN IMMEDIATE / SELECT ... FOR UPDATE en PG]
-    C --> D[INSERT movimiento delta]
-    D --> E["UPDATE productos<br/>SET stock_actual = stock_actual + :delta<br/>(incremento atómico, sin leer antes)"]
-    E --> F{stock_actual &lt; 0?}
-    F -- Sí --> G[Marcar alerta 'descuadre'<br/>NO se rechaza la venta]
-    F -- No --> H[COMMIT]
+    A[Ventas publica venta.item_registrado] --> B{¿Inventario cargado?<br/>eventos.py}
+    B -- No --> Z[La venta se guarda igual, sin descontar]
+    B -- Sí, en un SAVEPOINT --> C{¿Ya existe movimiento<br/>con ese origen?}
+    C -- Sí --> Y[Nada: reintento idempotente]
+    C -- No --> D[INSERT movimiento delta]
+    D --> E["UPDATE productos SET stock_actual = stock_actual + :delta<br/>(incremento atómico)"]
+    E --> F{stock_actual < 0?}
+    F -- Sí --> G[Aviso: 'cuenta cuánto hay'<br/>la venta NO se rechaza]
+    F -- No --> H[COMMIT junto con la venta]
     G --> H
 ```
 
-Por qué así (auditoría de condiciones de carrera):
+Garantías contra condiciones de carrera (verificadas en `tests/test_inventario.py`):
 
-1. **Actualización perdida**: el patrón *leer stock → restar en Python → escribir* pierde ventas cuando dos peticiones se cruzan. Se usa `stock_actual = stock_actual + :delta` en SQL, que es atómico en SQLite y PostgreSQL.
-2. **Sincronización con last-write-wins** (la regla actual de `Sincronizacion-Offline.md`) destruiría los descuentos de stock hechos sin red. Los movimientos son **conmutativos**: se pueden aplicar en cualquier orden y el total es el mismo. LWW sigue siendo válido para datos maestros (nombre de cliente, precio).
-3. **Doble envío por reintento**: la clave `UNIQUE(dispositivo_id, id_operacion)` hace la operación idempotente.
-4. **Fuente de verdad**: `stock_actual` es una caché. Un job de conciliación recalcula `Σ movimientos` y avisa si difiere.
+1. **Actualización perdida:** nunca "leer stock → restar en Python → escribir". El incremento es SQL atómico, y las
+   escrituras abren con `BEGIN IMMEDIATE` (control negativo: sin él, 40 escrituras paralelas fallan con
+   `database is locked`).
+2. **Sincronización:** los movimientos son conmutativos; "gana la última escritura" queda solo para datos maestros.
+3. **Reintentos:** `UNIQUE(origen_tipo, origen_ref)`.
+4. **Aislamiento de módulos:** si Inventario lanza, su SAVEPOINT se deshace, la venta se confirma y el fallo aparece en
+   `eventos_con_fallas` de `/api/salud`.
+5. **Conciliación:** `GET /api/inventario/conciliacion` compara la caché `stock_actual` con Σ movimientos; debe estar vacía.
 
-## 4. Recepción de compras [Implementado: esquema]
+## 4. Recepción de compras **[Pendiente: Fase 4]**
 
 ```mermaid
 flowchart LR
@@ -101,22 +123,31 @@ flowchart LR
     R --> M[monto_real = Σ recibido + Σ sustitutos]
 ```
 
-## 5. Asistente (AI Companion) en una consulta [Implementado]
+Hoy existe el esquema y la lectura; el Dashboard ya usa los pedidos `pendiente`/`en_camino` para "Mañana necesitas en caja".
+
+## 5. Asistente (AI Companion)
 
 ```mermaid
 sequenceDiagram
     participant UI as Asistente.tsx
     participant R as /api/asistente/preguntar
-    participant D as dashboard.obtener_resumen
+    participant D as dashboard.servicio
+    participant P as ia.privacidad
     participant S as ia.servicio
-    participant P as Proveedor (NVIDIA NIM hoy)
-    UI->>R: {mensaje} + Bearer token
+    participant M as Modelo (NVIDIA hoy · local mañana)
+    UI->>R: {mensaje, historial (≤ 6 turnos)} + token
     R->>D: resumen SOLO del proyecto del token
-    R->>S: preguntar(mensaje, contexto_json)
-    loop modelos por prioridad (3b → 8b → 8x22b)
-        S->>P: chat/completions (timeout 8 s)
-        P-->>S: texto o error → siguiente modelo
+    R->>P: nombres → "Cliente 1", "Proveedor A" (resumen, pregunta e historial)
+    R->>S: preguntar(pregunta, contexto, historial)
+    loop modelos en el orden verificado (ia_modelos.json)
+        S->>M: chat/completions (≤ 12 s por modelo)
+        M-->>S: texto o error → siguiente modelo
     end
-    S-->>R: primera respuesta a tiempo
-    R-->>UI: {respuesta} | 503 AsistenteNoDisponible
+    S-->>R: texto + líneas "ACCION: ir_a <pantalla>"
+    R->>R: acciones de la lista blanca → botones; registro opt-in (seudonimizado)
+    R-->>UI: {respuesta con nombres reales, acciones, id_respuesta, modelo}
+    UI-->>UI: botón "Ir a Ventas" (el operador decide) · "Me sirvió" / "No me sirvió"
 ```
+
+Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y una acción sugerida
+nunca se ejecuta sola (ADR-037). Sin Dashboard disponible responde igual, avisando que no tiene cifras.

@@ -37,8 +37,10 @@ Funciona **sin** [[Modulo-Inventario]]: no se valida stock al vender. La informa
 
 ## Estado
 - Fase: **MVP**
-- **Avance (Demo 1):** esquema de base de datos creado en
-  `backend/modules/ventas/models.py` (`clientes`, `ventas`, `items_venta`,
-  `pagos`) con endpoints de lectura. La deuda del cliente se deriva
-  (Σ ventas fiado − Σ pagos), no se almacena. Pendiente: UI y operaciones de
-  escritura.
+- **Avance (Fase 3):** API de escritura idempotente y pantalla de Ventas con
+  órdenes activas en paralelo, fiado con buscador de clientes, venta rápida y su
+  detalle posterior, todo funcionando sin conexión (ver
+  `frontend/src/modules/ventas/README.md` y `backend/modules/ventas/README.md`).
+  La deuda se deriva (Σ ventas fiadas − Σ abonos); los montos se guardan en
+  céntimos. Pendiente: QR de YAPE/Plin (necesita el número del vendedor) y
+  registro por foto o código de barras.

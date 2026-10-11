@@ -2,33 +2,30 @@
 
 ## Qué es
 
-API del resumen diario (`docs/03-modulos/Modulo-Dashboard.md`): total vendido
-hoy, proyección de caja para mañana, órdenes abiertas, fiados por cobrar,
-ventas rápidas pendientes y pedidos por llegar.
+API del resumen diario (`docs/03-modulos/Modulo-Dashboard.md`): total cobrado hoy, proyección de caja para mañana,
+órdenes abiertas, fiados por cobrar, ventas rápidas pendientes y pedidos por llegar. El cálculo vive en `servicio.py`;
+`router.py` solo lo expone.
 
 ## Qué datos maneja
 
-No tiene tablas propias: **agrega** cifras de Ventas y Compras. En Demo 1
-devuelve datos ficticios (espejo de
-`frontend/src/modules/dashboard/datos-ficticios.ts`) para fijar el contrato
-del API. Lee de otros módulos pero no bloquea su funcionamiento: si Ventas o
-Compras fallan, el resumen degrada esa cifra, no se cae.
+No tiene tablas propias: **lee** las de Ventas y Compras del proyecto del token. Cada sección va en su propio `try`: si
+un módulo no puede leerse, su parte sale en cero y se nombra en `secciones_no_disponibles`, y el resto se muestra igual.
+Demo y negocio real usan exactamente el mismo cálculo (demo trae datos de muestra, `backend/datos_demo.py`).
 
-El día se calcula con `fechas.dia_peruano()` (zona America/Lima), nunca con el
-reloj del servidor: entre las 19:00 y medianoche hora peruana un servidor en
-UTC ya estaría en el día siguiente.
+- **Vendiste hoy**: ventas `pagada_cerrada` + `pendiente_formalizar` cerradas dentro del día de Lima.
+- **Mañana necesitas en caja**: Σ de pedidos `pendiente`/`en_camino` con llegada mañana, con el motivo en palabras.
+- **Fiados por cobrar**: Σ de deudas positivas (derivadas, ver Ventas) y cuántos clientes deben.
+
+El día se calcula con `fechas.dia_peruano()` (America/Lima), nunca con el reloj del servidor.
 
 ## Qué acciones permite
 
-| Endpoint | Estado |
+| Endpoint | Acción |
 |---|---|
-| `GET /api/dashboard/resumen` | Demo 1 — datos ficticios tipados (`ResumenDashboard`) |
-
-La proyección "mañana necesitas en caja" se calculará como la suma de las
-órdenes de compra con `fecha_estimada_llegada` = mañana que aún no se pagan.
+| `GET /api/dashboard/resumen` | Resumen del día (`ResumenDashboard`) |
 
 ## Cómo interactúa la IA
 
-El AI Companion usa este endpoint como fuente única del estado del día para
-explicar cualquier cifra en lenguaje simple ("mañana necesitas S/ 320 porque
-llega el pedido de Distribuidora Norte") y decidir a qué módulo navegar.
+Es la única fuente de cifras del Asistente: `modules/asistente` usa `servicio.calcular_resumen` (seudonimizado antes de
+salir) para explicar cualquier número en lenguaje simple, por ejemplo "mañana necesitas S/ 320 porque llega el pedido de
+Distribuidora Norte".

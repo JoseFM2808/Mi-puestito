@@ -279,6 +279,21 @@ export interface AbonoCable {
   avisos: string[]
 }
 
+// ------------------------------------------------------------------ asistente
+
+export interface AccionSugeridaCable {
+  tipo: 'ir_a'
+  pantalla: string
+  etiqueta: string
+}
+
+export interface RespuestaAsistenteCable {
+  respuesta: string
+  acciones: AccionSugeridaCable[]
+  id_respuesta: string
+  modelo: string
+}
+
 // ------------------------------------------------------------------ listas exactas de campos
 
 /** Esquema del backend (nombre en openapi.json) → campos que el frontend espera. */
@@ -337,6 +352,8 @@ export const CAMPOS_DEL_CONTRATO = {
     'creado_en',
     'deuda',
   ]),
+  RespuestaSalida: camposDe<RespuestaAsistenteCable>()(['respuesta', 'acciones', 'id_respuesta', 'modelo']),
+  AccionSugerida: camposDe<AccionSugeridaCable>()(['tipo', 'pantalla', 'etiqueta']),
   AbonoSalida: camposDe<AbonoCable>()([
     'uuid',
     'cliente_uuid',

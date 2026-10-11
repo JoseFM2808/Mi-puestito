@@ -17,22 +17,24 @@ tamaño de letra.
 
 ## Qué acciones permite
 
-| Acción                                            | Estado en Demo 1                                       |
-| ------------------------------------------------- | ------------------------------------------------------ |
-| **Menú** — abrir navegación entre módulos         | Muestra un aviso: se activa cuando existan más módulos |
-| **Asistente** — abrir el AI Companion             | Muestra un aviso: llega con la capa de IA              |
-| **Tamaño de letra** — cambiar entre los 3 niveles | Funcional y persistente por sesión                     |
+| Acción              | Resultado                                                                                                       |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Menú**            | Despliega la navegación: **Caja de hoy**, **Ventas**, **Fiados**, el negocio activo y **Salir de este negocio** |
+| **Asistente**       | Abre o cierra el panel del Asistente (`componentes/asistente`)                                                  |
+| **Tamaño de letra** | Cambia entre los 3 niveles; persiste durante la sesión                                                          |
+
+Debajo de la barra aparece el estado de conexión cuando hay cambios por enviar o no hay red
+(`componentes/sincronizacion/EstadoSincronizacion.tsx`).
 
 ## Cómo interactúa la IA
 
 `data-ai-id` disponibles para que el AI Companion identifique y accione:
 
 - `barra` — el contenedor completo
-- `barra.menu` — botón Menú
+- `barra.menu`, `barra.menu-abierto`, `barra.negocio` — Menú y su contenido
+- `barra.ir-caja`, `barra.ir-ventas`, `barra.ir-fiados`, `barra.salir` — navegación
 - `barra.asistente` — botón Asistente (color `--ia`, identidad del Companion)
 - `barra.letra-normal`, `barra.letra-grande`, `barra.letra-muygrande` — selector
-- `barra.aviso` — texto del aviso visible (región `aria-live`)
 
-Si el usuario pide "letra más grande", la IA puede pulsar el siguiente nivel
-del selector. El botón Asistente es el hogar visual permanente del Companion:
-mismo color y lugar siempre.
+Si el usuario pide "letra más grande", la IA puede sugerir el siguiente nivel del selector. El botón Asistente es el
+hogar visual permanente del Companion: mismo color y lugar siempre.
