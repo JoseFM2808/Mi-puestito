@@ -108,6 +108,7 @@
 
 .pedido {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: var(--esp-2);
@@ -133,12 +134,12 @@
 
 .acciones > button {
   flex: 1;
-  min-width: 14rem;
+  min-width: min(14rem, 100%);
 }
 
 @media (max-width: 760px) {
   .resumen,
   .cuadricula {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

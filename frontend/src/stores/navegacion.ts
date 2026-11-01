@@ -37,7 +37,8 @@ export const useNavegacion = create<EstadoNavegacion>()((set) => ({
   menuAbierto: false,
   asistenteAbierto: false,
   irA: (pantalla, opciones) => {
-    if (window.location.hash !== `#${pantalla}`) window.history.replaceState(null, '', `#${pantalla}`)
+    // pushState y no replaceState: el botón Atrás de la tablet debe volver a la pantalla anterior
+    if (window.location.hash !== `#${pantalla}`) window.history.pushState(null, '', `#${pantalla}`)
     set({ pantalla, menuAbierto: false, abrirVentaRapida: Boolean(opciones?.ventaRapida) })
   },
   alternarMenu: () => set((estado) => ({ menuAbierto: !estado.menuAbierto, asistenteAbierto: false })),
