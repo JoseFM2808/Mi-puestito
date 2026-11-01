@@ -1,6 +1,6 @@
 # 05 · Deuda técnica e higiene del repositorio
 
-> Última revisión: 2026-10-08 · rama `chore/auditoria-arquitectura-higiene`.
+> Última revisión: 2026-11-01 · rama `chore/auditoria-arquitectura-higiene`.
 > Prioridad: **P1** antes de usar el negocio real · **P2** antes de la nube · **P3** mejora continua.
 
 ## 1. Pendientes
@@ -10,15 +10,14 @@
 | D-07 | P3 | El PIN generado se imprime una vez en consola | Si stdout se redirige a un log, el PIN queda en disco | Mostrarlo en la UI de primer arranque; `*.log` ya ignorado | ADR-030 |
 | D-08 | P2 | El registro de proyectos (`backend/proyectos.py`) tiene el nombre de un negocio real en código público | Exposición de identidad del cliente; dar de alta un negocio exige una versión nueva | Pantalla de alta de negocio + `proyectos.json` en la carpeta de datos (ignorado) | ADR-030 |
 | D-10 | P3 | `starlette.testclient` depreca su uso con `httpx` (aviso filtrado en `backend/pytest.ini`) | Tests rotos en una versión futura de Starlette | Migrar de cliente de pruebas cuando se estabilice | — |
-| D-12 | P2 | Sin escaneo de secretos en el remoto | Un `git add -f` se detecta en CI, pero ya estaría publicado | Activar *Secret scanning + Push protection* en GitHub (lo hace el owner) y hook `pre-commit` con gitleaks | ADR-030 |
-| D-13 | P2 | En modo local el secreto de firma es aleatorio por arranque | Al reiniciar el programa se cierran las sesiones (la cola offline espera, no pierde nada) | Guardar un secreto generado una vez en la carpeta de datos | ADR-032 |
-| D-14 | P1 | La llave de IA del vendedor en el `.exe` solo se puede dar por variable de entorno | Un vendedor no sabe configurar variables; sin llave no hay Asistente | Pantalla "Configurar Asistente" que guarde la llave con DPAPI de Windows (nunca en texto plano) | ADR-036 |
+| D-12 | P2 | Falta activar en GitHub *Secret scanning + Push protection* | gitleaks en CI lo detecta, pero después de publicado; push protection lo impide antes | Lo activa el owner en Settings → Code security | ADR-030 |
 | D-15 | P2 | El Asistente necesita internet | Sin red no hay ayuda | Modelo local (Ollama/llama.cpp) con Gemma pequeño; luego fine-tuning | ADR-039 |
-| D-16 | P2 | Compras solo tiene lectura | Recepción de pedidos no mueve stock ni actualiza la proyección | Fase 4: escrituras idempotentes + evento `compra.item_recibido` hacia Inventario | 01-logica §4 |
-| D-17 | P2 | El `.exe` publicado aún tiene el frontend anterior | El vendedor no ve Ventas/Fiados hasta reconstruirlo | Etiqueta `v*` → flujo `Ejecutable Windows` (humo ya exige módulos sanos) | ADR-029 |
-| D-18 | P3 | Una versión nueva de la PWA se aplica recién en la segunda recarga | El operador puede ver la versión anterior un rato | Aviso "Hay una versión nueva — Actualizar" con `registerType: 'prompt'` | — |
-| D-19 | P3 | Los datos de demo se siembran una vez, relativos a ese día | Días después "Vendiste hoy" sale en cero y los pedidos aparecen atrasados (el Asistente lo dice bien, pero la demo pierde gracia) | Botón "Reiniciar datos de práctica" solo en demo | `backend/datos_demo.py` |
-| D-20 | P2 | El registro de Staging tiene 1 intercambio del 2026-10-11 02:12 UTC con un borrador de razonamiento (antes del arreglo) | Ensuciaría el fine-tuning | Al armar el dataset, usar solo intercambios con valoración positiva y descartar los que empiecen como borrador | ADR-038/039 |
+| D-17 | P2 | El `.exe` publicado aún tiene el frontend anterior | El vendedor no ve Ventas, Fiados ni Compras hasta publicar uno nuevo | Construido y probado localmente el 2026-11-01. Falta que el owner publique una etiqueta `v*` → flujo `Ejecutable Windows` | ADR-029 |
+| D-21 | P3 | El RUC se escribe a mano | Un RUC válido en forma pero inexistente pasa | Búsqueda en SUNAT: requiere elegir un servicio externo | `Modulo-Compras.md` |
+| D-22 | P3 | Inventario no tiene pantalla ni guarda costo | El campo de stock del checklist no aparece sin productos; una recepción errónea no se corrige desde la app; las compras no alimentan el costo | Pantalla de Inventario (Fase 7) con ajustes y costo | ADR-045 |
+| D-23 | P2 | La copia de respaldo va sin cifrar | Quien tenga el archivo ve clientes, fiados y ventas | Cifrar con una contraseña que elija el vendedor; decidir qué pasa si la olvida | ADR-044 |
+| D-24 | P3 | "Ya le pagué" cierra el pedido pero no descuenta de la caja | La caja no refleja lo pagado a proveedores | Definir el flujo de caja (efectivo inicial, egresos) | `Modulo-Dashboard.md` |
+| D-25 | P3 | Dos tablets sin red registran el mismo RUC | La segunda queda rechazada, y su pedido también: hay que rehacerlo | Fusionar proveedores por RUC al sincronizar | ADR-032 |
 
 ## 2. Hechos
 
@@ -37,6 +36,16 @@
 | — | 2026-10-10 | Nemotron devolvía su razonamiento en inglés como respuesta; gpt-oss sumaba mal con prompt corto | Ajustes por familia + descarte de borradores + verificación con el prompt real (ADR-036) |
 | — | 2026-10-10 | Una respuesta larga en el historial daba `422` en la pregunta siguiente | El historial se recorta a 1000 caracteres por turno |
 | — | 2026-10-10 | "El Sra. Flora" al restituir nombres; el Asistente no veía a todos los deudores | Artículos ajustados en `ia/privacidad.py`; `clientes_que_deben` (top 5, seudonimizado) en el contexto |
+| D-13 | 2026-11-01 | En local el secreto de firma se conserva en `sesion.key`: reiniciar el programa no cierra la sesión | `tests/test_auth.py`; navegador: token válido tras reiniciar el servidor |
+| D-14 | 2026-11-01 | El vendedor guarda la llave desde el panel del Asistente, cifrada con DPAPI | `tests/test_llave_local.py` con DPAPI real; navegador: NVIDIA rechazó una llave falsa y no se escribió archivo; `.exe`: `puede_guardar_llave` |
+| D-16 | 2026-11-01 | Compras completo y offline-first: proveedores, pedidos, checklist, `monto_real`, evento a Inventario | `tests/test_compras.py`; navegador: S/ 320 → S/ 330 con un cambio, flujo sin red entregado en orden |
+| D-18 | 2026-11-01 | La PWA avisa de una versión nueva y se aplica cuando el operador decide | Navegador: aviso, "Actualizar ahora" y recarga sin SW en espera |
+| D-19 | 2026-11-01 | Botón para reiniciar los datos de práctica; `403` con un negocio real | `tests/test_api.py`; navegador: 4 → 3 órdenes, S/ 485.50, cola local vacía |
+| D-20 | 2026-11-01 | `ia/dataset.py` exporta solo lo útil y descarta borradores, respaldos y cifras sin respaldo | `tests/test_asistente.py`; registro de Staging: 0 ejemplos, sin valoraciones |
+| — | 2026-11-01 | Escaneo de secretos con gitleaks sobre todo el historial en CI (parte de D-12) | `.github/workflows/ci.yml` |
+| — | 2026-11-01 | Respaldo y restauración del archivo de datos (Fase 5) | `tests/test_respaldo.py`; navegador y `.exe`: copia y restauración, lo posterior desaparece y queda copia en `respaldos/` |
+| — | 2026-11-01 | Nemotron inventaba montos | Verificador de cifras (ADR-042); `ia.evaluar` 19/19 con Bolt en la última corrida |
+| — | 2026-11-01 | Navegación en teléfono y tablet: controles recortados y desbordes | Sin desborde a 375 y 768 px en todas las pantallas; sin `data-ai-id` faltantes ni duplicados |
 
 ## 3. Resueltos en la auditoría inicial (2026-09-27, verificados en Staging)
 
@@ -56,9 +65,9 @@ Resultado Staging: `pytest` 42/42 · `vitest` 14/14 · `npm run build` ok · `.e
 | Categoría | Patrones | Control automático |
 |---|---|---|
 | Secretos / entorno | `.env`, `.env.*`, `*.env`, `config/*`, `secrets/` (excepto `*.env.example`) | ✅ test |
-| Llaves y certificados | `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.crt`, `id_rsa*`, `id_ed25519*` | ✅ test + regex de contenido |
+| Llaves y certificados | `*.pem`, `*.key`, `*.dpapi`, `*.p12`, `*.pfx`, `*.crt`, `id_rsa*`, `id_ed25519*` | ✅ test + regex de contenido |
 | Credenciales de la app | `usuarios.json` | ✅ test |
-| Base de datos del vendedor | `*.db`, `*.db-wal`, `*.db-shm`, `*.db-journal`, `*.sqlite*`, `*.dump`, `backups/` | ✅ test |
+| Base de datos del vendedor | `*.db`, `*.db-wal`, `*.db-shm`, `*.db-journal`, `*.sqlite*`, `*.dump`, `backups/`, `respaldos/` | ✅ test |
 | Datos de negocio | `data/raw/`, `data/processed/`, `data/vector_store/`, `*.csv`, `*.xlsx` | ✅ test (carpetas) |
 | Actas y acuerdos internos | `docs/meetings/`, `docs/privado/`, `docs/acuerdos/`, `.ai-context/privado/`, `*.private.md`, `*-privado.md` | ✅ test |
 | Logs | `*.log`, `logs/` | ✅ test |

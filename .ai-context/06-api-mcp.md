@@ -1,6 +1,6 @@
 # 06 · API y MCP
 
-> Contrato HTTP del backend (FastAPI) y estado de MCP. Última revisión: 2026-10-08.
+> Contrato HTTP del backend (FastAPI) y estado de MCP. Última revisión: 2026-11-01.
 > Fuente de verdad: `backend/main.py`, `backend/seguridad.py`, `backend/database.py` y `backend/modules/*/router.py`.
 > Esquemas: `frontend/src/api/openapi.json`, exportado por `backend/exportar_openapi.py` y vigilado por
 > `backend/tests/test_contrato.py`. Con el servidor en marcha, el OpenAPI completo está en `/docs` y `/openapi.json`.
@@ -66,6 +66,7 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 | Método | Ruta | Respuesta | Notas |
 |---|---|---|---|
 | GET | `/api/dashboard/resumen` | `ResumenDashboard` | Día actual en hora de Lima y proyección de mañana; si un módulo no pudo leerse, su parte sale en cero y se nombra en `secciones_no_disponibles` |
+| POST | `/api/dashboard/demo/reiniciar` | `204` | Vuelve a sembrar la práctica; con un negocio real → `403` |
 
 ### Ventas, clientes y fiado (token)
 
@@ -101,12 +102,25 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 | GET | `/api/inventario/descuadres` | – | `ProductoConEstado[]` | Stock negativo: se vendió más de lo registrado |
 | GET | `/api/inventario/conciliacion` | – | `Descuadre[]` | Control interno: debe estar siempre vacío (stock = Σ movimientos) |
 
-### Compras (token · solo lectura por ahora)
+### Compras (token · ADR-045)
 
-| Método | Ruta | Entrada | Respuesta |
-|---|---|---|---|
-| GET | `/api/compras/proveedores` | `limite`, `desde` | `ProveedorSalida[]` |
-| GET | `/api/compras/ordenes` | `limite`, `desde` | `OrdenCompraSalida[]` con items |
+| Método | Ruta | Entrada | Respuesta | Notas |
+|---|---|---|---|---|
+| GET | `/api/compras/proveedores` | `busqueda?`, `limite`, `desde` | `ProveedorSalida[]` | Por nombre, empresa o RUC |
+| POST | `/api/compras/proveedores` | `ProveedorEntrada {uuid, nombre, empresa?, ruc? (11 dígitos), telefono?, categoria?}` | `ProveedorSalida` | `201`/`200`; RUC repetido → `409` |
+| GET | `/api/compras/proveedores/{uuid}/frecuentes` | — | `ProductoFrecuente[] {nombre_producto, cantidad, monto, veces}` | Máx. 10 |
+| GET | `/api/compras/ordenes` | `estado?` repetible, `limite`, `desde` | `OrdenCompraSalida[]` con items | |
+| POST | `/api/compras/ordenes` | `OrdenEntrada {uuid, proveedor_uuid, estado? (borrador\|pendiente), fecha_estimada_llegada?, notas?, items (1–100) [{uuid, nombre_producto, cantidad?, monto}]}` | `ResultadoOrden {orden, avisos}` | `201`/`200`; el total lo calcula el servidor |
+| PATCH | `/api/compras/ordenes/{uuid}/estado` | `{estado: pendiente\|en_camino}` | `ResultadoOrden` | Solo hacia adelante; atrás → `409` |
+| POST | `/api/compras/ordenes/{uuid}/recepcion` | `RecepcionEntrada {items [{item_uuid, estado, producto_sustituto?, monto_sustituto?, cantidad_stock?}]}` | `ResultadoOrden` | Recalcula `monto_real`; publica `compra.item_recibido`; reescribir → `409` |
+| POST | `/api/compras/ordenes/{uuid}/cerrar` | — | `ResultadoOrden` | Solo desde `recibida` |
+
+### Respaldo (token · ADR-044)
+
+| Método | Ruta | Entrada | Respuesta | Notas |
+|---|---|---|---|---|
+| GET | `/api/respaldo/copia` | — | Archivo `application/octet-stream` | `Cache-Control: no-store`. Solo del proyecto del token |
+| POST | `/api/respaldo/restaurar` | Bytes de la copia en el cuerpo | `204` | `400` no sirve · `409` otro negocio o versión más nueva · `413` > 200 MB · `507` sin disco |
 
 ### Asistente (token)
 
@@ -114,6 +128,9 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 |---|---|---|---|---|
 | POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a, pantalla, etiqueta}], id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta e historial antes de salir al proveedor y restituye los nombres en la respuesta (ADR-034). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
 | POST | `/api/asistente/valoracion` | `ValoracionEntrada {id_respuesta, util}` | `204` | "Me sirvió" / "No me sirvió". Se guarda solo si el registro está activo (ADR-038) |
+| GET | `/api/asistente/estado` | — | `EstadoAsistente {listo, puede_guardar_llave, llave_guardada}` | Nunca incluye la llave |
+| POST | `/api/asistente/llave` | `LlaveEntrada {llave}` | `EstadoAsistente` | Solo modo local, Windows y desde el mismo equipo (`403`); mal copiada o rechazada → `400`, sin repetirla (ADR-043) |
+| DELETE | `/api/asistente/llave` | — | `EstadoAsistente` | Mismas condiciones |
 
 ## 4. Proveedor de IA (salida del backend)
 
@@ -122,7 +139,7 @@ No es un endpoint de Mi Puestito, sino lo que el backend consume (ADR-036):
 | Qué | Valor |
 |---|---|
 | Protocolo | `POST {MI_PUESTITO_IA_URL}/chat/completions`, compatible con OpenAI (`model`, `messages`, `max_tokens` 450, `temperature` 0.3) |
-| NVIDIA NIM (hoy) | `https://integrate.api.nvidia.com/v1`, `Authorization: Bearer $NVIDIA_API_KEY` |
+| NVIDIA NIM (hoy) | `https://integrate.api.nvidia.com/v1`, `Authorization: Bearer` con `NVIDIA_API_KEY` o la llave guardada (ADR-043) |
 | Local (futuro) | `MI_PUESTITO_IA_PROVEEDOR=local` → `http://127.0.0.1:11434/v1` (Ollama) o la URL de llama.cpp |
 | Orden de modelos | `MI_PUESTITO_IA_MODELOS` > `ia_modelos.json` (de `python -m ia.verificar`) > lista por defecto |
 | Ajustes por familia | Nemotron: `chat_template_kwargs: {enable_thinking: false}` · gpt-oss: `reasoning_effort: low` (`ia/configuracion.py`) |

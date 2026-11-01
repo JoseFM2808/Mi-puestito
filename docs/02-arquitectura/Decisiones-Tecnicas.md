@@ -47,3 +47,7 @@
 | 39 | *(Propuesta)* Fine-tuning LoRA de un Gemma 4 pequeño para correr en el dispositivo | Depender siempre de la nube | El puesto puede no tener red; pendiente de decidir tamaño y licencia |
 | 40 | Estilos aislados con CSS Modules y piezas base en `frontend/src/ui` | Prefijo obligatorio por módulo | Un módulo ya no puede reestilar a otro; un test lo vigila. Ver [[Design-System]] |
 | 41 | Migraciones con Alembic, una base por proyecto, claves foráneas apagadas durante la migración | `create_all` | Con datos reales hay que migrar sin perder ventas; el modo batch de SQLite dispararía CASCADE |
+| 42 | Verificador de cifras en el servidor: un monto fuera del contexto descarta la respuesta | Confiar en las reglas del prompt | Nemotron inventó montos con las reglas puestas; en una caja es peor que no responder. Ver [[Conexion-Agnostica]] |
+| 43 | Llave de IA guardada desde la pantalla, cifrada con DPAPI y solo desde el mismo equipo | Solo variable de entorno, archivo en claro | Un vendedor no configura variables; el PIN de demo es público |
+| 44 | Respaldo con la API de SQLite; cada copia sabe de qué negocio es y se revisa antes de restaurar | Copiar el archivo a mano | Con WAL una copia simple puede perder lo último; restaurar la práctica borraría ventas reales |
+| 45 | Recepción de compras inmutable; el stock sube solo con cantidad explícita | Reescribir la recepción, deducir unidades del texto | La cola puede reenviar; "2 packs" no dice cuántas unidades son. Ver [[Modulo-Compras]] |

@@ -112,6 +112,11 @@
 - **Consecuencias**: pasar a un modelo local es cambiar `MI_PUESTITO_IA_PROVEEDOR=local` y el nombre del modelo. El
   catálogo puede cambiar sin tocar código. La llave solo vive en variables de entorno. Gemma 4 queda de respaldo hasta
   que responda a tiempo (sigue siendo la familia objetivo para el modelo local).
+- **Actualización 2026-11-01**: la llave también puede guardarse desde la pantalla (ADR-043). El orden pasa a ser
+  `nemotron-3.5-bolt-e4b`, `nemotron-3.5-lightning-30b-a3b`, `gemma-4-31b-it`: `ordenar` conserva la preferencia entre los
+  que aciertan a tiempo, y `python -m ia.evaluar` decide esa preferencia con casos reales. Medición: Bolt 18/18 y 19/19 en
+  sus mejores corridas, 17/18 en otras, mediana ~1,4 s; Lightning 16/18. `gpt-oss-20b` y `gemma-4-31b-it` no responden a
+  tiempo hoy. Bolt da 404 intermitentes: los códigos transitorios se reintentan antes de pasar al siguiente modelo.
 
 ## ADR-037 · Acciones sugeridas por el Asistente — Aceptada
 
@@ -158,3 +163,53 @@
   arrancar en cada base, marca en 0001 las bases creadas antes de Alembic y apaga las claves foráneas durante la
   migración (el modo batch de SQLite recrea tablas y, con FK activas, dispararía `ON DELETE CASCADE`).
 - **Consecuencias**: verificado sobre la carpeta de datos del `.exe` anterior: migra sin perder items.
+
+## ADR-042 · Verificador de cifras en el servidor — Aceptada
+
+- **Fecha**: 2026-11-01.
+- **Contexto**: en la evaluación con NVIDIA, Nemotron inventó montos ("S/ 130.00", "S/ 12.50") con las reglas del prompt ya
+  puestas. En una caja, un monto falso hace más daño que no responder, y un modelo pequeño lo hará más.
+- **Decisión**: `ia/cifras.py` compara cada monto de la respuesta con el contexto enviado y con lo dicho por el operador. Si
+  no aparece, se prueba el siguiente modelo; si ninguno pasa, se responde un mensaje fijo con el botón a la Caja y el modelo
+  queda como `verificador-de-cifras`. La aritmética solo se acepta con cifras que dijo el operador.
+- **Consecuencias**: el modelo puede fallar sin que el operador vea una cifra falsa. Puede rechazar de más una suma correcta
+  no prevista: ese es el lado seguro. Esas respuestas de respaldo no entran al dataset de fine-tuning.
+
+## ADR-043 · Llave de IA guardada con DPAPI desde la pantalla — Aceptada
+
+- **Fecha**: 2026-11-01.
+- **Contexto**: un vendedor no sabe configurar variables de entorno, y sin llave no hay Asistente en el `.exe` (D-14). La llave
+  es un secreto con costo asociado: no puede quedar en claro ni devolverse por la API.
+- **Decisión**: el panel del Asistente la pide si falta, la prueba con un saludo al proveedor (solo 401/403 la rechaza; sin
+  red se guarda igual) y `ia/llave_local.py` la cifra con DPAPI en `ia_llave.dpapi`, ligada a la cuenta de Windows. Solo en modo
+  local, proveedor NVIDIA, Windows y **desde la misma computadora**: el PIN de demo es público y no debe permitir reemplazarla
+  desde otro equipo. La variable de entorno sigue mandando. El esquema de entrada no valida con Pydantic para que un `422` no
+  repita la llave en su respuesta; el frontend la envía directo, nunca por la cola offline.
+- **Consecuencias**: copiar el archivo a otra PC o cuenta no sirve. Reinstalar Windows obliga a escribirla de nuevo. Otro
+  programa corriendo con la misma cuenta de Windows podría descifrarla: es el límite conocido de DPAPI. Fuera de Windows se
+  sigue usando la variable.
+
+## ADR-044 · Respaldo con la API de SQLite y copias que saben de qué negocio son — Aceptada
+
+- **Fecha**: 2026-11-01.
+- **Contexto**: los datos del vendedor viven en un archivo de su computadora (Fase 5). Copiarlo a mano con WAL puede perder lo
+  último, restaurar la copia equivocada borraría ventas reales, y un archivo recibido no es de confianza.
+- **Decisión**: la copia sale de `Connection.backup` y lleva una tabla `respaldo_info` con el proyecto. Antes de tocar nada se
+  revisa cabecera, `integrity_check`, tablas necesarias, ausencia de triggers y vistas, proyecto y revisión conocida. Lo actual
+  se guarda en `respaldos/`; si falla la migración, se vuelve a ello. Las rutas viven en un módulo propio y solo con SQLite.
+- **Consecuencias**: la práctica no puede pisar un negocio real. Una copia de una versión anterior se migra; una más nueva se
+  rechaza. La copia va sin cifrar (D-23) y no incluye PIN, llave ni secreto: en otra PC hay PIN nuevos. `respaldos/` no se limpia
+  sola, a propósito.
+
+## ADR-045 · Recepción de compras inmutable y stock solo con cantidad explícita — Aceptada
+
+- **Fecha**: 2026-11-01.
+- **Contexto**: la recepción mueve stock y dinero, y la cola offline puede reenviarla. La cantidad del pedido es texto libre
+  ("2 packs"), que no equivale a unidades de inventario.
+- **Decisión**: un ítem confirmado no se reescribe: la misma confirmación es un no-op y otra distinta da `409`. El evento
+  `compra.item_recibido` suma al stock solo si llega `cantidad_stock`, y la pantalla solo la pregunta si el producto existe en
+  Inventario. Compras identifica el producto por nombre, único en el sistema, sin clave foránea entre módulos. Se agregan `uuid`
+  a proveedores, órdenes e ítems (migración 0004) y la API deja de exponer sus ids enteros.
+- **Consecuencias**: reenviar no duplica stock. Un error de recepción se corrige con un ajuste de Inventario, que aún no tiene
+  pantalla (D-22). Compras sigue funcionando sin Inventario.
+

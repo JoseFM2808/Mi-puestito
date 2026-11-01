@@ -2,7 +2,7 @@
 
 ## Qué es
 
-La cola que cumple la regla offline-first (AGENTS.md, ADR-032): toda escritura de Ventas y Fiados se guarda en el
+La cola que cumple la regla offline-first (AGENTS.md, ADR-032): toda escritura de Ventas, Fiados y Compras se guarda en el
 dispositivo ANTES de enviarse, y se envía sola cuando hay red.
 
 ## Qué datos maneja

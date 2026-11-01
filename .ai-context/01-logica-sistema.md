@@ -1,6 +1,6 @@
 # 01 · Lógica del sistema
 
-> Flujos transaccionales, inventario, cobro offline y Asistente. Última revisión: 2026-10-08.
+> Flujos transaccionales, inventario, cobro offline y Asistente. Última revisión: 2026-11-01.
 > Todo lo descrito aquí está **implementado** salvo lo marcado **[Pendiente]**.
 > Fuente funcional: `docs/03-modulos/Modulo-Ventas.md`, `Modulo-Inventario.md`, `docs/02-arquitectura/Sincronizacion-Offline.md`.
 > Código: `backend/modules/ventas/servicio.py`, `backend/modules/inventario/servicio.py`, `frontend/src/sincronizacion/cola.ts`.
@@ -111,19 +111,36 @@ Garantías contra condiciones de carrera (verificadas en `tests/test_inventario.
    `eventos_con_fallas` de `/api/salud`.
 5. **Conciliación:** `GET /api/inventario/conciliacion` compara la caché `stock_actual` con Σ movimientos; debe estar vacía.
 
-## 4. Recepción de compras **[Pendiente: Fase 4]**
+## 4. Recepción de compras
+
+Código: `backend/modules/compras/servicio.py`, `frontend/src/modules/compras/`.
 
 ```mermaid
 flowchart LR
     B[borrador] --> P[pendiente] --> C[en_camino] --> R[recibida] --> X[cerrada]
-    R -. checklist por ítem .-> I{estado_recepcion}
-    I -->|recibido| S1[+stock]
-    I -->|cambiado| S2[+stock del sustituto<br/>monto_sustituto]
-    I -->|no_recibido| S3[sin movimiento]
-    R --> M[monto_real = Σ recibido + Σ sustitutos]
+    P & C -. checklist por ítem .-> I{estado_recepcion}
+    I -->|recibido| S1[evento: +stock si dijeron cuánto]
+    I -->|cambiado| S2[evento: +stock del sustituto<br/>monto_sustituto]
+    I -->|no_recibido| S3[sin movimiento · no se paga]
+    I -->|pendiente| S4[el pedido sigue abierto<br/>se confirma después]
+    I --> M[monto_real = Σ recibido + Σ sustitutos]
 ```
 
-Hoy existe el esquema y la lectura; el Dashboard ya usa los pedidos `pendiente`/`en_camino` para "Mañana necesitas en caja".
+Reglas (ADR-045):
+
+- **Totales en el servidor:** `monto_total` = Σ items; `monto_real` = Σ de lo que llegó de verdad. `monto_total` no cambia.
+- **Solo hacia adelante:** Borrador → Pendiente → En camino. Pasa a Recibida cuando ningún ítem queda pendiente, y a
+  Cerrada con "Ya le pagué". Volver atrás da `409`.
+- **Una recepción confirmada no se reescribe:** ya movió stock. Reenviar la misma es un no-op (cola offline); cambiarla
+  da `409`. Un error se corrige con un ajuste de Inventario.
+- **Stock por evento:** `compra.item_recibido` lleva el nombre efectivo y `cantidad_stock`. Inventario suma solo con
+  cantidad explícita, porque "2 packs" no dice cuántas unidades son; busca por nombre (único) y es idempotente por
+  `("item_compra", uuid del ítem)`. Si no está o falla, la recepción se guarda igual.
+- **Caja:** "Mañana necesitas" y "Pedidos por llegar" usan `monto_por_recibir`: tras una recepción parcial, solo lo que falta.
+- **Sugerencias:** lo más pedido a ese proveedor en sus últimas 30 órdenes (sin borradores), con la cantidad y el monto de
+  la última vez.
+- **Offline:** proveedor, pedido, avance, recepción y cierre pasan por la misma cola FIFO que Ventas. Un RUC repetido se
+  avisa en el dispositivo si ya se conoce; si no, el servidor lo rechaza con `409` y el operador lo ve en "rechazadas".
 
 ## 5. Asistente (AI Companion)
 
@@ -151,3 +168,37 @@ sequenceDiagram
 
 Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y una acción sugerida
 nunca se ejecuta sola (ADR-037). Sin Dashboard disponible responde igual, avisando que no tiene cifras.
+
+**Verificador de cifras (ADR-042):** cada monto de la respuesta debe estar en el contexto o en lo que dijo el operador. Si
+un modelo inventa uno, se prueba el siguiente; si todos fallan, se responde con un mensaje de respaldo y el botón a la Caja.
+
+**Calidad medida:** `python -m ia.evaluar` corre 19 casos fijos sobre una demo temporal. Con NVIDIA el 2026-11-01:
+`nemotron-3.5-bolt-e4b` 19/19 en una corrida, mediana 1,4 s, sin nombres reales hacia el proveedor en 30 llamadas (Bolt tuvo
+404 intermitentes, cubiertos por los reintentos). Entre corridas hay variación: hubo 17/18 antes de añadir el caso de Compras.
+
+**Dataset:** `python -m ia.dataset salida.jsonl` exporta solo lo valorado "Me sirvió", sin borradores, sin respuestas de
+respaldo y sin cifras ausentes de su contexto. Una valoración posterior negativa saca el ejemplo.
+
+## 6. Respaldo y restauración (ADR-044)
+
+Código: `backend/modules/respaldo/servicio.py`, `frontend/src/componentes/barra-superior/Respaldo.tsx`.
+
+```mermaid
+flowchart TB
+    G[Guardar una copia] --> BK[API backup de SQLite<br/>coherente con WAL] --> INF[+ respaldo_info: de qué negocio es] --> ARC[archivo .db para el vendedor]
+    ARC --> REV{Revisar en carpeta temporal}
+    REV -->|cabecera, integridad, tablas,<br/>triggers/vistas| NO1[400 no sirve]
+    REV -->|otro negocio o versión más nueva| NO2[409]
+    REV -->|ok| ANT[guardar lo actual en respaldos/] --> REE[reemplazar] --> MIG{migrar al esquema de hoy}
+    MIG -->|falla| VOL[volver a lo anterior · 409]
+    MIG -->|ok| FIN[204: el dispositivo limpia su caché y recarga]
+```
+
+- Recuperar no se ofrece con cambios sin enviar en la cola: se perderían.
+- La copia no lleva los PIN, la llave de IA ni el secreto de sesión; va **sin cifrar** y la custodia el vendedor (D-23).
+
+## 7. Datos de práctica
+
+`POST /api/dashboard/demo/reiniciar` borra lo practicado y vuelve a sembrar con las fechas de hoy; con un negocio real da
+`403`. El botón pide confirmación en dos pasos y limpia también lo guardado en el dispositivo, para que la cola no reenvíe
+operaciones de la práctica anterior.

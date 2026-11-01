@@ -1,7 +1,7 @@
 # 03 · Base de datos
 
-> Modelo entidad-relación y diccionario de datos. Última revisión: 2026-10-08.
-> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0003).
+> Modelo entidad-relación y diccionario de datos. Última revisión: 2026-11-01.
+> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0004).
 > Un archivo SQLite **por proyecto** (`mi_puestito_demo.db`, `mi_puestito_<real>.db`), mismo esquema en cada uno.
 > `backend/tests/test_migraciones.py` falla si un modelo cambia sin su migración.
 
@@ -60,6 +60,7 @@ erDiagram
     }
     PROVEEDORES {
         int id PK
+        string uuid UK
         string nombre "idx"
         string empresa "idx"
         string ruc UK "11 dígitos SUNAT"
@@ -69,6 +70,7 @@ erDiagram
     }
     ORDENES_COMPRA {
         int id PK
+        string uuid UK
         int proveedor_id FK
         enum estado "borrador..cerrada"
         date fecha_estimada_llegada
@@ -80,6 +82,7 @@ erDiagram
     }
     ITEMS_ORDEN_COMPRA {
         int id PK
+        string uuid UK
         int orden_compra_id FK
         string nombre_producto
         string cantidad
@@ -120,7 +123,10 @@ erDiagram
 | Usuarios | `usuarios.json` en la carpeta de datos | `{usuario: {proyecto, sal, pin_hash}}` | `.gitignore` + `test_higiene_repo.py` |
 | Orden de modelos de IA | `ia_modelos.json` en la carpeta de datos | Nombres de modelos, latencias, fecha. **Nunca la llave** | Se regenera con `python -m ia.verificar` |
 | Registro para fine-tuning | `ia_registro_<proyecto>.jsonl` en la carpeta de datos | Intercambios en formato chat, seudonimizados, y valoraciones (ADR-038) | Opt-in; `*.jsonl` ignorado y vigilado |
-| Cola offline | IndexedDB `mi-puestito-<proyecto>` en el navegador | `operaciones`, `ventasAbiertas`, `clientes`, `instantaneas` | Por proyecto; vive en el dispositivo |
+| Cola offline | IndexedDB `mi-puestito-<proyecto>` en el navegador | `operaciones`, `ventasAbiertas`, `clientes`, `instantaneas`, `ordenesCompra`, `proveedores` | Por proyecto; vive en el dispositivo |
+| Secreto de sesión | `sesion.key` en la carpeta de datos | Firma los tokens en modo local | `*.key` en `.gitignore` y en el test de higiene |
+| Llave de IA | `ia_llave.dpapi` en la carpeta de datos | Cifrada con DPAPI, ligada a la cuenta de Windows (ADR-043) | `*.dpapi` en `.gitignore` y en el test de higiene |
+| Copias automáticas | `respaldos/antes-de-restaurar-<proyecto>-<momento>.db` en la carpeta de datos | Lo que había antes de cada restauración (ADR-044) | `*.db` y `respaldos/` en `.gitignore`. No se borran solas |
 
 ## 3. Diccionario de datos
 
@@ -140,6 +146,9 @@ erDiagram
 | `pagos.monto` | INTEGER | no | `ck_pago_monto_positivo` | Céntimos |
 | `proveedores.ruc` | VARCHAR(11) | sí | `uq_proveedores_ruc` | Evita duplicados al autorregistrarse |
 | `ordenes_compra.(estado, fecha_estimada_llegada)` | enum + DATE | — | `ix_ordenes_estado_llegada` | "Mañana necesitas en caja" |
+| `ordenes_compra.monto_total` | INTEGER | no | — | Céntimos, Σ items, calculado en el servidor. No cambia al recibir |
+| `ordenes_compra.monto_real` | INTEGER | sí | — | Céntimos; NULL hasta la primera recepción. Σ recibido + Σ sustitutos |
+| `items_orden_compra.estado_recepcion` | VARCHAR enum | no | — | Una vez distinto de `pendiente`, no se reescribe (ADR-045) |
 | `productos.stock_actual` | INTEGER | no | — | Milésimas. Solo lo cambia `registrar_movimiento` (incremento atómico) |
 | `movimientos_inventario.(origen_tipo, origen_ref)` | VARCHAR | no | `uq_movimiento_origen` | Un origen mueve el stock una sola vez |
 | `movimientos_inventario.delta` | INTEGER | no | `ck_movimiento_delta_no_cero` | Milésimas, ± |
@@ -157,3 +166,5 @@ erDiagram
   el modo batch de SQLite no dispare `ON DELETE CASCADE`, y `PRAGMA foreign_key_check` lo confirma al final.
 - **Concurrencia:** WAL + `busy_timeout=5000`; sesiones de escritura con `BEGIN IMMEDIATE` (D-02).
 - **Sin FK entre módulos:** Ventas y Compras funcionan sin Inventario.
+- **Tabla solo en copias:** `respaldo_info (proyecto, creado_en)` existe únicamente dentro del archivo de respaldo; se quita
+  al restaurar y no forma parte del esquema (ADR-044).

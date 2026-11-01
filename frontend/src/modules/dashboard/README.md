@@ -21,7 +21,7 @@ las cifras reales del proyecto que vienen de `GET /api/dashboard/resumen`.
 | Tocar una orden abierta, **Registrar venta** | Va a Ventas                                           |
 | **Venta rápida**                             | Va a Ventas con el formulario de venta rápida abierto |
 | Tocar **Fiados por cobrar**                  | Va a Fiados                                           |
-| **Llegó un pedido**                          | Aviso: llega con el módulo Compras (Fase 4)           |
+| **Llegó un pedido**                          | Abre Compras, donde se revisa lo que llegó           |
 | **Volver a intentar**                        | Relee la caja tras un error                           |
 
 ## Cómo interactúa la IA
