@@ -29,7 +29,8 @@ _MENCION = re.compile(
 )
 
 _LINEA = re.compile(
-    r"^\s*ACCI[OÓ]N\s*:\s*(?P<tipo>\w+)\s+(?P<destino>[\wáéíóú]+)\s*\.?\s*$",
+    # Sin ancla al inicio: algunos modelos la pegan al final de la última frase
+    r"\s*\bACCI[OÓ]N\s*:\s*(?P<tipo>\w+)\s+(?P<destino>[\wáéíóú]+)\s*\.?\s*$",
     re.IGNORECASE | re.MULTILINE,
 )
 

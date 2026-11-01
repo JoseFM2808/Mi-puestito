@@ -212,7 +212,7 @@ def test_el_orden_verificado_se_usa_si_no_hay_variable(monkeypatch, tmp_path):
     # primero); Gemma 4, la familia del modelo local futuro, queda de respaldo
     (tmp_path / configuracion.ARCHIVO_MODELOS).unlink()
     assert configuracion.leer().modelos == tuple(configuracion.MODELOS_NVIDIA)
-    assert configuracion.MODELOS_NVIDIA[0] == "nvidia/nemotron-3.5-lightning-30b-a3b"
+    assert configuracion.MODELOS_NVIDIA[0] == "nvidia/nemotron-3.5-bolt-e4b"
 
 
 def test_un_proveedor_local_no_necesita_llave(monkeypatch):
@@ -358,7 +358,7 @@ def test_un_borrador_de_razonamiento_nunca_llega_al_operador(monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, "post", post)
     monkeypatch.setenv("NVIDIA_API_KEY", "llave-falsa")
     monkeypatch.setenv("MI_PUESTITO_IA_MODELOS", "piensa-en-voz-alta,duplica,bueno")
-    respuesta = asyncio.run(servicio.preguntar("¿Cuánto debe Cliente 1?", "{}"))
+    respuesta = asyncio.run(servicio.preguntar("¿Cuánto debe Cliente 1?", '{"deuda_cliente": "45.00"}'))
     assert respuesta.modelo == "bueno"
     assert respuesta.texto == "Cliente 1 debe S/ 45.00."  # sin asteriscos de markdown
     assert respuesta.acciones[0]["pantalla"] == "fiados"
@@ -429,3 +429,127 @@ def test_el_asistente_ve_a_todos_los_que_deben_seudonimizados(cliente, cabeceras
     deudas = [c["deuda"] for c in contexto["clientes_que_deben"]]
     assert deudas == sorted(deudas, key=float, reverse=True) and deudas[0] == "45.00"
     assert all(c["nombre"].startswith("Cliente ") for c in contexto["clientes_que_deben"])
+
+
+# ---- Garantías halladas con la evaluación real (2026-11-01) ----
+
+def test_cifras_inventadas_no_pasan():
+    # Casos reales: "te deben S/ 130.00" con 132.50 en los datos; "este mes S/ 12.50"
+    from decimal import Decimal
+
+    from ia.cifras import cifras_no_respaldadas
+
+    contexto = '{"fiados_por_cobrar": "132.50", "deuda": "45.00", "otra": "32.50"}'
+    assert cifras_no_respaldadas("Te deben S/ 130.00", contexto) == {Decimal("130.00")}
+    assert cifras_no_respaldadas("Este mes suman S/ 12.50", contexto) == {Decimal("12.50")}  # 45 − 32.50 no vale
+    assert cifras_no_respaldadas("Debe 99.90 soles", contexto) == {Decimal("99.90")}
+    assert cifras_no_respaldadas("Te deben S/ 132.50 y Flora debe 45.00.", contexto) == set()
+    assert cifras_no_respaldadas("Tienes 3 ventas y 12 órdenes el 2026-11-02", contexto) == set()  # no son dinero
+
+
+def test_se_permite_la_cuenta_con_cifras_que_dio_el_operador():
+    from ia.cifras import cifras_no_respaldadas
+
+    assert cifras_no_respaldadas("Tendrás S/ 165.", "{}", "Vendí S/ 120 y me deben 45") == set()
+    assert cifras_no_respaldadas("Te quedan S/ 75.", "{}", "Vendí S/ 120 y me deben 45") == set()
+
+
+def _falsear_modelos(monkeypatch, respuestas: dict):
+    """Cada modelo devuelve su texto, o lanza si lo que se le dio es una excepción."""
+    import ia.compatible_openai as proveedor
+
+    llamadas = []
+
+    async def responder(self, mensajes, modelo, tiempo_limite, extra=None):
+        llamadas.append(modelo)
+        salida = respuestas[modelo]
+        if isinstance(salida, list):
+            salida = salida.pop(0)
+        if isinstance(salida, Exception):
+            raise salida
+        return salida
+
+    monkeypatch.setattr(proveedor.ProveedorCompatibleOpenAI, "responder", responder)
+    monkeypatch.setenv("NVIDIA_API_KEY", "llave-falsa")
+    monkeypatch.setenv("MI_PUESTITO_IA_MODELOS", ",".join(respuestas))
+    return llamadas
+
+
+def test_si_un_modelo_inventa_una_cifra_responde_el_siguiente(monkeypatch):
+    import asyncio
+
+    from ia import servicio
+
+    _falsear_modelos(monkeypatch, {"inventa": "Te deben S/ 130.00.", "exacto": "Te deben S/ 132.50."})
+    respuesta = asyncio.run(servicio.preguntar("¿Cuánto me deben?", '{"fiados_por_cobrar": "132.50"}'))
+    assert (respuesta.modelo, respuesta.texto) == ("exacto", "Te deben S/ 132.50.")
+
+
+def test_si_todos_inventan_lo_dice_y_ofrece_la_caja(monkeypatch):
+    import asyncio
+
+    from ia import servicio
+
+    _falsear_modelos(monkeypatch, {"inventa": "Te deben S/ 130.00.", "otro": "Te deben S/ 131.00."})
+    respuesta = asyncio.run(servicio.preguntar("¿Cuánto me deben?", '{"fiados_por_cobrar": "132.50"}'))
+    assert "130" not in respuesta.texto and "131" not in respuesta.texto
+    assert respuesta.modelo == servicio.MODELO_VERIFICADOR
+    assert respuesta.acciones[0]["pantalla"] == "caja"
+
+
+def test_un_404_intermitente_se_reintenta_en_el_mismo_modelo(monkeypatch):
+    # nemotron-3.5-bolt-e4b devolvió 404 en 1 de cada 3 llamadas (2026-11-01)
+    import asyncio
+
+    import httpx
+
+    from ia import servicio
+
+    pedido = httpx.Request("POST", "http://x")
+    error = httpx.HTTPStatusError("404", request=pedido, response=httpx.Response(404, request=pedido))
+    llamadas = _falsear_modelos(monkeypatch, {"inestable": [error, "Listo."]})
+    assert asyncio.run(servicio.preguntar("hola", "{}")).texto == "Listo."
+    assert llamadas == ["inestable", "inestable"]
+
+
+def test_la_llave_invalida_no_se_reintenta(monkeypatch):
+    import asyncio
+
+    import httpx
+
+    from ia import servicio
+
+    pedido = httpx.Request("POST", "http://x")
+    error = httpx.HTTPStatusError("401", request=pedido, response=httpx.Response(401, request=pedido))
+    llamadas = _falsear_modelos(monkeypatch, {"modelo": [error]})
+    with pytest.raises(servicio.AsistenteNoDisponible):
+        asyncio.run(servicio.preguntar("hola", "{}"))
+    assert llamadas == ["modelo"]
+
+
+def test_la_accion_pegada_al_final_de_la_frase_no_se_muestra():
+    from ia.acciones import extraer
+
+    texto, acciones = extraer("Sra. Flora debe 45.00. ACCION: ir_a fiados")
+    assert texto == "Sra. Flora debe 45.00."
+    assert acciones[0]["pantalla"] == "fiados"
+
+
+def test_el_modelo_sabe_que_dia_es_y_que_pedido_se_atraso(cliente, cabeceras_demo, modelo):
+    from fechas import dia_peruano
+
+    preguntar(cliente, cabeceras_demo, "¿Qué pedido está atrasado?")
+    contexto = json.loads(modelo["llamadas"][0]["contexto"])
+    assert contexto["hoy"] == dia_peruano().isoformat()
+    assert [p["atrasado"] for p in contexto["pedidos_por_llegar"]] == [True, False, False]
+    # Identificadores internos no salen hacia el proveedor
+    assert "uuid" not in contexto["ordenes_activas"][0] and "id" not in contexto["pedidos_por_llegar"][0]
+
+
+def test_abstenerse_no_es_equivocarse_pero_un_monto_falso_si():
+    from ia.verificar import es_correcta
+
+    assert es_correcta("Tendrás S/ 165 en total.")
+    assert es_correcta("Vendiste S/ 120.00 y Cliente 1 debe S/ 45.00. No puedo calcular el total.")
+    assert not es_correcta("Tendrás S/ 75.")
+    assert not es_correcta("S/ 165 " + "x" * 700)  # acierta, pero demasiado largo para el puesto

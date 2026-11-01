@@ -28,13 +28,13 @@ URLS = {
     "local": "http://127.0.0.1:11434/v1",
 }
 
-# Medido el 2026-10-08 con la llave del owner y el prompt real del Asistente:
-# Nemotron 3.5 Lightning (MoE, ~3B activos) 1.2 s y gpt-oss-20b 1.7 s, ambos
-# correctos con el razonamiento apagado. Gemma 4 31B (la familia del modelo
-# local futuro) no respondió en 45 s: queda de respaldo hasta que lo haga.
+# Medido el 2026-11-01 con la llave del owner y el set de ia.evaluar: Bolt E4B, el
+# más parecido a un modelo pequeño local, 18/18 en ~1.2 s (con 404 intermitentes que
+# un reintento resuelve); Nemotron 3.5 Lightning 16/18 en ~1 s. gpt-oss-20b y Gemma 4
+# 31B (la familia del modelo local futuro) no responden a tiempo hoy.
 MODELOS_NVIDIA = [
+    "nvidia/nemotron-3.5-bolt-e4b",
     "nvidia/nemotron-3.5-lightning-30b-a3b",
-    "openai/gpt-oss-20b",
     "google/gemma-4-31b-it",
 ]
 

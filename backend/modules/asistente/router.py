@@ -60,6 +60,11 @@ def _resumen_del_proyecto(sesion: Session) -> dict:
         resumen = calcular_resumen(sesion, dia_peruano()).model_dump(mode="json")
     except Exception:  # noqa: BLE001 — sin Dashboard, el Asistente sigue atendiendo
         return dict(SIN_CIFRAS)
+    # El modelo no sabe qué día es: sin esto no puede decir qué pedido se atrasó
+    hoy = dia_peruano().isoformat()
+    resumen["hoy"] = hoy
+    for pedido in resumen.get("pedidos_por_llegar", []):
+        pedido["atrasado"] = pedido["fecha_estimada"] < hoy
     try:
         resumen["clientes_que_deben"] = _clientes_que_deben(sesion)
     except Exception:  # noqa: BLE001 — sin Ventas, se responde con lo que hay

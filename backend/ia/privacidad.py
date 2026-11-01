@@ -71,11 +71,13 @@ def seudonimizar_resumen(resumen: dict) -> tuple[dict, Seudonimos]:
     """Copia del resumen del Dashboard con los nombres reemplazados por alias."""
     alias = Seudonimos()
     copia = dict(resumen)
+    # Sin uuid ni id: al modelo no le sirven y un uuid es un identificador más que no debe salir
     copia["ordenes_activas"] = [
-        {**orden, "nombre": alias.cliente(orden["nombre"])} for orden in resumen.get("ordenes_activas", [])
+        {**{k: v for k, v in orden.items() if k != "uuid"}, "nombre": alias.cliente(orden["nombre"])}
+        for orden in resumen.get("ordenes_activas", [])
     ]
     copia["pedidos_por_llegar"] = [
-        {**pedido, "proveedor": alias.proveedor(pedido["proveedor"])}
+        {**{k: v for k, v in pedido.items() if k != "id"}, "proveedor": alias.proveedor(pedido["proveedor"])}
         for pedido in resumen.get("pedidos_por_llegar", [])
     ]
     if "clientes_que_deben" in resumen:

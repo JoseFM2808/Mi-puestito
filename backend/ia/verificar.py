@@ -6,9 +6,9 @@
 El catálogo de NVIDIA cambia: un modelo listado puede no estar disponible
 para tu llave. Este script prueba cada candidato con una pregunta del puesto
 que tiene UNA respuesta correcta (120 + 45 = 165) y guarda en la carpeta de
-datos `ia_modelos.json`: primero los que acertaron, del más rápido al más
-lento; después los que respondieron mal (el Asistente no los usa). Un modelo
-rápido que suma mal no sirve en una caja.
+datos `ia_modelos.json`: primero los que acertaron a tiempo, en el orden de
+preferencia; después los que respondieron mal (el Asistente no los usa). Un
+modelo rápido que suma mal no sirve en una caja.
 
 El archivo guarda solo nombres de modelos y tiempos: NUNCA la llave.
 """
@@ -18,19 +18,22 @@ import json
 import sys
 import time
 from datetime import datetime, timezone
+from decimal import Decimal
 
 import httpx
 
 import rutas
 
 from . import configuracion
-from .compatible_openai import ProveedorCompatibleOpenAI, RespuestaConBorrador
-from .servicio import armar_mensajes
+from .cifras import montos_en
+from .compatible_openai import ProveedorCompatibleOpenAI, RespuestaConBorrador, es_transitorio
+from .servicio import REINTENTOS_TRANSITORIOS, armar_mensajes
 
 # Candidatos de NVIDIA (catálogo del 2026-10-08), eficientes primero. Gemma 4
 # y Gemma 3 son la familia del modelo local futuro; los Nemotron con "a3b"
 # son MoE con ~3B de parámetros activos por token (rápidos).
 CANDIDATOS_NVIDIA = [
+    "nvidia/nemotron-3.5-bolt-e4b",
     "nvidia/nemotron-3.5-lightning-30b-a3b",
     "openai/gpt-oss-20b",
     "google/gemma-4-31b-it",
@@ -60,15 +63,27 @@ REINTENTOS_POR_TIEMPO = 1
 
 
 def es_correcta(texto: str) -> bool:
-    return RESPUESTA_CORRECTA in texto.replace(" ", "").replace(",", "") and len(texto) <= LARGO_MAXIMO
+    """Acierta la cuenta, o se abstiene sin dar un monto equivocado. "Tendrás S/ 75" es
+    incorrecto; "vendiste S/ 120 y te deben S/ 45" no da un dato falso, aunque no sume."""
+    if len(texto) > LARGO_MAXIMO:
+        return False
+    if RESPUESTA_CORRECTA in texto.replace(" ", "").replace(",", ""):
+        return True
+    return montos_en(texto) <= {Decimal("120.00"), Decimal("45.00"), Decimal("0.00")}
 
 
 def ordenar(resultados: list[dict]) -> list[dict]:
-    """Correctos por latencia; luego los que respondieron mal; luego los caídos."""
+    """Primero los que acertaron a tiempo, en el orden de preferencia de la lista (lo decide
+    `ia.evaluar`, no un segundo de diferencia); luego los lentos; luego los que respondieron
+    mal; al final los caídos. `sorted` es estable: conserva la preferencia."""
+    limite = configuracion.leer().tiempo_limite
+
     def clave(fila: dict):
         if not fila["responde"]:
-            return (2, 0.0)
-        return (0 if fila.get("correcto", True) else 1, fila["segundos"])
+            return (3, 0.0)
+        if not fila.get("correcto", True):
+            return (2, fila["segundos"])
+        return (0, 0.0) if fila["segundos"] <= limite else (1, fila["segundos"])
 
     return sorted(resultados, key=clave)
 
@@ -87,7 +102,7 @@ def _motivo(error: Exception) -> str:
 
 
 async def probar(proveedor, modelo: str) -> dict:
-    for intento in range(REINTENTOS_POR_TIEMPO + 1):
+    for intento in range(REINTENTOS_TRANSITORIOS + 1):
         inicio = time.perf_counter()
         try:
             ajustes = configuracion.ajustes_para(modelo)
@@ -97,6 +112,8 @@ async def probar(proveedor, modelo: str) -> dict:
                 continue
             return {"modelo": modelo, "responde": False, "motivo": _motivo(error)}
         except Exception as error:  # noqa: BLE001 — se informa y se sigue con el siguiente
+            if es_transitorio(error) and intento < REINTENTOS_TRANSITORIOS:
+                continue
             return {"modelo": modelo, "responde": False, "motivo": _motivo(error)}
         return {
             "modelo": modelo,

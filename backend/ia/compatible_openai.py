@@ -24,6 +24,7 @@ _BORRADOR = re.compile(
 _NEGRITA = re.compile(r"(\*\*|__)(.+?)\1")
 
 MAX_TOKENS = 450
+CODIGOS_TRANSITORIOS = {404, 429, 500, 502, 503, 504}
 
 
 class RespuestaVacia(Exception):
@@ -41,6 +42,19 @@ def limpiar(texto: str) -> str:
 
 def es_borrador(texto: str) -> bool:
     return bool(_BORRADOR.match(texto or ""))
+
+
+def es_transitorio(error: Exception) -> bool:
+    """Vale la pena reintentar en seguida (NVIDIA devuelve 404 intermitentes: 1 de cada 3
+    con nemotron-3.5-bolt-e4b el 2026-11-01). Un tiempo agotado no: gastaría más espera."""
+    return isinstance(error, httpx.HTTPStatusError) and error.response.status_code in CODIGOS_TRANSITORIOS
+
+
+def motivo_error(error: Exception) -> str:
+    """Motivo corto y SIN datos sensibles (nunca la cabecera con la llave)."""
+    if isinstance(error, httpx.HTTPStatusError):
+        return f"HTTP {error.response.status_code}"
+    return type(error).__name__
 
 
 class ProveedorCompatibleOpenAI:
