@@ -32,6 +32,8 @@ jobs:
     # Windows además de Linux: el ejecutable corre en Windows, y fallos como
     # la falta de tzdata solo aparecen ahí (Linux trae la base de zonas)
     strategy:
+      # Un fallo en un sistema no debe ocultar el resultado del otro
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
