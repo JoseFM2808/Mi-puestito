@@ -50,7 +50,7 @@ def test_el_esquema_migrado_coincide_con_los_modelos(motor):
 def test_migrar_dos_veces_no_cambia_nada(motor):
     migrar(motor)
     migrar(motor)
-    assert _revision_actual(motor) == "0003"
+    assert _revision_actual(motor) == "0004"
 
 
 def test_migrar_datos_de_la_demo_1_conserva_items_y_pasa_a_centimos(motor):
@@ -86,6 +86,25 @@ def test_migrar_datos_de_la_demo_1_conserva_items_y_pasa_a_centimos(motor):
         assert venta.items[0].monto == Decimal("30.50")
 
 
+def test_migrar_compras_conserva_pedidos_y_les_da_uuid(motor):
+    migrar(motor, "0003")
+    with motor.begin() as c:
+        c.execute(text("INSERT INTO proveedores (id, nombre, creado_en) VALUES (1, 'Norte', '2026-09-01 10:00:00')"))
+        c.execute(text("INSERT INTO ordenes_compra (id, proveedor_id, estado, monto_total, creado_en, actualizado_en) "
+                       "VALUES (1, 1, 'en_camino', 3050, '2026-09-01 10:00:00', '2026-09-01 10:00:00')"))
+        c.execute(text("INSERT INTO items_orden_compra (id, orden_compra_id, nombre_producto, monto, estado_recepcion) "
+                       "VALUES (1, 1, 'Arroz', 3050, 'pendiente')"))
+
+    migrar(motor)
+
+    with motor.connect() as c:
+        # Recrear "ordenes_compra" en modo batch NO debe disparar el ON DELETE CASCADE
+        assert c.execute(text("SELECT COUNT(*) FROM items_orden_compra")).scalar_one() == 1
+        uuids = c.execute(text("SELECT uuid FROM proveedores UNION ALL SELECT uuid FROM ordenes_compra "
+                               "UNION ALL SELECT uuid FROM items_orden_compra")).scalars().all()
+        assert len(set(uuids)) == 3 and all(len(u) == 36 for u in uuids)
+
+
 def test_una_base_creada_antes_de_alembic_se_marca_y_se_migra(motor):
     # Así quedaron las bases de la Demo 1: tablas de create_all, sin alembic_version
     migrar(motor, "0001")
@@ -94,7 +113,7 @@ def test_una_base_creada_antes_de_alembic_se_marca_y_se_migra(motor):
 
     migrar(motor)
 
-    assert _revision_actual(motor) == "0003"
+    assert _revision_actual(motor) == "0004"
     assert "productos" in inspect(motor).get_table_names()
 
 
@@ -110,4 +129,4 @@ def test_las_migraciones_se_pueden_revertir(motor):
     assert _revision_actual(motor) == "0001"
     assert "productos" not in inspect(motor).get_table_names()
     migrar(motor)
-    assert _revision_actual(motor) == "0003"
+    assert _revision_actual(motor) == "0004"

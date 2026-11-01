@@ -1,0 +1,77 @@
+/* Estilos del módulo Compras. Solo tokens. */
+
+.pantalla {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--esp-4) var(--esp-3) var(--esp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.tarjeta,
+.formulario,
+.bloque {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--esp-2);
+  flex-wrap: wrap;
+}
+
+.fila > * {
+  min-width: 0;
+}
+
+.filaDerecha,
+.acciones,
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.filaCampos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--esp-2);
+}
+
+.nombre {
+  font-size: var(--tam-nombre);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.nota {
+  color: var(--texto-suave);
+}
+
+.notaAtrasada {
+  color: var(--deuda);
+  font-weight: 600;
+}
+
+.productos {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  overflow-wrap: anywhere;
+}
+
+.enlaceLlamar {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tactil-min);
+  padding: var(--esp-1) var(--esp-3);
+  font-weight: 600;
+  color: var(--primario);
+}

@@ -77,7 +77,10 @@ def seudonimizar_resumen(resumen: dict) -> tuple[dict, Seudonimos]:
         for orden in resumen.get("ordenes_activas", [])
     ]
     copia["pedidos_por_llegar"] = [
-        {**{k: v for k, v in pedido.items() if k != "id"}, "proveedor": alias.proveedor(pedido["proveedor"])}
+        {
+            **{k: v for k, v in pedido.items() if k != "uuid"},
+            "proveedor": alias.proveedor(pedido["proveedor"]),
+        }
         for pedido in resumen.get("pedidos_por_llegar", [])
     ]
     if "clientes_que_deben" in resumen:

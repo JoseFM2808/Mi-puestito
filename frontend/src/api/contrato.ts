@@ -88,7 +88,7 @@ interface OrdenActivaResumenCable {
 }
 
 interface PedidoPorLlegarCable {
-  id: number
+  uuid: string
   proveedor: string
   fecha_estimada: string
   monto: string
@@ -122,7 +122,7 @@ export interface ResumenCaja {
   fiadosPorCobrar: number
   clientesConFiado: number
   ventasRapidasPendientes: number
-  pedidosPorLlegar: { id: number; proveedor: string; fechaEstimada: Date; monto: number }[]
+  pedidosPorLlegar: { uuid: string; proveedor: string; fechaEstimada: Date; monto: number }[]
   seccionesNoDisponibles: string[]
 }
 
@@ -148,7 +148,7 @@ export function leerResumen(cable: ResumenDashboardCable): ResumenCaja {
     clientesConFiado: cable.clientes_con_fiado,
     ventasRapidasPendientes: cable.ventas_rapidas_pendientes,
     pedidosPorLlegar: cable.pedidos_por_llegar.map((pedido) => ({
-      id: pedido.id,
+      uuid: pedido.uuid,
       proveedor: pedido.proveedor,
       fechaEstimada: fechaPeruana(pedido.fecha_estimada),
       monto: aCentimos(pedido.monto),
@@ -296,6 +296,56 @@ export interface RespuestaAsistenteCable {
 
 // ------------------------------------------------------------------ listas exactas de campos
 
+// ------------------------------------------------------------------ compras
+
+export type EstadoOrden = 'borrador' | 'pendiente' | 'en_camino' | 'recibida' | 'cerrada'
+export type EstadoRecepcion = 'pendiente' | 'recibido' | 'no_recibido' | 'cambiado'
+
+export interface ProveedorCable {
+  uuid: string
+  nombre: string
+  empresa: string | null
+  ruc: string | null
+  telefono: string | null
+  categoria: string | null
+  creado_en: string
+}
+
+export interface ItemOrdenCompraCable {
+  uuid: string
+  nombre_producto: string
+  cantidad: string | null
+  monto: string
+  estado_recepcion: EstadoRecepcion
+  producto_sustituto: string | null
+  monto_sustituto: string | null
+}
+
+export interface OrdenCompraCable {
+  uuid: string
+  proveedor_uuid: string
+  proveedor: string
+  proveedor_telefono: string | null
+  estado: EstadoOrden
+  fecha_estimada_llegada: string | null
+  monto_total: string
+  monto_real: string | null
+  notas: string | null
+  items: ItemOrdenCompraCable[]
+}
+
+export interface ResultadoOrdenCable {
+  orden: OrdenCompraCable
+  avisos: string[]
+}
+
+export interface ProductoFrecuenteCable {
+  nombre_producto: string
+  cantidad: string | null
+  monto: string
+  veces: number
+}
+
 /** Esquema del backend (nombre en openapi.json) → campos que el frontend espera. */
 export const CAMPOS_DEL_CONTRATO = {
   IngresoSalida: camposDe<IngresoCable>()(['token', 'proyecto', 'nombre_proyecto', 'es_real']),
@@ -319,7 +369,7 @@ export const CAMPOS_DEL_CONTRATO = {
     'monto',
     'deuda_cliente',
   ]),
-  PedidoPorLlegar: camposDe<PedidoPorLlegarCable>()(['id', 'proveedor', 'fecha_estimada', 'monto']),
+  PedidoPorLlegar: camposDe<PedidoPorLlegarCable>()(['uuid', 'proveedor', 'fecha_estimada', 'monto']),
   VentaSalida: camposDe<VentaCable>()([
     'uuid',
     'tipo',
@@ -343,6 +393,38 @@ export const CAMPOS_DEL_CONTRATO = {
     'cantidad_num',
   ]),
   ResultadoVenta: camposDe<ResultadoVentaCable>()(['venta', 'avisos']),
+  ProveedorSalida: camposDe<ProveedorCable>()([
+    'uuid',
+    'nombre',
+    'empresa',
+    'ruc',
+    'telefono',
+    'categoria',
+    'creado_en',
+  ]),
+  ItemOrdenCompraSalida: camposDe<ItemOrdenCompraCable>()([
+    'uuid',
+    'nombre_producto',
+    'cantidad',
+    'monto',
+    'estado_recepcion',
+    'producto_sustituto',
+    'monto_sustituto',
+  ]),
+  OrdenCompraSalida: camposDe<OrdenCompraCable>()([
+    'uuid',
+    'proveedor_uuid',
+    'proveedor',
+    'proveedor_telefono',
+    'estado',
+    'fecha_estimada_llegada',
+    'monto_total',
+    'monto_real',
+    'notas',
+    'items',
+  ]),
+  ResultadoOrden: camposDe<ResultadoOrdenCable>()(['orden', 'avisos']),
+  ProductoFrecuente: camposDe<ProductoFrecuenteCable>()(['nombre_producto', 'cantidad', 'monto', 'veces']),
   ClienteSalida: camposDe<ClienteCable>()(['uuid', 'nombre', 'telefono', 'limite_credito', 'creado_en']),
   ClienteConDeuda: camposDe<ClienteConDeudaCable>()([
     'uuid',

@@ -76,7 +76,7 @@ describe('contrato con el backend', () => {
       fiados_por_cobrar: '132.50',
       clientes_con_fiado: 4,
       ventas_rapidas_pendientes: 3,
-      pedidos_por_llegar: [{ id: 1, proveedor: 'Norte', fecha_estimada: '2026-09-29', monto: '320.00' }],
+      pedidos_por_llegar: [{ uuid: 'p1', proveedor: 'Norte', fecha_estimada: '2026-09-29', monto: '320.00' }],
       secciones_no_disponibles: [],
     }
     const resumen = leerResumen(cable)

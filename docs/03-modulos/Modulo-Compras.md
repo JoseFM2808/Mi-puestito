@@ -34,7 +34,9 @@ Funciona **sin** [[Modulo-Inventario]]. Cuando el inventario se active, las comp
 
 ## Estado
 - Fase: **MVP**
-- **Avance (Demo 1):** esquema de base de datos creado en
-  `backend/modules/compras/models.py` (`proveedores`, `ordenes_compra`,
-  `items_orden_compra`, con estados y checklist de recepción) y endpoints de
-  lectura. Pendiente: UI, auto-registro de proveedores y checklist.
+- **Avance (Fase 4):** módulo completo y offline-first. Alta de proveedores (también
+  por el propio proveedor en la tablet), pedidos con sugerencias de lo frecuente,
+  checklist de recepción con `monto_real` y evento `compra.item_recibido` hacia
+  [[Modulo-Inventario]]. La Caja proyecta solo lo que falta llegar.
+- **Pendiente:** búsqueda de RUC en SUNAT (necesita elegir un servicio externo) y
+  costo de los productos desde las compras (Inventario aún no guarda costo).

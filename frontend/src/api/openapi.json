@@ -68,6 +68,15 @@
       "producto"
     ]
   },
+  "CambioEstadoEntrada": {
+    "required": [
+      "estado"
+    ],
+    "properties": [
+      "estado",
+      "ocurrido_en"
+    ]
+  },
   "ClienteCambios": {
     "required": [],
     "properties": [
@@ -210,19 +219,45 @@
     "required": [
       "cantidad",
       "estado_recepcion",
-      "id",
       "monto",
       "monto_sustituto",
       "nombre_producto",
-      "producto_sustituto"
+      "producto_sustituto",
+      "uuid"
     ],
     "properties": [
       "cantidad",
       "estado_recepcion",
-      "id",
       "monto",
       "monto_sustituto",
       "nombre_producto",
+      "producto_sustituto",
+      "uuid"
+    ]
+  },
+  "ItemOrdenEntrada": {
+    "required": [
+      "monto",
+      "nombre_producto",
+      "uuid"
+    ],
+    "properties": [
+      "cantidad",
+      "monto",
+      "nombre_producto",
+      "uuid"
+    ]
+  },
+  "ItemRecepcionEntrada": {
+    "required": [
+      "estado",
+      "item_uuid"
+    ],
+    "properties": [
+      "cantidad_stock",
+      "estado",
+      "item_uuid",
+      "monto_sustituto",
       "producto_sustituto"
     ]
   },
@@ -293,36 +328,56 @@
     "required": [
       "estado",
       "fecha_estimada_llegada",
-      "id",
       "items",
       "monto_real",
       "monto_total",
       "notas",
-      "proveedor_id"
+      "proveedor",
+      "proveedor_telefono",
+      "proveedor_uuid",
+      "uuid"
     ],
     "properties": [
       "estado",
       "fecha_estimada_llegada",
-      "id",
       "items",
       "monto_real",
       "monto_total",
       "notas",
-      "proveedor_id"
+      "proveedor",
+      "proveedor_telefono",
+      "proveedor_uuid",
+      "uuid"
+    ]
+  },
+  "OrdenEntrada": {
+    "required": [
+      "items",
+      "proveedor_uuid",
+      "uuid"
+    ],
+    "properties": [
+      "estado",
+      "fecha_estimada_llegada",
+      "items",
+      "notas",
+      "ocurrido_en",
+      "proveedor_uuid",
+      "uuid"
     ]
   },
   "PedidoPorLlegar": {
     "required": [
       "fecha_estimada",
-      "id",
       "monto",
-      "proveedor"
+      "proveedor",
+      "uuid"
     ],
     "properties": [
       "fecha_estimada",
-      "id",
       "monto",
-      "proveedor"
+      "proveedor",
+      "uuid"
     ]
   },
   "PreguntaEntrada": {
@@ -387,6 +442,20 @@
       "uuid"
     ]
   },
+  "ProductoFrecuente": {
+    "required": [
+      "cantidad",
+      "monto",
+      "nombre_producto",
+      "veces"
+    ],
+    "properties": [
+      "cantidad",
+      "monto",
+      "nombre_producto",
+      "veces"
+    ]
+  },
   "ProductoSalida": {
     "required": [
       "codigo_barras",
@@ -409,24 +478,48 @@
       "uuid"
     ]
   },
+  "ProveedorEntrada": {
+    "required": [
+      "nombre",
+      "uuid"
+    ],
+    "properties": [
+      "categoria",
+      "empresa",
+      "nombre",
+      "ocurrido_en",
+      "ruc",
+      "telefono",
+      "uuid"
+    ]
+  },
   "ProveedorSalida": {
     "required": [
       "categoria",
       "creado_en",
       "empresa",
-      "id",
       "nombre",
       "ruc",
-      "telefono"
+      "telefono",
+      "uuid"
     ],
     "properties": [
       "categoria",
       "creado_en",
       "empresa",
-      "id",
       "nombre",
       "ruc",
-      "telefono"
+      "telefono",
+      "uuid"
+    ]
+  },
+  "RecepcionEntrada": {
+    "required": [
+      "items"
+    ],
+    "properties": [
+      "items",
+      "ocurrido_en"
     ]
   },
   "RespuestaSalida": {
@@ -440,6 +533,15 @@
       "id_respuesta",
       "modelo",
       "respuesta"
+    ]
+  },
+  "ResultadoOrden": {
+    "required": [
+      "orden"
+    ],
+    "properties": [
+      "avisos",
+      "orden"
     ]
   },
   "ResultadoVenta": {

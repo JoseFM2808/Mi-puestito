@@ -16,6 +16,7 @@ PANTALLAS = {
     "caja": "Ir a la Caja de hoy",
     "ventas": "Ir a Ventas",
     "fiados": "Ir a Fiados",
+    "compras": "Ir a Compras",
 }
 
 MAX_ACCIONES = 2
@@ -24,7 +25,7 @@ MAX_ACCIONES = 2
 # pantalla ("ve a la pantalla fiados"), igual se ofrece el botón. Los modelos
 # muy pequeños olvidan el formato más que el contenido.
 _MENCION = re.compile(
-    r"\b(?:pantalla|secci[oó]n|men[uú])\s+(?:de\s+)?(?:la\s+|los\s+)?[«\"']?(?P<destino>fiados|ventas|caja)\b",
+    r"\b(?:pantalla|secci[oó]n|men[uú])\s+(?:de\s+)?(?:la\s+|los\s+)?[«\"']?(?P<destino>fiados|ventas|caja|compras)\b",
     re.IGNORECASE,
 )
 

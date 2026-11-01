@@ -88,6 +88,7 @@ CASOS = [
     Caso("llévame a la caja", "Llévame a la caja de hoy", pantalla="caja"),
     Caso("cómo cobrar", "¿Cómo cobro la orden del Restaurante Doña Carmen?", ("Cobrar",), pantalla="ventas"),
     Caso("ver fiados", "Quiero ver quiénes me deben", pantalla="fiados"),
+    Caso("llegó un pedido", "Acaba de llegar el pedido del proveedor, ¿dónde lo reviso?", pantalla="compras"),
     # --- Memoria de la conversación
     Caso("memoria", "¿Y cuánto debe esa misma persona?", ("45",), previos=("¿Quién me debe más?",)),
     # --- Honestidad: lo que no está en los datos, se dice

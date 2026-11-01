@@ -8,12 +8,18 @@ Dinero en céntimos enteros (tipo `Dinero`, ADR-035).
 import enum
 from datetime import date, datetime
 from decimal import Decimal
+from uuid import uuid4
 
 from sqlalchemy import Date, Enum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base, Dinero, FechaHoraUTC
 from fechas import ahora_utc
+
+
+def nuevo_uuid() -> str:
+    """uuid para filas creadas en el servidor (seed, tests); la API exige el del dispositivo."""
+    return str(uuid4())
 
 
 class EstadoOrdenCompra(str, enum.Enum):
@@ -41,6 +47,7 @@ class Proveedor(Base):
     __tablename__ = "proveedores"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    uuid: Mapped[str] = mapped_column(String(36), unique=True, default=nuevo_uuid)
     # Se busca al proveedor por nombre, empresa o RUC
     nombre: Mapped[str] = mapped_column(String(120), index=True)
     empresa: Mapped[str | None] = mapped_column(String(120), index=True)
@@ -62,6 +69,7 @@ class OrdenCompra(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    uuid: Mapped[str] = mapped_column(String(36), unique=True, default=nuevo_uuid)
     proveedor_id: Mapped[int] = mapped_column(ForeignKey("proveedores.id"), index=True)
     estado: Mapped[EstadoOrdenCompra] = mapped_column(
         Enum(EstadoOrdenCompra, native_enum=False, values_callable=lambda e: [x.value for x in e]),
@@ -76,6 +84,14 @@ class OrdenCompra(Base):
     creado_en: Mapped[datetime] = mapped_column(FechaHoraUTC, default=ahora_utc)
     actualizado_en: Mapped[datetime] = mapped_column(FechaHoraUTC, default=ahora_utc, onupdate=ahora_utc)
 
+    @property
+    def monto_por_recibir(self) -> Decimal:
+        """Lo que falta que llegue: tras una recepción parcial, solo lo aún pendiente."""
+        pendientes = [i.monto for i in self.items if i.estado_recepcion == EstadoRecepcion.PENDIENTE]
+        if len(pendientes) == len(self.items):
+            return self.monto_total
+        return sum(pendientes, Decimal("0.00"))
+
     proveedor: Mapped[Proveedor] = relationship(back_populates="ordenes")
     # Los items no sobreviven a su orden: quedarían sin monto al que pertenecer
     items: Mapped[list["ItemOrdenCompra"]] = relationship(
@@ -87,6 +103,7 @@ class ItemOrdenCompra(Base):
     __tablename__ = "items_orden_compra"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    uuid: Mapped[str] = mapped_column(String(36), unique=True, default=nuevo_uuid)
     orden_compra_id: Mapped[int] = mapped_column(
         ForeignKey("ordenes_compra.id", ondelete="CASCADE"), index=True
     )

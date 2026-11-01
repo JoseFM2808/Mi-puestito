@@ -3,6 +3,7 @@ import { Asistente } from './componentes/asistente/Asistente'
 import { BarraSuperior } from './componentes/barra-superior/BarraSuperior'
 import { LimiteErrores } from './componentes/limite-errores/LimiteErrores'
 import { Login } from './componentes/login/Login'
+import { Compras } from './modules/compras/Compras'
 import { Dashboard } from './modules/dashboard/Dashboard'
 import { Fiados } from './modules/fiados/Fiados'
 import { Ventas } from './modules/ventas/Ventas'
@@ -50,6 +51,11 @@ export function App() {
       {pantalla === 'fiados' && (
         <LimiteErrores nombreModulo="Fiados" idModulo="fiados">
           <Fiados />
+        </LimiteErrores>
+      )}
+      {pantalla === 'compras' && (
+        <LimiteErrores nombreModulo="Compras" idModulo="compras">
+          <Compras />
         </LimiteErrores>
       )}
     </>

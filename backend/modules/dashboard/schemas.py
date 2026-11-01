@@ -19,7 +19,7 @@ class OrdenActivaResumen(BaseModel):
 
 
 class PedidoPorLlegar(BaseModel):
-    id: int
+    uuid: str
     proveedor: str
     fecha_estimada: date
     monto: Decimal

@@ -42,6 +42,8 @@ export function ReiniciarPractica() {
         base.ventasAbiertas.clear(),
         base.clientes.clear(),
         base.instantaneas.clear(),
+        base.ordenesCompra.clear(),
+        base.proveedores.clear(),
       ])
       window.location.reload()
     } catch (fallo) {

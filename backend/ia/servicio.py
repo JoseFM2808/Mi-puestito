@@ -32,6 +32,9 @@ productos con su monto y se cierra con "Cobrar en efectivo", "Cobrar con Yape o 
 un cliente". "Venta rápida" registra solo el monto cobrado; el detalle se completa después en \
 "Ventas rápidas por completar". Todo funciona aunque no haya internet.
 - Fiados: quién debe y cuánto. "Registrar un pago" anota lo que el cliente abona.
+- Compras: pedidos a proveedores. "Nuevo pedido" arma un pedido y registra al proveedor si es \
+nuevo. Cuando llega, "Llegó este pedido" abre la lista para marcar cada producto como "Llegó", \
+"No llegó" o "Cambió", y calcula lo que hay que pagar. "Ya le pagué: cerrar pedido" lo termina.
 La app NO tiene todavía reportes por mes ni pantalla de inventario. No menciones pantallas ni \
 reportes que no estén en esta lista."""
 

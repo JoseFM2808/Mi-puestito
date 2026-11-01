@@ -212,6 +212,26 @@ def al_vender_item(sesion: Session, datos: dict) -> list[str]:
     return aviso_si_negativo(producto)
 
 
+def al_recibir_compra(sesion: Session, datos: dict) -> list[str]:
+    """Suscriptor de "compra.item_recibido": suma al stock lo que llegó.
+
+    Compras habla por nombre (el nombre del producto es único en el sistema). Sin
+    cantidad no se mueve nada: "2 packs" no dice cuántas unidades son, y no se adivina.
+    """
+    if not datos.get("cantidad"):
+        return []
+    producto = sesion.scalar(
+        select(Producto).where(func.lower(Producto.nombre) == datos["nombre_producto"].lower())
+    )
+    if producto is None:
+        return [f"«{datos['nombre_producto']}» no está en el inventario: no se sumó al stock."]
+    registrar_movimiento(
+        sesion, producto, datos["cantidad"], MotivoMovimiento.COMPRA,
+        "item_compra", datos["item_uuid"], ocurrido_en=datos.get("ocurrido_en"),
+    )
+    return []
+
+
 def al_anular_item(sesion: Session, datos: dict) -> list[str]:
     """Suscriptor de "venta.item_anulado": devuelve al stock lo descontado."""
     if not datos.get("producto_uuid") or not datos.get("cantidad"):

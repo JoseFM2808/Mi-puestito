@@ -75,7 +75,7 @@ def _seccion_compras(sesion: Session, hoy: date) -> dict:
             OrdenCompra.estado.in_([EstadoOrdenCompra.PENDIENTE, EstadoOrdenCompra.EN_CAMINO]),
             OrdenCompra.fecha_estimada_llegada.is_not(None),
         )
-        .options(selectinload(OrdenCompra.proveedor))
+        .options(selectinload(OrdenCompra.proveedor), selectinload(OrdenCompra.items))
         .order_by(OrdenCompra.fecha_estimada_llegada)
         .limit(MAX_PEDIDOS)
     ).all()
@@ -90,14 +90,14 @@ def _seccion_compras(sesion: Session, hoy: date) -> dict:
         motivo = f"Llegan {len(de_manana)} pedidos: " + ", ".join(o.proveedor.nombre for o in de_manana)
 
     return {
-        "proyeccion_manana": sum((o.monto_total for o in de_manana), CERO),
+        "proyeccion_manana": sum((o.monto_por_recibir for o in de_manana), CERO),
         "motivo_proyeccion": motivo,
         "pedidos_por_llegar": [
             PedidoPorLlegar(
-                id=o.id,
+                uuid=o.uuid,
                 proveedor=o.proveedor.nombre,
                 fecha_estimada=o.fecha_estimada_llegada,
-                monto=o.monto_total,
+                monto=o.monto_por_recibir,
             )
             for o in ordenes
         ],

@@ -65,7 +65,6 @@ function useResumen() {
 export function Dashboard() {
   const { datos, error, cargar } = useResumen()
   const irA = useNavegacion((estado) => estado.irA)
-  const [avisoCompras, setAvisoCompras] = useState(false)
 
   return (
     <main className={estilos.pantalla} data-ai-id="dashboard">
@@ -119,16 +118,10 @@ export function Dashboard() {
         >
           Venta rápida
         </Boton>
-        <Boton aiId="dashboard.llego-pedido" variante="secundario" onClick={() => setAvisoCompras((v) => !v)}>
+        <Boton aiId="dashboard.llego-pedido" variante="secundario" onClick={() => irA('compras')}>
           Llegó un pedido
         </Boton>
       </div>
-      {avisoCompras && (
-        <Aviso tipo="info" aiId="dashboard.aviso-compras">
-          El registro de pedidos que llegan se activa con el módulo Compras, que es el siguiente en
-          construirse.
-        </Aviso>
-      )}
     </main>
   )
 }
@@ -213,7 +206,7 @@ function ContenidoCaja({ resumen }: { resumen: ResumenCaja }) {
           {resumen.pedidosPorLlegar.map((pedido) => {
             const atrasado = estaAtrasado(pedido.fechaEstimada)
             return (
-              <Tarjeta key={pedido.id} aiId={`dashboard.pedido-${pedido.id}`} className={estilos.pedido}>
+              <Tarjeta key={pedido.uuid} aiId={`dashboard.pedido-${pedido.uuid}`} className={estilos.pedido}>
                 <div>
                   <div className={estilos.nombre}>{pedido.proveedor}</div>
                   {/* El atraso se dice con palabras, el color solo acompaña */}

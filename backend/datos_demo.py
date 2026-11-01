@@ -51,7 +51,13 @@ def cargar_si_vacio() -> bool:
     if "demo" not in PROYECTOS or PROYECTOS["demo"].es_real:
         return False
 
-    from modules.compras.models import EstadoOrdenCompra, ItemOrdenCompra, OrdenCompra, Proveedor
+    from modules.compras.models import (
+        EstadoOrdenCompra,
+        EstadoRecepcion,
+        ItemOrdenCompra,
+        OrdenCompra,
+        Proveedor,
+    )
     from modules.ventas.models import (
         Cliente,
         EstadoVenta,
@@ -127,16 +133,33 @@ def cargar_si_vacio() -> bool:
             ))
 
         # Pedidos a proveedores: uno mañana (la proyección), uno pasado, uno atrasado
+        # Teléfonos ficticios: el botón "Llamar" de la demo no debe sonarle a nadie
+        norte = Proveedor(nombre="Distribuidora Norte", ruc="20123456789", telefono="900000001")
         pedidos = [
-            ("Distribuidora Norte", "20123456789", 1, EstadoOrdenCompra.EN_CAMINO, D("320.00")),
-            ("Avícola San Pedro", None, 2, EstadoOrdenCompra.PENDIENTE, D("145.00")),
-            ("Abarrotes El Sol", None, -1, EstadoOrdenCompra.EN_CAMINO, D("88.00")),
+            (norte, 1, EstadoOrdenCompra.EN_CAMINO,
+             [("Arroz", "2 sacos", D("180.00")), ("Aceite", "1 caja", D("140.00"))]),
+            (Proveedor(nombre="Avícola San Pedro", telefono="900000002"), 2, EstadoOrdenCompra.PENDIENTE,
+             [("Pollo", "15 kg", D("145.00"))]),
+            (Proveedor(nombre="Abarrotes El Sol"), -1, EstadoOrdenCompra.EN_CAMINO,
+             [("Azúcar", "1 saco", D("88.00"))]),
+            (norte, -7, EstadoOrdenCompra.CERRADA,
+             [("Arroz", "2 sacos", D("175.00")), ("Fideos", "1 caja", D("60.00"))]),
         ]
-        for nombre, ruc, dias, estado, monto in pedidos:
+        for proveedor, dias, estado, items in pedidos:
+            total = sum((m for _, _, m in items), D("0"))
+            cerrada = estado == EstadoOrdenCompra.CERRADA
             sesion.add(OrdenCompra(
-                proveedor=Proveedor(nombre=nombre, ruc=ruc), estado=estado,
-                fecha_estimada_llegada=hoy + timedelta(days=dias), monto_total=monto,
-                items=[ItemOrdenCompra(nombre_producto="Pedido semanal", monto=monto)],
+                proveedor=proveedor, estado=estado,
+                fecha_estimada_llegada=hoy + timedelta(days=dias),
+                monto_total=total, monto_real=total if cerrada else None,
+                creado_en=ahora_utc() + timedelta(days=min(dias, 0)),
+                items=[
+                    ItemOrdenCompra(
+                        nombre_producto=n, cantidad=c, monto=m,
+                        estado_recepcion=EstadoRecepcion.RECIBIDO if cerrada else EstadoRecepcion.PENDIENTE,
+                    )
+                    for n, c, m in items
+                ],
             ))
 
         sesion.commit()

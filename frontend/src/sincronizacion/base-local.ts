@@ -1,5 +1,11 @@
 import Dexie, { type Table } from 'dexie'
-import type { ClienteCable, ResumenDashboardCable, VentaCable } from '../api/contrato'
+import type {
+  ClienteCable,
+  OrdenCompraCable,
+  ProveedorCable,
+  ResumenDashboardCable,
+  VentaCable,
+} from '../api/contrato'
 import type { MetodoHttp } from '../api/cliente'
 
 /**
@@ -29,6 +35,8 @@ export class BaseLocal extends Dexie {
   ventasAbiertas!: Table<VentaCable, string>
   clientes!: Table<ClienteCable, string>
   instantaneas!: Table<{ clave: string; resumen: ResumenDashboardCable; guardadaEn: string }, string>
+  ordenesCompra!: Table<OrdenCompraCable, string>
+  proveedores!: Table<ProveedorCable, string>
 
   constructor(proyecto: string) {
     super(`mi-puestito-${proyecto}`)
@@ -37,6 +45,10 @@ export class BaseLocal extends Dexie {
       ventasAbiertas: 'uuid',
       clientes: 'uuid, nombre',
       instantaneas: 'clave',
+    })
+    this.version(2).stores({
+      ordenesCompra: 'uuid, estado',
+      proveedores: 'uuid, nombre',
     })
   }
 }

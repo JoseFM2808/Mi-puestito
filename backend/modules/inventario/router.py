@@ -30,6 +30,7 @@ router = APIRouter(prefix="/api/inventario", tags=["inventario"])
 
 eventos.suscribir("venta.item_registrado", "inventario.descontar", servicio.al_vender_item)
 eventos.suscribir("venta.item_anulado", "inventario.devolver", servicio.al_anular_item)
+eventos.suscribir("compra.item_recibido", "inventario.ingresar", servicio.al_recibir_compra)
 
 
 def _http(error: servicio.ErrorDeInventario) -> HTTPException:
