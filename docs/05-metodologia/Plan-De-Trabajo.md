@@ -14,8 +14,8 @@
 | [[#Fase 1 — Correcciones antes de los datos reales]] | Arreglar lo que después sale caro | **Terminada** | 10/10 |
 | [[#Fase 2 — Base técnica sostenible]] | Que crecer no duela | **Terminada** | 6/6 |
 | [[#Fase 3 — Módulo Ventas]] | Vender de verdad | En curso | 6/7 |
-| [[#Fase 4 — Módulo Compras]] | Comprar de verdad | Pendiente | 1/6 |
-| [[#Fase 5 — Offline real y sincronización]] | Que funcione sin internet | En curso | 4/5 |
+| [[#Fase 4 — Módulo Compras]] | Comprar de verdad | Hecha | 6/6 |
+| [[#Fase 5 — Offline real y sincronización]] | Que funcione sin internet | Hecha | 5/5 |
 | [[#Fase 6 — AI Companion]] | El asistente que guía | En curso | 2/6 |
 | [[#Fase 7 — Módulos de Fase 2 del producto]] | Inventario, Análisis, Gastos | Pendiente | 0/3 |
 
@@ -169,12 +169,12 @@ Meta: registrar ventas reales. Ver [[Modulo-Ventas]].
 
 Meta: gestionar proveedores y pedidos. Ver [[Modulo-Compras]].
 
-- [ ] Auto-registro del proveedor desde la tablet
-- [ ] Creación de orden de pedido con sugerencia de productos frecuentes
-- [ ] Checklist de recepción (recibido / no recibido / cambio)
-- [ ] Recálculo del monto real a pagar
+- [x] Auto-registro del proveedor desde la tablet
+- [x] Creación de orden de pedido con sugerencia de productos frecuentes
+- [x] Checklist de recepción (recibido / no recibido / cambio)
+- [x] Recálculo del monto real a pagar
 - [x] Conectar la proyección real del Dashboard ("Mañana necesitas en caja")
-- [ ] `README.md` del módulo y `data-ai-id`
+- [x] `README.md` del módulo y `data-ai-id`
 
 ---
 
@@ -186,7 +186,7 @@ Meta: cumplir el pilar offline-first con datos reales. Ver [[Sincronizacion-Offl
 - [x] Escritura local primero, sincronización cuando haya red
 - [x] Resolución de conflictos y orden por fecha UTC
 - [x] Indicador visible de "sin conexión" / "sincronizando"
-- [ ] Respaldo y restauración del archivo de datos del vendedor
+- [x] Respaldo y restauración del archivo de datos del vendedor
 
 ---
 

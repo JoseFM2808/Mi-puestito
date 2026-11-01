@@ -185,3 +185,8 @@
 .confirmacion > p {
   flex: 1 1 100%;
 }
+
+/* El selector nativo no se puede traducir: lo abre el botón "Recuperar una copia" */
+.selectorArchivo {
+  display: none;
+}

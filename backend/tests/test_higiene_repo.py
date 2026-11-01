@@ -20,6 +20,7 @@ PATRONES_PROHIBIDOS = [
     ".env", "*/.env", ".env.*", "*/.env.*", "*.env",
     "*.pem", "*.key", "*.dpapi", "*.p12", "*.pfx", "id_rsa*", "id_ed25519*",
     "*usuarios.json",
+    "respaldos/*", "*/respaldos/*",
     "*.db", "*.db-journal", "*.db-wal", "*.sqlite", "*.sqlite3", "*.dump",
     "docs/meetings/*", "docs/privado/*", "docs/acuerdos/*", ".ai-context/privado/*",
     "*.private.md", "*-privado.md",

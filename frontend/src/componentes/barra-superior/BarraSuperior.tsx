@@ -4,6 +4,7 @@ import { useSesion } from '../../stores/sesion'
 import { Boton } from '../../ui/componentes'
 import { IndicadorConexion } from '../sincronizacion/EstadoSincronizacion'
 import { AvisoVersionNueva, ReiniciarPractica } from './AccionesBarra'
+import { Respaldo } from './Respaldo'
 import estilos from './BarraSuperior.module.css'
 
 /**
@@ -75,6 +76,7 @@ export function BarraSuperior() {
                 {nombre}
               </Boton>
             ))}
+            <Respaldo />
             {!esReal && <ReiniciarPractica />}
             <Boton aiId="barra.salir" variante="discreto" onClick={cerrarSesion}>
               Salir de este negocio

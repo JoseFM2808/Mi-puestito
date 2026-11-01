@@ -81,3 +81,44 @@ export async function pedir<T>(metodo: MetodoHttp, ruta: string, cuerpo?: unknow
   }
   return datos as T
 }
+
+async function comprobarArchivo(respuesta: Response): Promise<void> {
+  if (respuesta.ok) return
+  const datos: unknown = await respuesta.json().catch(() => null)
+  if (respuesta.status === 401) useSesion.getState().cerrarSesion()
+  throw new ErrorApi(respuesta.status, detalleLegible(datos, respuesta.status))
+}
+
+function cabecerasDeSesion(): Record<string, string> {
+  const token = useSesion.getState().token
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+/** Descarga un archivo con la sesión: un enlace normal no podría llevar el token. */
+export async function recibirArchivo(ruta: string): Promise<{ datos: Blob; nombre: string }> {
+  let respuesta: Response
+  try {
+    respuesta = await fetch(ruta, { headers: cabecerasDeSesion() })
+  } catch {
+    throw new SinConexion()
+  }
+  await comprobarArchivo(respuesta)
+  const disposicion = respuesta.headers.get('Content-Disposition') ?? ''
+  const nombre = /filename="([^"]+)"/.exec(disposicion)?.[1] ?? 'mi-puestito-copia.db'
+  return { datos: await respuesta.blob(), nombre }
+}
+
+/** Envía un archivo tal cual en el cuerpo. */
+export async function enviarArchivo(ruta: string, archivo: Blob): Promise<void> {
+  let respuesta: Response
+  try {
+    respuesta = await fetch(ruta, {
+      method: 'POST',
+      headers: { ...cabecerasDeSesion(), 'Content-Type': 'application/octet-stream' },
+      body: archivo,
+    })
+  } catch {
+    throw new SinConexion()
+  }
+  await comprobarArchivo(respuesta)
+}

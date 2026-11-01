@@ -23,7 +23,7 @@ from seguridad import asegurar_usuarios_iniciales
 # Módulos que se montan al arrancar. Cada entrada es independiente: si uno
 # falla al importarse, los demás siguen operativos (ver cargar_modulos).
 # "auth" va sin autenticar (es la puerta de entrada); los demás exigen login.
-MODULOS = ("auth", "dashboard", "ventas", "compras", "inventario", "asistente")
+MODULOS = ("auth", "dashboard", "ventas", "compras", "inventario", "asistente", "respaldo")
 
 # Módulos que no pudieron cargarse, para que el Dashboard informe la degradación
 modulos_degradados: dict[str, str] = {}
