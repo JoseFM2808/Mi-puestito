@@ -75,3 +75,8 @@ def ruta_base_datos(proyecto: str) -> Path:
 def ruta_usuarios() -> Path:
     """Archivo con las credenciales de acceso (PIN con hash, nunca en claro)."""
     return directorio_datos() / "usuarios.json"
+
+
+def ruta_secreto() -> Path:
+    """Llave que firma las sesiones en esta instalación (nunca en el repo: *.key está ignorado)."""
+    return directorio_datos() / "sesion.key"

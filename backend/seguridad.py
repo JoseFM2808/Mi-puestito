@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from fastapi import Header, HTTPException
 
 from proyectos import proyecto_valido
-from rutas import ruta_usuarios
+from rutas import ruta_secreto, ruta_usuarios
 
 PIN_DEMO_FIJO = "0000"
 DURACION_TOKEN_SEGUNDOS = 12 * 60 * 60  # una jornada de trabajo
@@ -179,7 +179,8 @@ def _secreto_de_firma() -> bytes:
 
     En "production" (servidor en la nube, D-09) el secreto es obligatorio: uno
     al azar cerraría todas las sesiones en cada reinicio o despliegue, y uno
-    corto se adivina. En "local" (escritorio) basta uno al azar por arranque.
+    corto se adivina. En "local" (escritorio) se genera una vez y se guarda en la
+    carpeta de datos: reiniciar el programa no cierra la sesión del operador (D-13).
     """
     configurado = os.environ.get("MI_PUESTITO_SECRETO") or ""
     if ENTORNO == "production" and len(configurado) < LARGO_MINIMO_SECRETO:
@@ -187,7 +188,24 @@ def _secreto_de_firma() -> bytes:
             f"En producción MI_PUESTITO_SECRETO debe tener al menos {LARGO_MINIMO_SECRETO} "
             'caracteres. Genera uno con: python -c "import secrets; print(secrets.token_hex(32))"'
         )
-    return (configurado or secrets.token_hex(32)).encode()
+    return (configurado or _secreto_local()).encode()
+
+
+def _secreto_local() -> str:
+    """El secreto guardado de esta instalación; lo crea la primera vez."""
+    ruta = ruta_secreto()
+    try:
+        guardado = ruta.read_text(encoding="utf-8").strip()
+        if len(guardado) >= LARGO_MINIMO_SECRETO:
+            return guardado
+    except OSError:
+        pass
+    nuevo = secrets.token_hex(32)
+    try:
+        ruta.write_text(nuevo, encoding="utf-8")
+    except OSError:
+        pass  # sin permiso de escritura la app funciona igual: la sesión dura hasta reiniciar
+    return nuevo
 
 
 _SECRETO = _secreto_de_firma()

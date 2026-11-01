@@ -163,3 +163,25 @@
     flex: 1 1 100%;
   }
 }
+
+.avisoBarra,
+.confirmacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.avisoBarra {
+  padding: var(--esp-1) var(--esp-3);
+  border-top: 1px solid var(--borde);
+}
+
+.confirmacion {
+  flex-basis: 100%;
+}
+
+.avisoBarra > p,
+.confirmacion > p {
+  flex: 1 1 100%;
+}

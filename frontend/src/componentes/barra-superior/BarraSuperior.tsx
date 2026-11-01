@@ -3,6 +3,7 @@ import { TAMANOS_LETRA, usePreferencias } from '../../stores/preferencias'
 import { useSesion } from '../../stores/sesion'
 import { Boton } from '../../ui/componentes'
 import { IndicadorConexion } from '../sincronizacion/EstadoSincronizacion'
+import { AvisoVersionNueva, ReiniciarPractica } from './AccionesBarra'
 import estilos from './BarraSuperior.module.css'
 
 /**
@@ -74,12 +75,14 @@ export function BarraSuperior() {
                 {nombre}
               </Boton>
             ))}
+            {!esReal && <ReiniciarPractica />}
             <Boton aiId="barra.salir" variante="discreto" onClick={cerrarSesion}>
               Salir de este negocio
             </Boton>
           </div>
         </nav>
       )}
+      <AvisoVersionNueva />
       <IndicadorConexion />
     </header>
   )

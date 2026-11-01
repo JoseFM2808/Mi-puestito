@@ -36,7 +36,8 @@ export default defineConfig({
     react(),
     coloresEnHtml(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': la versión nueva se aplica cuando el operador lo decide (no en medio de una venta)
+      registerType: 'prompt',
       includeAssets: ['icono.svg', 'apple-touch-icon.png'],
       workbox: {
         // En la app de escritorio el API comparte origen con la interfaz:

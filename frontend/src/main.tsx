@@ -12,6 +12,7 @@ import '@tokens/tokens.css'
 import './estilos-base.css'
 
 import { App } from './App'
+import { registrarActualizaciones } from './pwa'
 
 const raiz = document.getElementById('raiz')
 if (!raiz) throw new Error('index.html no tiene el elemento #raiz')
@@ -21,3 +22,5 @@ createRoot(raiz).render(
     <App />
   </StrictMode>,
 )
+
+registrarActualizaciones()

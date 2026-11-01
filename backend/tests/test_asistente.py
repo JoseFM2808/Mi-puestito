@@ -553,3 +553,47 @@ def test_abstenerse_no_es_equivocarse_pero_un_monto_falso_si():
     assert es_correcta("Vendiste S/ 120.00 y Cliente 1 debe S/ 45.00. No puedo calcular el total.")
     assert not es_correcta("Tendrás S/ 75.")
     assert not es_correcta("S/ 165 " + "x" * 700)  # acierta, pero demasiado largo para el puesto
+
+
+# ---- Dataset para fine-tuning (D-20) ----
+
+def _fila_de_registro(id_, respuesta, modelo="m", contexto='{"deuda": "45.00"}'):
+    mensajes = [
+        {"role": "system", "content": contexto},
+        {"role": "user", "content": "¿Cuánto debe Cliente 1?"},
+        {"role": "assistant", "content": respuesta},
+    ]
+    return json.dumps({"tipo": "intercambio", "id": id_, "modelo": modelo, "mensajes": mensajes})
+
+
+def test_el_dataset_solo_toma_lo_util_y_descarta_errores(monkeypatch, tmp_path):
+    import rutas
+    from ia import dataset
+    from ia.servicio import MODELO_VERIFICADOR
+
+    monkeypatch.setattr(rutas, "directorio_datos", lambda: tmp_path)
+    valorar = lambda id_, util: json.dumps({"tipo": "valoracion", "id": id_, "util": util})  # noqa: E731
+    lineas = [
+        _fila_de_registro("bueno", "Cliente 1 debe S/ 45.00."),
+        _fila_de_registro("repetido", "Cliente 1 debe S/ 45.00."),
+        _fila_de_registro("sin-valorar", "Cliente 1 debe S/ 45.00, ya."),
+        _fila_de_registro("no-sirvio", "Cliente 1 debe 45.00 soles."),
+        _fila_de_registro("cambio-de-opinion", "Debe S/ 45.00."),
+        _fila_de_registro("borrador", "Here's a thinking process:\n1. Analyze"),
+        _fila_de_registro("cifra-falsa", "Cliente 1 debe S/ 99.00."),
+        _fila_de_registro("respaldo", "No tengo esa cifra.", modelo=MODELO_VERIFICADOR),
+        valorar("bueno", True), valorar("repetido", True), valorar("no-sirvio", False),
+        valorar("cambio-de-opinion", True), valorar("cambio-de-opinion", False),
+        valorar("borrador", True), valorar("cifra-falsa", True), valorar("respaldo", True),
+    ]
+    (tmp_path / "ia_registro_demo.jsonl").write_text("\n".join(lineas), encoding="utf-8")
+    ejemplos = dataset.armar("demo")
+    assert [e["messages"][-1]["content"] for e in ejemplos] == ["Cliente 1 debe S/ 45.00."]
+
+
+def test_el_dataset_de_un_proyecto_sin_registro_esta_vacio(monkeypatch, tmp_path):
+    import rutas
+    from ia import dataset
+
+    monkeypatch.setattr(rutas, "directorio_datos", lambda: tmp_path)
+    assert dataset.armar("demo") == []

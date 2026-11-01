@@ -146,3 +146,27 @@ def test_la_pantalla_de_ingreso_recibe_las_cuentas_sin_secretos(cliente):
     assert [c["nombre_usuario"] for c in cuentas] == ["demo", "anita"]
     assert cuentas[1] == {"nombre_usuario": "anita", "nombre_proyecto": "Anita", "es_real": True}
     assert "pin" not in respuesta.text and "sal" not in respuesta.text
+
+
+# ---- Sesión que sobrevive al reinicio (D-13) ----
+
+def test_el_secreto_local_se_conserva_entre_arranques(monkeypatch, tmp_path):
+    import rutas
+    import seguridad
+
+    monkeypatch.delenv("MI_PUESTITO_SECRETO", raising=False)
+    monkeypatch.setattr(rutas, "directorio_datos", lambda: tmp_path)
+    primero = seguridad._secreto_de_firma()
+    assert len(primero) == 64
+    assert seguridad._secreto_de_firma() == primero  # un "reinicio" no invalida las sesiones
+    assert (tmp_path / "sesion.key").read_text(encoding="utf-8") == primero.decode()
+
+
+def test_el_secreto_configurado_manda_sobre_el_guardado(monkeypatch, tmp_path):
+    import rutas
+    import seguridad
+
+    monkeypatch.setattr(rutas, "directorio_datos", lambda: tmp_path)
+    monkeypatch.setenv("MI_PUESTITO_SECRETO", "b" * 40)
+    assert seguridad._secreto_de_firma() == b"b" * 40
+    assert not (tmp_path / "sesion.key").exists()

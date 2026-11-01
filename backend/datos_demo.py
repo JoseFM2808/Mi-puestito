@@ -143,3 +143,27 @@ def cargar_si_vacio() -> bool:
         return True
     finally:
         sesion.close()
+
+
+def reiniciar() -> None:
+    """Borra lo practicado en demo y vuelve a sembrar con las fechas de hoy (D-19).
+
+    Solo actúa sobre el proyecto de práctica: un negocio real nunca pasa por aquí.
+    """
+    if "demo" not in PROYECTOS or PROYECTOS["demo"].es_real:
+        raise ValueError("Solo se reinicia un proyecto de práctica")
+
+    # Registran sus tablas en Base.metadata aunque el módulo aún no se haya importado
+    from database import Base, sesion_escritura_para
+    from modules.compras import models as _compras  # noqa: F401
+    from modules.inventario import models as _inventario  # noqa: F401
+    from modules.ventas import models as _ventas  # noqa: F401
+
+    sesion = sesion_escritura_para("demo")
+    try:
+        for tabla in reversed(Base.metadata.sorted_tables):
+            sesion.execute(tabla.delete())
+        sesion.commit()
+    finally:
+        sesion.close()
+    cargar_si_vacio()
