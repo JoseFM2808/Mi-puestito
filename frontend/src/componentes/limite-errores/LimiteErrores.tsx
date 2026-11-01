@@ -1,5 +1,6 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react'
-import './LimiteErrores.css'
+import { Boton, Nota } from '../../ui/componentes'
+import estilos from './LimiteErrores.module.css'
 
 /**
  * Límite de errores por módulo.
@@ -49,19 +50,16 @@ export class LimiteErrores extends Component<Props, Estado> {
     }
 
     return (
-      <div className="limite-errores" data-ai-id={`error-modulo.${this.props.idModulo}`}>
-        <p className="titulo-error">El módulo {this.props.nombreModulo} tuvo un problema</p>
-        <p className="nota-error">
-          Los demás módulos siguen funcionando. Puedes intentar abrirlo de nuevo.
-        </p>
-        <button
-          type="button"
-          className="btn-reintentar"
-          data-ai-id={`error-modulo.${this.props.idModulo}.reintentar`}
+      <div className={estilos.limite} data-ai-id={`error-modulo.${this.props.idModulo}`}>
+        <p className={estilos.titulo}>El módulo {this.props.nombreModulo} tuvo un problema</p>
+        <Nota>Los demás módulos siguen funcionando. Puedes intentar abrirlo de nuevo.</Nota>
+        <Boton
+          aiId={`error-modulo.${this.props.idModulo}.reintentar`}
+          variante="secundario"
           onClick={this.reintentar}
         >
           Volver a intentar
-        </button>
+        </Boton>
       </div>
     )
   }

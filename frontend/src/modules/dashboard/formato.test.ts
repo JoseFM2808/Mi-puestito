@@ -1,23 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  diasHastaHoy,
-  estaAtrasado,
-  formatearFechaRelativa,
-  formatearMonto,
-} from './formato'
+import { diasHastaHoy, estaAtrasado, formatearFechaRelativa } from './formato'
 
 function enDias(dias: number): Date {
   const fecha = new Date()
   fecha.setDate(fecha.getDate() + dias)
   return fecha
 }
-
-describe('formato de montos', () => {
-  it('muestra soles con dos decimales', () => {
-    expect(formatearMonto(485.5)).toContain('485.50')
-    expect(formatearMonto(0)).toContain('0.00')
-  })
-})
 
 describe('fechas relativas', () => {
   afterEach(() => {

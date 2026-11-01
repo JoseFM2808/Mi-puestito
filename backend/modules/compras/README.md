@@ -29,9 +29,19 @@ Fechas en UTC (tipo `FechaHoraUTC`, siempre con zona); la zona horaria
 
 | Endpoint | Estado |
 |---|---|
-| `GET /api/compras/proveedores` | Demo 1 — lista proveedores, paginada |
-| `GET /api/compras/ordenes` | Demo 1 — lista órdenes con items, paginada, sin N+1 |
-| Registrar proveedor / crear orden / checklist de recepción | Próxima demo |
+| `GET /api/compras/proveedores?busqueda=` | Lista proveedores; busca por nombre, empresa o RUC |
+| `POST /api/compras/proveedores` | Alta idempotente por `uuid`; un RUC repetido da `409` |
+| `GET /api/compras/proveedores/{uuid}/frecuentes` | Lo que más se le pide, según sus últimas órdenes |
+| `GET /api/compras/ordenes?estado=` | Órdenes con items, paginada, sin N+1 |
+| `POST /api/compras/ordenes` | Nuevo pedido; el total lo calcula el servidor |
+| `PATCH /api/compras/ordenes/{uuid}/estado` | Borrador → Pendiente → En camino, solo hacia adelante |
+| `POST /api/compras/ordenes/{uuid}/recepcion` | Checklist: recalcula `monto_real` y publica `compra.item_recibido` |
+| `POST /api/compras/ordenes/{uuid}/cerrar` | De Recibida a Cerrada |
+
+Toda escritura admite reenvío de la cola offline (ADR-032). Una recepción ya confirmada
+no se reescribe: reenviarla igual no hace nada y cambiarla da `409`, porque ya movió stock.
+Inventario suma lo recibido solo si llega `cantidad_stock` ("2 packs" no dice cuántas unidades
+son) y busca el producto por nombre; si no está o falla, la recepción se guarda igual.
 
 ## Cómo interactúa la IA
 

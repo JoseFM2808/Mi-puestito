@@ -54,17 +54,28 @@ jobs:
             $listo = $false
             foreach ($intento in 1..30) {
               Start-Sleep -Seconds 2
-              # El puerto es dinámico: se busca el que abrió el proceso
-              $conexion = Get-NetTCPConnection -OwningProcess $proceso.Id -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-              if ($conexion) {
-                $respuesta = Invoke-RestMethod "http://127.0.0.1:$($conexion.LocalPort)/api/salud"
-                if ($respuesta.estado -eq 'ok') { $listo = $true; break }
+              # El puerto es dinámico y lo escucha un proceso HIJO del
+              # ejecutable de un solo archivo (no $proceso.Id): se lee el
+              # puerto que la app recuerda en su carpeta de datos
+              $archivoPuerto = Join-Path $env:LOCALAPPDATA 'MiPuestito\puerto.txt'
+              if (Test-Path $archivoPuerto) {
+                $puerto = (Get-Content $archivoPuerto).Trim()
+                try { $respuesta = Invoke-RestMethod "http://127.0.0.1:$puerto/api/salud" -TimeoutSec 2 } catch { continue }
+                # "ok" también se responde con módulos caídos: se exige que
+                # ninguno haya quedado degradado dentro del ejecutable
+                if ($respuesta.estado -eq 'ok') {
+                  if ($respuesta.modulos_degradados.Count -gt 0) {
+                    throw "Módulos degradados en el ejecutable: $($respuesta.modulos_degradados -join ', ')"
+                  }
+                  $listo = $true; break
+                }
               }
             }
             if (-not $listo) { throw 'El ejecutable no respondió en /api/salud' }
             Write-Host 'El ejecutable arranca y responde correctamente'
           } finally {
-            Stop-Process -Id $proceso.Id -Force -ErrorAction SilentlyContinue
+            Get-CimInstance Win32_Process -Filter "Name='MiPuestito.exe'" |
+              ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
           }
 
       - uses: actions/upload-artifact@v4

@@ -10,18 +10,20 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 
-from database import crear_tablas_todos_los_proyectos
+import eventos
+from database import migrar_todos_los_proyectos
+from datos_demo import cargar_si_vacio as cargar_datos_demo
 from rutas import directorio_web
 from seguridad import asegurar_usuarios_iniciales
 
 # Módulos que se montan al arrancar. Cada entrada es independiente: si uno
 # falla al importarse, los demás siguen operativos (ver cargar_modulos).
 # "auth" va sin autenticar (es la puerta de entrada); los demás exigen login.
-MODULOS = ("auth", "dashboard", "ventas", "compras", "asistente")
+MODULOS = ("auth", "dashboard", "ventas", "compras", "inventario", "asistente", "respaldo")
 
 # Módulos que no pudieron cargarse, para que el Dashboard informe la degradación
 modulos_degradados: dict[str, str] = {}
@@ -50,8 +52,13 @@ def cargar_modulos(app: FastAPI) -> None:
 
 @asynccontextmanager
 async def ciclo_de_vida(app: FastAPI):
-    # Demo 1: create_all directo; Alembic llegará cuando el esquema se estabilice
-    crear_tablas_todos_los_proyectos()
+    # Cada proyecto se lleva a la última versión del esquema (Alembic, D-03)
+    migrar_todos_los_proyectos()
+    # Demo trae datos de muestra; un proyecto real arranca vacío
+    try:
+        cargar_datos_demo()
+    except Exception as error:  # noqa: BLE001 — sin muestra, la app igual arranca
+        print(f"AVISO: no se pudieron cargar los datos de demo: {error}")
     asegurar_usuarios_iniciales()
     yield
 
@@ -90,7 +97,12 @@ def salud():
     Informa qué módulos quedaron degradados: el servicio responde "ok" aunque
     alguno haya fallado, porque los demás siguen sirviendo.
     """
-    return {"estado": "ok", "modulos_degradados": sorted(modulos_degradados)}
+    return {
+        "estado": "ok",
+        "modulos_degradados": sorted(modulos_degradados),
+        # Suscriptores que fallaron (p. ej. Inventario no pudo descontar stock)
+        "eventos_con_fallas": sorted(eventos.fallos),
+    }
 
 
 # El frontend construido se sirve desde el mismo servidor: así la aplicación

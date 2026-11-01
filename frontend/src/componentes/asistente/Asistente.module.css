@@ -1,0 +1,78 @@
+/* Panel del Asistente. CSS Module. Solo tokens. */
+
+.asistente {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--esp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  border-bottom: 1px solid var(--borde);
+}
+
+.mensajes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.turno {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  max-width: 80%;
+}
+
+.turnoIa {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.turnoOperador {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.valoracion {
+  display: flex;
+  gap: var(--esp-1);
+  flex-wrap: wrap;
+}
+
+.gracias {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+}
+
+.burbuja {
+  font-size: var(--tam-subtitulo);
+  line-height: 1.5;
+  padding: var(--esp-2) var(--esp-3);
+  border-radius: var(--radio-chico);
+}
+
+.burbujaIa {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  align-self: flex-start;
+}
+
+.burbujaOperador {
+  background: var(--ia);
+  color: var(--superficie);
+  align-self: flex-end;
+}
+
+.formulario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--esp-2);
+}
+
+.formulario > div {
+  flex: 1;
+  min-width: min(14rem, 100%);
+}

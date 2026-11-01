@@ -1,0 +1,145 @@
+/* Estilos del Dashboard (CSS Module: nada se filtra a otros módulos). Solo tokens. */
+
+.pantalla {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--esp-4) var(--esp-3) var(--esp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--esp-1);
+  margin-bottom: var(--esp-2);
+}
+
+.fecha {
+  font-size: var(--tam-subtitulo);
+  font-weight: 500;
+  color: var(--texto-suave);
+}
+
+.filaAviso {
+  display: flex;
+  gap: var(--esp-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.resumen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--esp-2);
+}
+
+.resumenSecundario {
+  margin-top: var(--esp-3);
+}
+
+.etiqueta {
+  font-size: var(--tam-subtitulo);
+  font-weight: 600;
+  margin-bottom: var(--esp-1);
+}
+
+.cuadricula {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--esp-2);
+}
+
+/* Cards tocables: llevan al módulo de origen */
+.orden {
+  font-family: var(--fuente);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  text-align: left;
+  cursor: pointer;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: var(--esp-3);
+  color: var(--texto);
+  min-height: var(--tactil-min);
+}
+
+.orden:focus-visible {
+  outline: 3px solid var(--ia);
+  outline-offset: 2px;
+}
+
+.nombre {
+  font-size: var(--tam-nombre);
+  font-weight: 600;
+}
+
+.conteo {
+  font-size: var(--tam-monto);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--pendiente);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Regla del color: solo comunica dinero y siempre va con palabra */
+.estadoAbierta {
+  font-size: var(--tam-nota);
+  font-weight: 500;
+  color: var(--pendiente);
+}
+
+.estadoFiado {
+  font-size: var(--tam-nota);
+  font-weight: 500;
+  color: var(--deuda);
+}
+
+.listaPedidos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.pedido {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.notaPedido {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+}
+
+.notaAtrasada {
+  font-size: var(--tam-nota);
+  font-weight: 600;
+  color: var(--deuda);
+}
+
+.acciones {
+  display: flex;
+  gap: var(--esp-2);
+  margin-top: var(--esp-4);
+  flex-wrap: wrap;
+}
+
+.acciones > button {
+  flex: 1;
+  min-width: min(14rem, 100%);
+}
+
+@media (max-width: 760px) {
+  .resumen,
+  .cuadricula {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -30,6 +30,20 @@ def test_espera_al_servidor_antes_de_abrir_el_navegador():
     assert escritorio.esperar_servidor(puerto_sin_uso, intentos=2) is False
 
 
+def test_el_arranque_informa_la_carpeta_de_datos_sin_romperse(tmp_path, monkeypatch, capsys):
+    # main() imprimía ruta_base_datos() sin proyecto: desde que cada proyecto
+    # tiene su propio archivo, eso lanzaba TypeError y el .exe moría antes de
+    # levantar el servidor. Se recorre main() sin abrir red ni navegador.
+    monkeypatch.setattr(escritorio, "directorio_web", lambda: tmp_path)
+    monkeypatch.setattr(escritorio, "directorio_datos", lambda: tmp_path)
+    monkeypatch.setattr(escritorio, "obtener_puerto", lambda: 65000)
+    monkeypatch.setattr(escritorio.threading, "Thread", lambda **_: type("H", (), {"start": lambda self: None})())
+    monkeypatch.setattr(escritorio, "esperar_servidor", lambda _puerto: False)
+
+    assert escritorio.main() == 1  # el servidor falso nunca responde
+    assert str(tmp_path) in capsys.readouterr().out
+
+
 def test_el_puerto_se_recuerda_entre_arranques(tmp_path, monkeypatch):
     # El puerto es parte del origen del navegador: si cambiara en cada
     # arranque, IndexedDB y las preferencias quedarían huérfanas al reabrir.

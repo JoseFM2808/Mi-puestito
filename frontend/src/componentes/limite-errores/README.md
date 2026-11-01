@@ -3,8 +3,8 @@
 ## Qué es
 
 Contenedor que aísla el fallo de un módulo (React error boundary). Materializa
-la regla no negociable de `AGENTS.md`: *"Cada módulo es independiente: el fallo
-de uno no debe derribar otro"*. Sin él, un error de render en cualquier módulo
+la regla no negociable de `AGENTS.md`: _"Cada módulo es independiente: el fallo
+de uno no debe derribar otro"_. Sin él, un error de render en cualquier módulo
 dejaría la pantalla en blanco.
 
 ## Qué datos maneja
@@ -15,8 +15,8 @@ props: `nombreModulo` (texto que lee el usuario, p. ej. "Caja de hoy") e
 
 ## Qué acciones permite
 
-| Acción | Descripción |
-|---|---|
+| Acción                | Descripción                                                          |
+| --------------------- | -------------------------------------------------------------------- |
 | **Volver a intentar** | Desmonta y vuelve a montar el módulo desde cero, sin recargar la app |
 
 El aviso lleva texto completo (nunca solo un ícono) y usa `--deuda` acompañado

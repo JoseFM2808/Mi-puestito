@@ -1,0 +1,175 @@
+/*
+ * Piezas base del Design System (Design-System.md). Único lugar donde se
+ * estilizan botones, cards, campos y avisos: los módulos usan los
+ * componentes de src/ui, nunca clases globales. Solo tokens de tokens.css.
+ */
+
+/* ---- Botón: siempre con texto completo (regla dura §4) ---- */
+.boton {
+  font-family: var(--fuente);
+  font-size: var(--tam-boton);
+  font-weight: 600;
+  min-height: var(--tactil-min);
+  padding: var(--esp-1) var(--esp-4);
+  border-radius: var(--radio-chico);
+  border: 2px solid transparent;
+  cursor: pointer;
+  line-height: 1.2;
+  text-align: center;
+}
+.boton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.boton:focus-visible {
+  outline: 3px solid var(--ia);
+  outline-offset: 2px;
+}
+.anchoCompleto {
+  width: 100%;
+}
+.primario {
+  background: var(--primario);
+  color: var(--superficie);
+}
+.secundario {
+  background: var(--superficie);
+  border-color: var(--primario);
+  color: var(--primario);
+}
+.peligro {
+  background: var(--superficie);
+  border-color: var(--deuda);
+  color: var(--deuda);
+}
+/* Identidad del Asistente: único color fuera de la lógica del dinero (§8) */
+.ia {
+  background: var(--ia);
+  color: var(--superficie);
+}
+.discreto {
+  background: var(--fondo);
+  border-color: var(--borde-fuerte);
+  color: var(--texto);
+}
+
+/* ---- Card ---- */
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: var(--esp-3) var(--esp-3);
+  text-align: left;
+}
+
+/* ---- Campo: etiqueta visible siempre encima del control ---- */
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  min-width: 0;
+}
+.etiqueta {
+  font-size: var(--tam-subtitulo);
+  font-weight: 600;
+  color: var(--texto);
+}
+.ayuda {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+}
+.control {
+  width: 100%;
+  font-family: var(--fuente);
+  font-size: var(--tam-nombre);
+  color: var(--texto);
+  background: var(--superficie);
+  border: 2px solid var(--borde-fuerte);
+  border-radius: var(--radio-chico);
+  padding: var(--esp-2) var(--esp-2);
+  min-height: var(--tactil-min);
+}
+.control:focus {
+  outline: none;
+  border-color: var(--primario);
+}
+.controlConError {
+  border-color: var(--deuda);
+}
+.error {
+  font-size: var(--tam-nota);
+  font-weight: 600;
+  color: var(--deuda);
+}
+
+/* ---- Avisos: el color acompaña, la palabra comunica ---- */
+.aviso {
+  font-size: var(--tam-nota);
+  line-height: 1.45;
+  border-radius: var(--radio-chico);
+  padding: var(--esp-2) var(--esp-3);
+  border: 1px solid var(--borde);
+}
+.avisoInfo {
+  background: var(--tinte-ia);
+  color: var(--texto);
+}
+.avisoExito {
+  background: var(--tinte-primario);
+  color: var(--texto);
+}
+.avisoPendiente {
+  background: var(--tinte-pendiente);
+  color: var(--texto);
+}
+.avisoError {
+  background: var(--tinte-deuda);
+  color: var(--texto);
+  font-weight: 600;
+}
+
+/* ---- Montos: números tabulares, jerarquía por tamaño ---- */
+.monto {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.montoGrande {
+  font-size: var(--tam-monto);
+}
+.montoOrden {
+  font-size: var(--tam-monto-orden);
+}
+.montoNormal {
+  font-size: var(--tam-nombre);
+}
+.tonoIngreso {
+  color: var(--primario);
+}
+.tonoPendiente {
+  color: var(--pendiente);
+}
+.tonoDeuda {
+  color: var(--deuda);
+}
+.tonoNeutro {
+  color: var(--texto);
+}
+
+/* ---- Títulos ---- */
+.tituloPagina {
+  font-size: var(--tam-titulo);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.tituloSeccion {
+  font-size: var(--tam-seccion);
+  font-weight: 700;
+  margin: var(--esp-4) 0 var(--esp-2);
+}
+.nota {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+}

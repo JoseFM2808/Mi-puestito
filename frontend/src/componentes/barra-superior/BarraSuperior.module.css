@@ -1,0 +1,192 @@
+/* Barra superior fija (Design-System §6). CSS Module. Solo tokens. */
+
+.barra {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--superficie);
+  border-bottom: 1.5px solid var(--borde-fuerte);
+  box-shadow: var(--sombra-barra);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  flex-wrap: wrap;
+  padding: var(--esp-1) var(--esp-3);
+}
+
+.izquierda {
+  display: flex;
+  gap: var(--esp-2);
+  align-items: center;
+}
+
+/* Controles de barra: 2.9rem (Design-System §3), más bajos que un botón de acción */
+.izquierda > button {
+  min-height: var(--tactil-barra);
+  padding-inline: var(--esp-3);
+  font-size: var(--tam-nota);
+}
+
+.derecha {
+  display: flex;
+  gap: var(--esp-2);
+  align-items: center;
+  margin-left: auto;
+}
+
+.grupoLetra {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-1);
+}
+
+.rotulo {
+  font-size: var(--tam-rotulo);
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.opciones {
+  display: flex;
+  gap: var(--esp-1);
+}
+
+.opcionLetra {
+  font-family: var(--fuente);
+  border: 1.5px solid var(--borde);
+  background: var(--fondo);
+  color: var(--texto);
+  border-radius: var(--radio-chico);
+  min-height: var(--tactil-barra);
+  min-width: 3.1rem;
+  cursor: pointer;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0.2rem;
+}
+
+.opcionLetra:focus-visible {
+  outline: 3px solid var(--ia);
+  outline-offset: 2px;
+}
+
+.nombreLetra {
+  font-size: 0.55rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+  margin-top: 0.15rem;
+}
+
+/* Cada botón muestra "Aa" a su tamaño real */
+.opcionLetra[data-tam='normal'] {
+  font-size: 0.85rem;
+}
+.opcionLetra[data-tam='grande'] {
+  font-size: 1.05rem;
+}
+.opcionLetra[data-tam='muygrande'] {
+  font-size: 1.3rem;
+}
+
+.activo {
+  background: var(--primario);
+  border-color: var(--primario);
+  color: var(--superficie);
+}
+.activo .nombreLetra {
+  color: var(--superficie);
+}
+
+.menu {
+  border-top: 1px solid var(--borde);
+  padding: var(--esp-2) var(--esp-3) var(--esp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  /* Con letra grande en un teléfono el menú no cabe: se desplaza en vez de quedar cortado */
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.negocio {
+  font-size: var(--tam-nota);
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.opcionesMenu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+/* En pantalla angosta el selector baja a segunda fila sin pisar los botones */
+@media (max-width: 760px) {
+  .fila {
+    gap: var(--esp-1);
+    padding: var(--esp-1) var(--esp-2);
+  }
+  .izquierda {
+    width: 100%;
+    gap: var(--esp-1);
+  }
+  /* La barra fija no puede comerse la pantalla del teléfono */
+  .izquierda > button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: var(--esp-1);
+  }
+  .derecha {
+    width: 100%;
+    margin-left: 0;
+  }
+  .grupoLetra,
+  .opciones {
+    width: 100%;
+  }
+  /* Cada botón ya dice "Normal", "Grande", "Muy grande"; el grupo conserva su aria-label */
+  .rotulo {
+    display: none;
+  }
+  .opcionLetra {
+    flex: 1;
+    min-width: 0;
+  }
+  .opcionesMenu > button {
+    flex: 1 1 100%;
+  }
+}
+
+.avisoBarra,
+.confirmacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.avisoBarra {
+  padding: var(--esp-1) var(--esp-3);
+  border-top: 1px solid var(--borde);
+}
+
+.confirmacion {
+  flex-basis: 100%;
+}
+
+.avisoBarra > p,
+.confirmacion > p {
+  flex: 1 1 100%;
+}
+
+/* El selector nativo no se puede traducir: lo abre el botón "Recuperar una copia" */
+.selectorArchivo {
+  display: none;
+}

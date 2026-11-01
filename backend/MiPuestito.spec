@@ -10,9 +10,16 @@ frontend ya construido. El usuario final no instala nada.
 En Windows produce dist/MiPuestito.exe
 """
 
+import sys
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_submodules
+
 RAIZ = Path(SPECPATH).parent
+# collect_submodules importa los paquetes para listarlos: sin el backend en
+# sys.path devuelve [] en silencio y el .exe arranca con TODOS los módulos
+# degradados (/api/salud sigue diciendo "ok").
+sys.path.insert(0, str(RAIZ / "backend"))
 WEB = RAIZ / "frontend" / "dist"
 
 if not WEB.is_dir():
@@ -25,8 +32,12 @@ analisis = Analysis(
     ["escritorio.py"],
     pathex=[str(RAIZ / "backend")],
     binaries=[],
-    # El frontend construido viaja dentro del ejecutable, en la carpeta "web"
-    datas=[(str(WEB), "web")],
+    # El frontend construido viaja dentro del ejecutable, en la carpeta "web".
+    # Alembic lee las migraciones como archivos .py del disco: van como datos.
+    datas=[
+        (str(WEB), "web"),
+        (str(RAIZ / "backend" / "migraciones"), "migraciones"),
+    ],
     hiddenimports=[
         # Uvicorn carga estos por nombre; sin declararlos no entran al paquete
         "uvicorn.logging",
@@ -34,13 +45,16 @@ analisis = Analysis(
         "uvicorn.protocols.http.auto",
         "uvicorn.protocols.websockets.auto",
         "uvicorn.lifespan.on",
-        # Los módulos del backend se importan desde main.py
-        "modules.compras.models",
-        "modules.compras.router",
-        "modules.dashboard.router",
-        "modules.ventas.models",
-        "modules.ventas.router",
-    ],
+        # Base de zonas horarias: Windows no la trae (ZoneInfo("America/Lima"))
+        "tzdata",
+    ]
+    # main.py importa los módulos por nombre (importlib), así que PyInstaller
+    # no los ve: una lista a mano se quedó sin auth ni asistente y el .exe
+    # arrancaba sin login. Se recogen todos los submódulos automáticamente.
+    + collect_submodules("modules")
+    + collect_submodules("ia")
+    # Las migraciones importan alembic.op y sqlalchemy en tiempo de ejecución
+    + collect_submodules("alembic", filter=lambda nombre: not nombre.startswith("alembic.testing")),
     hookspath=[],
     runtime_hooks=[],
     excludes=["tkinter", "pytest"],

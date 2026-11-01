@@ -1,0 +1,35 @@
+/* Pantalla de ingreso. CSS Module. Solo tokens. */
+
+.login {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--esp-5) var(--esp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  text-align: center;
+}
+
+.subtitulo {
+  font-size: var(--tam-subtitulo);
+  color: var(--texto-suave);
+}
+
+.cuentas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  text-align: left;
+}
+
+.cuenta,
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.formulario {
+  padding-top: var(--esp-2);
+  border-top: 1px solid var(--borde);
+}

@@ -14,7 +14,7 @@ import webbrowser
 import uvicorn
 
 from main import app
-from rutas import directorio_datos, directorio_web, ruta_base_datos
+from rutas import directorio_datos, directorio_web
 
 DIRECCION = "127.0.0.1"
 
@@ -91,7 +91,8 @@ def main() -> int:
 
     print("Mi Puestito")
     print(f"  Abriendo en: {direccion_app}")
-    print(f"  Tus datos se guardan en: {ruta_base_datos()}")
+    # Cada proyecto (demo / anita) tiene su archivo en esta misma carpeta
+    print(f"  Tus datos se guardan en: {directorio_datos()}")
     print("  Para cerrar el programa, cierra esta ventana.")
 
     # Se pasa la aplicación ya importada (y no "main:app"): dentro del

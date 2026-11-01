@@ -12,11 +12,11 @@
 |---|---|---|---|
 | [[#Fase 0 — Demo 1 esqueleto y primera pantalla]] | Que exista algo ejecutable | **Terminada** | 8/8 |
 | [[#Fase 1 — Correcciones antes de los datos reales]] | Arreglar lo que después sale caro | **Terminada** | 10/10 |
-| [[#Fase 2 — Base técnica sostenible]] | Que crecer no duela | Pendiente | 0/6 |
-| [[#Fase 3 — Módulo Ventas]] | Vender de verdad | Pendiente | 0/7 |
-| [[#Fase 4 — Módulo Compras]] | Comprar de verdad | Pendiente | 0/6 |
-| [[#Fase 5 — Offline real y sincronización]] | Que funcione sin internet | Pendiente | 0/5 |
-| [[#Fase 6 — AI Companion]] | El asistente que guía | Pendiente | 0/6 |
+| [[#Fase 2 — Base técnica sostenible]] | Que crecer no duela | **Terminada** | 6/6 |
+| [[#Fase 3 — Módulo Ventas]] | Vender de verdad | En curso | 6/7 |
+| [[#Fase 4 — Módulo Compras]] | Comprar de verdad | Hecha | 6/6 |
+| [[#Fase 5 — Offline real y sincronización]] | Que funcione sin internet | Hecha | 5/5 |
+| [[#Fase 6 — AI Companion]] | El asistente que guía | En curso | 2/6 |
 | [[#Fase 7 — Módulos de Fase 2 del producto]] | Inventario, Análisis, Gastos | Pendiente | 0/3 |
 
 **Regla de orden:** la Fase 1 va antes que cualquier módulo nuevo. Sus tareas
@@ -127,23 +127,23 @@ Extras que salieron del mismo trabajo:
 
 Meta: que sumar el módulo número dos no ensucie al número uno.
 
-- [ ] **Tokens tipográficos.** `tokens.css` no materializa la escala de
+- [x] **Tokens tipográficos.** `tokens.css` no materializa la escala de
       [[Design-System]] §2, así que los CSS escriben tamaños a mano mientras su
       comentario dice lo contrario. Añadir `--texto-1..--texto-6` y usar los
       `--esp-*` que ya existen y nadie usa.
-- [ ] **Aislar los estilos por módulo.** `Dashboard.css` declara nombres
+- [x] **Aislar los estilos por módulo.** `Dashboard.css` declara nombres
       globalísimos (`.card`, `.btn`, `.monto`, `.nota`). Cuando Ventas traiga su
       propio `.card`, uno reestilará al otro en silencio: un módulo rompiendo a
       otro, que es justo lo prohibido. Decidir **ahora**: CSS Modules o prefijo
       obligatorio por módulo.
-- [ ] **Una sola copia de la paleta.** Los hexadecimales `#1E6E42` y `#FAF7F2`
+- [x] **Una sola copia de la paleta.** Los hexadecimales `#1E6E42` y `#FAF7F2`
       están re-escritos en `vite.config.ts` e `index.html`; generarlos desde
       `tokens.css` o documentar por qué no se puede.
-- [ ] **Eliminar el bloque duplicado** entre `.btn-secundario` y `.btn-reintentar`.
-- [ ] **Linters.** No hay ESLint, Prettier ni ruff; nada hace cumplir la regla
+- [x] **Eliminar el bloque duplicado** entre `.btn-secundario` y `.btn-reintentar`.
+- [x] **Linters.** No hay ESLint, Prettier ni ruff; nada hace cumplir la regla
       "TypeScript estricto, nada de `any` sin justificar" de `AGENTS.md`.
       Añadirlos y engancharlos al CI.
-- [ ] **Cerrar la brecha de documentación.** `README.md`, `AGENTS.md` y
+- [x] **Cerrar la brecha de documentación.** `README.md`, `AGENTS.md` y
       [[Agentes-De-Desarrollo]] describen un directorio `.claude/` (subagente
       revisor, permisos) que **no existe** en el repositorio. Como estos MD son
       el contexto del [[AI-Companion]], el asistente describirá con seguridad
@@ -155,13 +155,13 @@ Meta: que sumar el módulo número dos no ensucie al número uno.
 
 Meta: registrar ventas reales. Ver [[Modulo-Ventas]].
 
-- [ ] Panel de órdenes activas en paralelo (cards/pestañas, botón "+")
-- [ ] Registro de venta con descripción manual y búsqueda por nombre
-- [ ] Fiado: cliente, deuda derivada y límite de crédito opcional
-- [ ] Venta rápida (solo monto) y su formalización posterior
-- [ ] Cierre y pago: efectivo y YAPE/Plin con QR
-- [ ] Endpoints de escritura con paginación (evitar el N+1 ya detectado)
-- [ ] `README.md` del módulo y `data-ai-id` en todo elemento interactivo
+- [x] Panel de órdenes activas en paralelo (cards/pestañas, botón "+")
+- [x] Registro de venta con descripción manual y búsqueda por nombre
+- [x] Fiado: cliente, deuda derivada y límite de crédito opcional
+- [x] Venta rápida (solo monto) y su formalización posterior
+- [ ] Cierre y pago: efectivo y YAPE/Plin con QR *(cobro hecho; falta el QR, que necesita el número del vendedor)*
+- [x] Endpoints de escritura con paginación (evitar el N+1 ya detectado)
+- [x] `README.md` del módulo y `data-ai-id` en todo elemento interactivo
 
 ---
 
@@ -169,12 +169,12 @@ Meta: registrar ventas reales. Ver [[Modulo-Ventas]].
 
 Meta: gestionar proveedores y pedidos. Ver [[Modulo-Compras]].
 
-- [ ] Auto-registro del proveedor desde la tablet
-- [ ] Creación de orden de pedido con sugerencia de productos frecuentes
-- [ ] Checklist de recepción (recibido / no recibido / cambio)
-- [ ] Recálculo del monto real a pagar
-- [ ] Conectar la proyección real del Dashboard ("Mañana necesitas en caja")
-- [ ] `README.md` del módulo y `data-ai-id`
+- [x] Auto-registro del proveedor desde la tablet
+- [x] Creación de orden de pedido con sugerencia de productos frecuentes
+- [x] Checklist de recepción (recibido / no recibido / cambio)
+- [x] Recálculo del monto real a pagar
+- [x] Conectar la proyección real del Dashboard ("Mañana necesitas en caja")
+- [x] `README.md` del módulo y `data-ai-id`
 
 ---
 
@@ -182,11 +182,11 @@ Meta: gestionar proveedores y pedidos. Ver [[Modulo-Compras]].
 
 Meta: cumplir el pilar offline-first con datos reales. Ver [[Sincronizacion-Offline]].
 
-- [ ] IndexedDB con Dexie.js (depende del **puerto fijo** de la Fase 1)
-- [ ] Escritura local primero, sincronización cuando haya red
-- [ ] Resolución de conflictos y orden por fecha UTC
-- [ ] Indicador visible de "sin conexión" / "sincronizando"
-- [ ] Respaldo y restauración del archivo de datos del vendedor
+- [x] IndexedDB con Dexie.js (depende del **puerto fijo** de la Fase 1)
+- [x] Escritura local primero, sincronización cuando haya red
+- [x] Resolución de conflictos y orden por fecha UTC
+- [x] Indicador visible de "sin conexión" / "sincronizando"
+- [x] Respaldo y restauración del archivo de datos del vendedor
 
 ---
 
@@ -194,11 +194,11 @@ Meta: cumplir el pilar offline-first con datos reales. Ver [[Sincronizacion-Offl
 
 Meta: el asistente integrado. Ver [[AI-Companion]] y [[Orquestacion-IA]].
 
-- [ ] Capa de abstracción agnóstica al modelo ([[Conexion-Agnostica]])
+- [x] Capa de abstracción agnóstica al modelo ([[Conexion-Agnostica]])
 - [ ] Orquestación con LangGraph
 - [ ] Lectura del estado de la UI vía `data-ai-id`
-- [ ] Navegación y llenado de formularios guiado
-- [ ] Explicación de cifras en lenguaje simple
+- [ ] Navegación y llenado de formularios guiado *(navegación sugerida hecha, ADR-037; falta el llenado guiado)*
+- [x] Explicación de cifras en lenguaje simple
 - [ ] Los MD de módulos como contexto en runtime
 
 ---
@@ -215,6 +215,6 @@ Meta: el asistente integrado. Ver [[AI-Companion]] y [[Orquestacion-IA]].
 
 | Tema | Por qué se aplaza | Cuándo decidir |
 |---|---|---|
-| Dinero en céntimos enteros vs `Numeric` | SQLite pasa `Numeric` por float; hoy los montos son pequeños y el ida y vuelta es correcto | Al implementar Ventas real (Fase 3) |
-| Alembic para migraciones | El esquema aún cambia; `create_all` alcanza | Cuando exista data real que preservar (fin de Fase 3) |
+| ~~Dinero en céntimos enteros vs `Numeric`~~ | **Decidido:** céntimos enteros (decisión 35 de [[Decisiones-Tecnicas]]) | Resuelto en la Fase 3 |
+| ~~Alembic para migraciones~~ | **Decidido:** Alembic, una base por proyecto (decisión 41) | Resuelto en la Fase 3 |
 | Ejecutables de macOS y Linux | La receta ya sirve; falta añadirlos al flujo automático | Cuando haya usuarios que lo pidan |

@@ -1,0 +1,21 @@
+/* Aviso de módulo caído. CSS Module. Solo tokens. */
+
+.limite {
+  max-width: 920px;
+  margin: var(--esp-4) auto;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-left: var(--esp-1) solid var(--deuda);
+  border-radius: var(--radio);
+  padding: var(--esp-3) var(--esp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  align-items: flex-start;
+}
+
+.titulo {
+  font-size: var(--tam-seccion);
+  font-weight: 700;
+  color: var(--deuda);
+}

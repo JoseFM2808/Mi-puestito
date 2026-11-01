@@ -24,10 +24,31 @@
   --esp-3: 1.2rem;
   --esp-4: 1.6rem;
 
+  --esp-5: 2.4rem;
+
+  /* ---- Tintes suaves (fondos de avisos; siempre con palabra encima) ---- */
+  --tinte-primario: #E6F0E9;
+  --tinte-pendiente: #F7EBDD;
+  --tinte-deuda: #F5E3E0;
+  --tinte-ia: #E3EDF5;
+
+  /* ---- Escala tipográfica (Design-System.md §2), en rem desde la raíz ----
+     Jerarquía que se lee de lejos: monto > título > subtítulo > nota */
+  --tam-monto: 2.5rem;         /* monto principal de caja */
+  --tam-titulo: 1.8rem;        /* título de página */
+  --tam-monto-orden: 1.7rem;   /* monto de una orden o pedido */
+  --tam-seccion: 1.45rem;      /* título de sección */
+  --tam-nombre: 1.25rem;       /* nombre de cliente / producto */
+  --tam-boton: 1.2rem;
+  --tam-subtitulo: 1.15rem;    /* etiqueta de card */
+  --tam-nota: 1.05rem;         /* texto suave */
+  --tam-rotulo: 0.92rem;       /* rótulos pequeños de la barra */
+
   /* ---- Radios y control táctil ---- */
   --radio: 14px;
   --radio-chico: 11px;
   --tactil-min: 3.2rem;   /* >= 56px en Normal */
+  --tactil-barra: 2.9rem; /* controles de la barra superior */
 
   /* ---- Sombras ---- */
   --sombra-barra: 0 2px 10px rgba(43, 38, 32, 0.06);  /* barra superior fija */

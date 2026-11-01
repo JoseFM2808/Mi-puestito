@@ -15,10 +15,10 @@ Solo el PIN que el operador escribe (no se guarda en el frontend). Llama a
 
 ## Qué acciones permite
 
-| Acción | Descripción |
-|---|---|
-| Elegir cuenta (Demo / negocio real) | Muestra el campo de PIN de esa cuenta |
-| **Ingresar** | Valida el PIN y, si es correcto, entra a la app |
+| Acción                              | Descripción                                     |
+| ----------------------------------- | ----------------------------------------------- |
+| Elegir cuenta (Demo / negocio real) | Muestra el campo de PIN de esa cuenta           |
+| **Ingresar**                        | Valida el PIN y, si es correcto, entra a la app |
 
 ## Cómo interactúa la IA
 

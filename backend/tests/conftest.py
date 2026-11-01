@@ -48,10 +48,11 @@ def base_de_datos_limpia():
     vacía, y el resultado depende del orden de ejecución: la suite pasaría hoy
     y fallaría al añadir un archivo o al correr en paralelo.
     """
-    from database import Base, crear_tablas_todos_los_proyectos, motor_de
+    from database import Base, migrar_todos_los_proyectos, motor_de
     from proyectos import PROYECTOS
 
-    crear_tablas_todos_los_proyectos()
+    # Las tablas salen de las migraciones, igual que en producción
+    migrar_todos_los_proyectos()
     yield
     for clave in PROYECTOS:
         with motor_de(clave).begin() as conexion:
@@ -83,3 +84,13 @@ def cabeceras_demo(token_demo):
 @pytest.fixture()
 def cabeceras_anita(token_anita):
     return {"Authorization": f"Bearer {token_anita}"}
+
+
+@pytest.fixture(autouse=True)
+def intentos_de_login_limpios():
+    """El límite de intentos de PIN vive en memoria: cada test empieza de cero."""
+    import seguridad
+
+    seguridad._intentos.clear()
+    yield
+    seguridad._intentos.clear()

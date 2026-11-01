@@ -1,20 +1,11 @@
 /**
- * Formato de montos y fechas para Perú. El idioma y la zona horaria son
- * fijos (es-PE, America/Lima): el usuario nunca los configura a mano y la
- * app no depende de que la tablet tenga bien puesta su zona.
+ * Formato de fechas para Perú. El idioma y la zona horaria son fijos
+ * (es-PE, America/Lima): el usuario nunca los configura a mano y la app no
+ * depende de que la tablet tenga bien puesta su zona. Los montos se formatean
+ * en api/contrato.ts (céntimos enteros, ADR-033).
  */
 
 const ZONA_PERU = 'America/Lima'
-
-const formatoMoneda = new Intl.NumberFormat('es-PE', {
-  style: 'currency',
-  currency: 'PEN',
-  minimumFractionDigits: 2,
-})
-
-export function formatearMonto(monto: number): string {
-  return formatoMoneda.format(monto)
-}
 
 const formatoFechaLarga = new Intl.DateTimeFormat('es-PE', {
   weekday: 'long',
@@ -50,9 +41,7 @@ const formatoFechaCorta = new Intl.DateTimeFormat('es-PE', {
 /** Días de diferencia con hoy, contados sobre el calendario peruano. */
 export function diasHastaHoy(fecha: Date): number {
   // El corte del día es la medianoche de Lima, no la de la tablet
-  return Math.round(
-    (Date.parse(diaEnPeru(fecha)) - Date.parse(diaEnPeru(new Date()))) / 86_400_000,
-  )
+  return Math.round((Date.parse(diaEnPeru(fecha)) - Date.parse(diaEnPeru(new Date()))) / 86_400_000)
 }
 
 /**

@@ -1,0 +1,208 @@
+/* Estilos del módulo Ventas (CSS Module: nada se filtra a otros módulos). Solo tokens. */
+
+.pantalla {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--esp-4) var(--esp-3) var(--esp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
+}
+
+.accionesCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+.avisos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+}
+
+.avisoConBoton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
+  flex-wrap: wrap;
+}
+
+/* ---- Panel de órdenes activas: todas visibles, cambio con un toque ---- */
+.pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+.pestana {
+  font-family: var(--fuente);
+  min-height: var(--tactil-min);
+  min-width: min(10rem, 100%);
+  padding: var(--esp-1) var(--esp-3);
+  border-radius: var(--radio);
+  border: 2px solid var(--borde-fuerte);
+  background: var(--superficie);
+  color: var(--texto);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.pestana:focus-visible {
+  outline: 3px solid var(--ia);
+  outline-offset: 2px;
+}
+
+.pestanaActiva {
+  border-color: var(--primario);
+  background: var(--tinte-primario);
+}
+
+.pestanaNombre {
+  font-size: var(--tam-subtitulo);
+  font-weight: 600;
+}
+
+.pestanaDetalle {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.estadoFiado {
+  color: var(--deuda);
+  font-weight: 600;
+}
+
+/* ---- Detalle de la orden ---- */
+.detalle {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--esp-3);
+  align-items: start;
+}
+
+.columna {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.encabezadoOrden {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--esp-2);
+  flex-wrap: wrap;
+}
+
+.nombreOrden {
+  font-size: var(--tam-seccion);
+  font-weight: 700;
+}
+
+.tipoOrden {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+}
+
+.items {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: var(--esp-2) 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.itemTexto {
+  flex: 1 1 8rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.itemNombre {
+  font-size: var(--tam-nombre);
+  font-weight: 600;
+}
+
+.itemCantidad {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: var(--esp-2);
+  gap: var(--esp-2);
+}
+
+.totalEtiqueta {
+  font-size: var(--tam-subtitulo);
+  font-weight: 600;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+/* Dos columnas solo si caben de verdad: en una tablet vertical se apilan */
+.filaCampos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  gap: var(--esp-2);
+}
+
+.cobro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.resultados {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.vacio {
+  text-align: center;
+  padding: var(--esp-5) var(--esp-3);
+}
+
+@media (max-width: 760px) {
+  /* minmax(0, …): con 1fr a secas, un contenido ancho desborda la pantalla */
+  .detalle,
+  .filaCampos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pestana {
+    flex: 1 1 100%;
+  }
+}

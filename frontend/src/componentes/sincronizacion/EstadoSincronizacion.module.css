@@ -1,0 +1,29 @@
+/* Estado de sincronización. Solo tokens. */
+
+.indicador {
+  font-size: var(--tam-nota);
+  font-weight: 600;
+  color: var(--texto);
+  background: var(--tinte-pendiente);
+  border-bottom: 1px solid var(--borde-fuerte);
+  padding: var(--esp-1) var(--esp-3);
+  text-align: center;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  flex-wrap: wrap;
+}
+
+.fila > p {
+  flex: 1;
+  min-width: min(14rem, 100%);
+}
