@@ -161,7 +161,7 @@ sequenceDiagram
         M-->>S: texto o error → siguiente modelo
     end
     S-->>R: texto + líneas "ACCION: ir_a <pantalla>"
-    R->>R: acciones de la lista blanca → botones; registro opt-in (seudonimizado)
+    R->>R: acciones de la lista blanca → botones · registro opt-in (seudonimizado)
     R-->>UI: {respuesta con nombres reales, acciones, id_respuesta, modelo}
     UI-->>UI: botón "Ir a Ventas" (el operador decide) · "Me sirvió" / "No me sirvió"
 ```

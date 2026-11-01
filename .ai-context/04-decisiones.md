@@ -20,6 +20,10 @@
 | 039 | 2026-10-08 | Propuesta | Fine-tuning LoRA de un Gemma 4 pequeño para correr en el dispositivo |
 | 040 | 2026-09-28 | Aceptada | Estilos aislados con CSS Modules y piezas base compartidas en `src/ui` |
 | 041 | 2026-09-28 | Aceptada | Migraciones con Alembic, una base por proyecto |
+| 042 | 2026-11-01 | Aceptada | Verificador de cifras en el servidor: un monto fuera del contexto descarta la respuesta |
+| 043 | 2026-11-01 | Aceptada | Llave de IA guardada desde la pantalla, cifrada con DPAPI y solo desde el mismo equipo |
+| 044 | 2026-11-01 | Aceptada | Respaldo con la API de SQLite; cada copia sabe de qué negocio es |
+| 045 | 2026-11-01 | Aceptada | Recepción de compras inmutable; el stock sube solo con cantidad explícita |
 
 ---
 

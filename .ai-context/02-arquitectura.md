@@ -81,7 +81,7 @@ flowchart LR
         Conf --> Lla[ia/llave_local.py<br/>DPAPI, si no hay variable]
     end
     subgraph Manana["Mañana: en el dispositivo"]
-        Reg -. ia/dataset.py .-> FT[Fine-tuning LoRA<br/>Gemma 4 pequeño · ADR-039]
+        Reg -. dataset .-> FT[Fine-tuning LoRA<br/>Gemma 4 pequeño · ADR-039]
         FT --> Ollama[Ollama / llama.cpp<br/>MI_PUESTITO_IA_PROVEEDOR=local]
     end
     Ollama -. misma API compatible OpenAI .-> Conf
