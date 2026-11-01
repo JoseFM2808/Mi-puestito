@@ -13,17 +13,18 @@
 import json
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+import seguridad
 from database import obtener_sesion
 from fechas import dia_peruano
-from ia import registro
+from ia import configuracion, llave_local, registro
 from ia.privacidad import seudonimizar_resumen
 from ia.servicio import AsistenteNoDisponible, armar_mensajes, preguntar
 from seguridad import proyecto_autenticado
 
-from .schemas import PreguntaEntrada, RespuestaSalida, ValoracionEntrada
+from .schemas import EstadoAsistente, LlaveEntrada, PreguntaEntrada, RespuestaSalida, ValoracionEntrada
 
 router = APIRouter(prefix="/api/asistente", tags=["asistente"])
 
@@ -111,3 +112,69 @@ async def preguntar_endpoint(
 def valorar(datos: ValoracionEntrada, proyecto: str = Depends(proyecto_autenticado)) -> None:
     """ "Me sirvió" / "No me sirvió". Señal para elegir ejemplos de fine-tuning."""
     registro.valorar(proyecto, datos.id_respuesta, datos.util)
+
+
+# ---------------------------------------------------------------- llave (D-14)
+
+EQUIPO_LOCAL = {"127.0.0.1", "::1"}
+_SOLO_DESDE_EL_EQUIPO = "La llave solo se cambia desde la computadora del programa."
+
+
+def _estado(request: Request) -> EstadoAsistente:
+    ajustes = configuracion.leer()
+    return EstadoAsistente(
+        listo=ajustes.lista,
+        puede_guardar_llave=_se_puede_guardar(ajustes.proveedor, request),
+        llave_guardada=llave_local.guardada(),
+    )
+
+
+def _se_puede_guardar(proveedor: str, request: Request) -> bool:
+    """Solo la app de escritorio, desde la misma computadora.
+
+    En la nube la llave es configuración del servidor, y el PIN de demo es público:
+    nadie debe poder reemplazarla desde otro dispositivo de la red.
+    """
+    origen = request.client.host if request.client else ""
+    return (
+        seguridad.ENTORNO == "local"
+        and proveedor == "nvidia"
+        and llave_local.disponible()
+        and origen in EQUIPO_LOCAL
+    )
+
+
+@router.get("/estado", response_model=EstadoAsistente)
+def estado_del_asistente(
+    request: Request, _proyecto: str = Depends(proyecto_autenticado)
+) -> EstadoAsistente:
+    """Si el Asistente puede responder, para saber si hay que pedir la llave."""
+    return _estado(request)
+
+
+@router.post("/llave", response_model=EstadoAsistente)
+async def guardar_llave(
+    datos: LlaveEntrada, request: Request, _proyecto: str = Depends(proyecto_autenticado)
+) -> EstadoAsistente:
+    """Guarda la llave cifrada en este dispositivo. No queda en ninguna respuesta ni registro."""
+    ajustes = configuracion.leer()
+    if not _se_puede_guardar(ajustes.proveedor, request):
+        raise HTTPException(status_code=403, detail=_SOLO_DESDE_EL_EQUIPO)
+    llave = datos.llave.strip()
+    largo_valido = llave_local.LARGO_MINIMO <= len(llave) <= llave_local.LARGO_MAXIMO
+    if not largo_valido or any(c.isspace() for c in llave):
+        raise HTTPException(status_code=400, detail="No parece una llave. Cópiala completa, sin espacios.")
+    modelo = ajustes.modelos[0] if ajustes.modelos else ""
+    if await llave_local.rechazada_por_el_proveedor(llave, ajustes.url_base, modelo):
+        raise HTTPException(status_code=400, detail="NVIDIA no aceptó esa llave. Revisa que esté completa.")
+    llave_local.guardar(llave)
+    return _estado(request)
+
+
+@router.delete("/llave", response_model=EstadoAsistente)
+def quitar_llave(request: Request, _proyecto: str = Depends(proyecto_autenticado)) -> EstadoAsistente:
+    """Olvida la llave guardada en este dispositivo."""
+    if not _se_puede_guardar(configuracion.leer().proveedor, request):
+        raise HTTPException(status_code=403, detail=_SOLO_DESDE_EL_EQUIPO)
+    llave_local.borrar()
+    return _estado(request)

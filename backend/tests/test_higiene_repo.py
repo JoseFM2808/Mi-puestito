@@ -18,7 +18,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 # Archivos que jamás deben estar versionados (plantillas *.example sí)
 PATRONES_PROHIBIDOS = [
     ".env", "*/.env", ".env.*", "*/.env.*", "*.env",
-    "*.pem", "*.key", "*.p12", "*.pfx", "id_rsa*", "id_ed25519*",
+    "*.pem", "*.key", "*.dpapi", "*.p12", "*.pfx", "id_rsa*", "id_ed25519*",
     "*usuarios.json",
     "*.db", "*.db-journal", "*.db-wal", "*.sqlite", "*.sqlite3", "*.dump",
     "docs/meetings/*", "docs/privado/*", "docs/acuerdos/*", ".ai-context/privado/*",

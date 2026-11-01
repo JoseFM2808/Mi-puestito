@@ -4,7 +4,7 @@
 |---|---|---|
 | `MI_PUESTITO_IA_PROVEEDOR` | `nvidia` | `nvidia` (NIM en la nube) o `local` (Ollama, llama.cpp…) |
 | `MI_PUESTITO_IA_URL` | según proveedor | Base de una API compatible con OpenAI (`/v1`) |
-| `NVIDIA_API_KEY` | — | Llave de NVIDIA. Nunca en el repo ni en archivos del proyecto |
+| `NVIDIA_API_KEY` | — | Llave de NVIDIA, nunca en el repo. Si falta, la guardada (`llave_local.py`) |
 | `MI_PUESTITO_IA_API_KEY` | — | Llave de un proveedor local, si la pide |
 | `MI_PUESTITO_IA_MODELOS` | ver abajo | Modelos en orden de prioridad, separados por coma |
 | `MI_PUESTITO_IA_TIMEOUT` | `12` | Segundos máximos por modelo antes de probar el siguiente |
@@ -21,6 +21,8 @@ import os
 from dataclasses import dataclass
 
 import rutas
+
+from . import llave_local
 
 URLS = {
     "nvidia": "https://integrate.api.nvidia.com/v1",
@@ -95,7 +97,7 @@ def leer() -> ConfiguracionIA:
     if proveedor not in URLS:
         proveedor = "nvidia"
     if proveedor == "nvidia":
-        api_key = os.environ.get("NVIDIA_API_KEY") or None
+        api_key = os.environ.get("NVIDIA_API_KEY") or llave_local.leer()
         por_defecto = MODELOS_NVIDIA
     else:
         api_key = os.environ.get("MI_PUESTITO_IA_API_KEY") or None

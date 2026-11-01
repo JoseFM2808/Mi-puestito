@@ -162,6 +162,18 @@
       "stock_segun_movimientos"
     ]
   },
+  "EstadoAsistente": {
+    "required": [
+      "listo",
+      "llave_guardada",
+      "puede_guardar_llave"
+    ],
+    "properties": [
+      "listo",
+      "llave_guardada",
+      "puede_guardar_llave"
+    ]
+  },
   "FiarEntrada": {
     "required": [],
     "properties": [
@@ -277,6 +289,14 @@
       "nombre_producto",
       "producto_uuid",
       "uuid"
+    ]
+  },
+  "LlaveEntrada": {
+    "required": [
+      "llave"
+    ],
+    "properties": [
+      "llave"
     ]
   },
   "MermaEntrada": {

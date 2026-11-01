@@ -346,6 +346,14 @@ export interface ProductoFrecuenteCable {
   veces: number
 }
 
+// ------------------------------------------------------------------ asistente
+
+export interface EstadoAsistenteCable {
+  listo: boolean
+  puede_guardar_llave: boolean
+  llave_guardada: boolean
+}
+
 /** Esquema del backend (nombre en openapi.json) → campos que el frontend espera. */
 export const CAMPOS_DEL_CONTRATO = {
   IngresoSalida: camposDe<IngresoCable>()(['token', 'proyecto', 'nombre_proyecto', 'es_real']),
@@ -424,6 +432,7 @@ export const CAMPOS_DEL_CONTRATO = {
     'items',
   ]),
   ResultadoOrden: camposDe<ResultadoOrdenCable>()(['orden', 'avisos']),
+  EstadoAsistente: camposDe<EstadoAsistenteCable>()(['listo', 'puede_guardar_llave', 'llave_guardada']),
   ProductoFrecuente: camposDe<ProductoFrecuenteCable>()(['nombre_producto', 'cantidad', 'monto', 'veces']),
   ClienteSalida: camposDe<ClienteCable>()(['uuid', 'nombre', 'telefono', 'limite_credito', 'creado_en']),
   ClienteConDeuda: camposDe<ClienteConDeudaCable>()([

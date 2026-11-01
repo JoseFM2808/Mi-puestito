@@ -23,6 +23,20 @@ class PreguntaEntrada(BaseModel):
     historial: list[TurnoPrevio] = Field(default_factory=list, max_length=12)
 
 
+class LlaveEntrada(BaseModel):
+    # Sin restricciones de Pydantic a propósito: un 422 repetiría la llave en su
+    # respuesta. El largo se valida en el router, con un mensaje que no la incluye.
+    llave: str
+
+
+class EstadoAsistente(BaseModel):
+    """Nunca lleva la llave: solo si hay una y si se puede guardar desde la pantalla."""
+
+    listo: bool
+    puede_guardar_llave: bool
+    llave_guardada: bool
+
+
 class AccionSugerida(BaseModel):
     """Un botón que el Asistente propone; el operador decide si lo toca."""
 

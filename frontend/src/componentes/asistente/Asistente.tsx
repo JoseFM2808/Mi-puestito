@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ErrorApi, SinConexion, pedir } from '../../api/cliente'
-import type { AccionSugeridaCable, RespuestaAsistenteCable } from '../../api/contrato'
+import type { AccionSugeridaCable, EstadoAsistenteCable, RespuestaAsistenteCable } from '../../api/contrato'
 import { PANTALLAS, useNavegacion, type Pantalla } from '../../stores/navegacion'
 import { useSesion } from '../../stores/sesion'
-import { Aviso, Boton, Campo } from '../../ui/componentes'
+import { Aviso, Boton, Campo, Nota } from '../../ui/componentes'
 import estilos from './Asistente.module.css'
 
 /**
@@ -30,12 +30,86 @@ interface Mensaje {
 const TURNOS_DE_MEMORIA = 6
 const SALUDO = 'Hola, soy tu Asistente. Pregúntame por tu caja de hoy o cómo hacer algo en la app.'
 
+/**
+ * Pide la llave de IA dentro del programa (D-14). Va directo al servidor: nunca a la
+ * cola offline ni al almacenamiento del navegador, y el campo se vacía al enviarla.
+ */
+function PedirLlave({ alGuardar }: { alGuardar: (estado: EstadoAsistenteCable) => void }) {
+  const [llave, setLlave] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const guardar = async (evento: React.FormEvent) => {
+    evento.preventDefault()
+    if (!llave.trim() || guardando) return
+    setGuardando(true)
+    setError(null)
+    try {
+      alGuardar(await pedir<EstadoAsistenteCable>('POST', '/api/asistente/llave', { llave }))
+    } catch (fallo) {
+      setError(
+        fallo instanceof ErrorApi
+          ? fallo.detalle
+          : 'No se pudo guardar. Revisa que el programa siga abierto.',
+      )
+    } finally {
+      setLlave('')
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <form
+      className={estilos.formulario}
+      data-ai-id="asistente.configurar"
+      onSubmit={(evento) => void guardar(evento)}
+    >
+      <Aviso tipo="info">
+        Para usar el Asistente hace falta una llave de NVIDIA, que se crea en build.nvidia.com. Lo demás de la
+        app funciona sin ella.
+      </Aviso>
+      {error && (
+        <Aviso tipo="error" aiId="asistente.error-llave">
+          {error}
+        </Aviso>
+      )}
+      <Campo
+        id="asistente-llave"
+        aiId="asistente.llave"
+        etiqueta="Pega aquí tu llave"
+        ayuda="Se guarda cifrada en esta computadora y solo se usa para hablar con NVIDIA."
+        type="password"
+        autoComplete="off"
+        valor={llave}
+        alCambiar={setLlave}
+      />
+      <Boton tipo="submit" aiId="asistente.guardar-llave" variante="ia" deshabilitado={guardando}>
+        {guardando ? 'Probando la llave…' : 'Guardar llave'}
+      </Boton>
+    </form>
+  )
+}
+
 export function Asistente() {
   const esReal = useSesion((estado) => estado.esReal)
   const irA = useNavegacion((estado) => estado.irA)
   const [mensajes, setMensajes] = useState<Mensaje[]>([{ quienHabla: 'asistente', texto: SALUDO }])
   const [pregunta, setPregunta] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [estado, setEstado] = useState<EstadoAsistenteCable | null>(null)
+
+  useEffect(() => {
+    // Si esto falla (sin red), el panel sigue igual: el error real aparece al preguntar
+    pedir<EstadoAsistenteCable>('GET', '/api/asistente/estado')
+      .then(setEstado)
+      .catch(() => {})
+  }, [])
+
+  const quitarLlave = () => {
+    void pedir<EstadoAsistenteCable>('DELETE', '/api/asistente/llave')
+      .then(setEstado)
+      .catch(() => {})
+  }
 
   const enviar = async (evento: React.FormEvent) => {
     evento.preventDefault()
@@ -88,6 +162,14 @@ export function Asistente() {
   }
 
   const esPantalla = (pantalla: string): pantalla is Pantalla => PANTALLAS.some((p) => p.clave === pantalla)
+
+  if (estado && !estado.listo && estado.puede_guardar_llave) {
+    return (
+      <section className={estilos.asistente} data-ai-id="asistente" aria-label="Asistente">
+        <PedirLlave alGuardar={setEstado} />
+      </section>
+    )
+  }
 
   return (
     <section className={estilos.asistente} data-ai-id="asistente" aria-label="Asistente">
@@ -168,6 +250,14 @@ export function Asistente() {
           Enviar
         </Boton>
       </form>
+      {estado?.llave_guardada && estado.puede_guardar_llave && (
+        <div className={estilos.valoracion}>
+          <Nota>Usa la llave guardada en esta computadora.</Nota>
+          <Boton aiId="asistente.quitar-llave" variante="discreto" onClick={quitarLlave}>
+            Quitar la llave
+          </Boton>
+        </div>
+      )}
     </section>
   )
 }
