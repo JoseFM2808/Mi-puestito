@@ -216,4 +216,6 @@
   a proveedores, órdenes e ítems (migración 0004) y la API deja de exponer sus ids enteros.
 - **Consecuencias**: reenviar no duplica stock. Un error de recepción se corrige con un ajuste de Inventario, que aún no tiene
   pantalla (D-22). Compras sigue funcionando sin Inventario.
+- **Actualización 2026-11-07**: un RUC repetido ya no da `409`. El uuid nuevo queda como alias del proveedor existente
+  (`alias_proveedores`, migración 0005), así un pedido armado sin red en otra tablet se acepta al sincronizar (D-25).
 

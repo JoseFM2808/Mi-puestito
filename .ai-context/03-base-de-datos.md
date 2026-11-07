@@ -1,7 +1,7 @@
 # 03 · Base de datos
 
 > Modelo entidad-relación y diccionario de datos. Última revisión: 2026-11-01.
-> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0004).
+> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0005).
 > Un archivo SQLite **por proyecto** (`mi_puestito_demo.db`, `mi_puestito_<real>.db`), mismo esquema en cada uno.
 > `backend/tests/test_migraciones.py` falla si un modelo cambia sin su migración.
 
@@ -14,6 +14,7 @@ erDiagram
     VENTAS ||--o{ ITEMS_VENTA : "cascade delete"
     VENTAS ||--o{ PAGOS : "cascade delete"
     PROVEEDORES ||--o{ ORDENES_COMPRA : "emite"
+    PROVEEDORES ||--o{ ALIAS_PROVEEDORES : "mismo RUC, otro uuid"
     ORDENES_COMPRA ||--o{ ITEMS_ORDEN_COMPRA : "cascade delete"
     PRODUCTOS ||--o{ MOVIMIENTOS_INVENTARIO : "libro mayor"
     PRODUCTOS |o..o{ ITEMS_VENTA : "producto_uuid, SIN clave foránea"
@@ -66,6 +67,11 @@ erDiagram
         string ruc UK "11 dígitos SUNAT"
         string telefono
         string categoria
+        datetime creado_en
+    }
+    ALIAS_PROVEEDORES {
+        string uuid PK "del dispositivo que lo registró sin red"
+        int proveedor_id FK "cascade delete"
         datetime creado_en
     }
     ORDENES_COMPRA {
@@ -145,6 +151,7 @@ erDiagram
 | `pagos.venta_id` / `cliente_id` | INT FK | sí | `ck_pago_tiene_destino` | Pago de venta o abono a cuenta |
 | `pagos.monto` | INTEGER | no | `ck_pago_monto_positivo` | Céntimos |
 | `proveedores.ruc` | VARCHAR(11) | sí | `uq_proveedores_ruc` | Evita duplicados al autorregistrarse |
+| `alias_proveedores.uuid` | VARCHAR(36) | no | PK | Otro uuid del mismo proveedor; `buscar_proveedor` lo resuelve (D-25) |
 | `ordenes_compra.(estado, fecha_estimada_llegada)` | enum + DATE | — | `ix_ordenes_estado_llegada` | "Mañana necesitas en caja" |
 | `ordenes_compra.monto_total` | INTEGER | no | — | Céntimos, Σ items, calculado en el servidor. No cambia al recibir |
 | `ordenes_compra.monto_real` | INTEGER | sí | — | Céntimos; NULL hasta la primera recepción. Σ recibido + Σ sustitutos |

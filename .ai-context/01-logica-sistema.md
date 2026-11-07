@@ -140,7 +140,8 @@ Reglas (ADR-045):
 - **Sugerencias:** lo más pedido a ese proveedor en sus últimas 30 órdenes (sin borradores), con la cantidad y el monto de
   la última vez.
 - **Offline:** proveedor, pedido, avance, recepción y cierre pasan por la misma cola FIFO que Ventas. Un RUC repetido se
-  avisa en el dispositivo si ya se conoce; si no, el servidor lo rechaza con `409` y el operador lo ve en "rechazadas".
+  avisa en el dispositivo si ya se conoce. Si dos tablets sin red lo registran, el segundo uuid queda como **alias** del
+  primero (`alias_proveedores`): el alta responde `200` con el proveedor existente y sus pedidos se aceptan (D-25).
 
 ## 5. Asistente (AI Companion)
 

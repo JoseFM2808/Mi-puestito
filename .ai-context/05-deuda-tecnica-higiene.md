@@ -17,7 +17,6 @@
 | D-22 | P3 | Inventario no tiene pantalla ni guarda costo | El campo de stock del checklist no aparece sin productos; una recepción errónea no se corrige desde la app; las compras no alimentan el costo | Pantalla de Inventario (Fase 7) con ajustes y costo | ADR-045 |
 | D-23 | P2 | La copia de respaldo va sin cifrar | Quien tenga el archivo ve clientes, fiados y ventas | Cifrar con una contraseña que elija el vendedor; decidir qué pasa si la olvida | ADR-044 |
 | D-24 | P3 | "Ya le pagué" cierra el pedido pero no descuenta de la caja | La caja no refleja lo pagado a proveedores | Definir el flujo de caja (efectivo inicial, egresos) | `Modulo-Dashboard.md` |
-| D-25 | P3 | Dos tablets sin red registran el mismo RUC | La segunda queda rechazada, y su pedido también: hay que rehacerlo | Fusionar proveedores por RUC al sincronizar | ADR-032 |
 
 ## 2. Hechos
 
@@ -46,6 +45,8 @@
 | — | 2026-11-01 | Respaldo y restauración del archivo de datos (Fase 5) | `tests/test_respaldo.py`; navegador y `.exe`: copia y restauración, lo posterior desaparece y queda copia en `respaldos/` |
 | — | 2026-11-01 | Nemotron inventaba montos | Verificador de cifras (ADR-042); `ia.evaluar` 19/19 con Bolt en la última corrida |
 | — | 2026-11-01 | Navegación en teléfono y tablet: controles recortados y desbordes | Sin desborde a 375 y 768 px en todas las pantallas; sin `data-ai-id` faltantes ni duplicados |
+| D-25 | 2026-11-07 | El mismo RUC registrado sin red en dos tablets queda como alias: nada se rechaza | `tests/test_compras.py`, migración 0005 |
+| — | 2026-11-07 | Vitest 4.1.12 y `npm audit fix`: sin vulnerabilidades críticas ni altas en desarrollo (producción: 0); actions en Node 24 | `npm audit`; 63 tests de frontend |
 
 ## 3. Resueltos en la auditoría inicial (2026-09-27, verificados en Staging)
 

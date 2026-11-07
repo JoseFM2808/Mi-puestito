@@ -61,14 +61,30 @@ def test_registrar_proveedor_es_idempotente_y_no_exige_ruc(h):
 
 
 def test_el_mismo_ruc_no_se_registra_dos_veces(h):
-    proveedor(h, ruc="20123456789", nombre="Norte SAC")
+    norte = proveedor(h, ruc="20123456789", nombre="Norte SAC")
+    otro_uuid = uuid()
     r = cliente.post(
         "/api/compras/proveedores",
-        json={"uuid": uuid(), "nombre": "Otro", "ruc": "20123456789"},
+        json={"uuid": otro_uuid, "nombre": "Norte (otra tablet)", "ruc": "20123456789"},
         headers=h,
     )
-    assert r.status_code == 409
-    assert "Norte SAC" in r.json()["detail"]
+    assert r.status_code == 200
+    assert r.json()["uuid"] == norte["uuid"]
+    assert [p["nombre"] for p in cliente.get("/api/compras/proveedores", headers=h).json()] == ["Norte SAC"]
+
+
+def test_un_pedido_hecho_sin_red_con_el_uuid_repetido_se_acepta(h):
+    # Dos tablets sin red registran al mismo proveedor; la segunda ya armó un pedido
+    norte = proveedor(h, ruc="20123456789", nombre="Norte SAC")
+    alias = {"uuid": uuid(), "nombre": "Norte", "ruc": "20123456789"}
+    assert cliente.post("/api/compras/proveedores", json=alias, headers=h).status_code == 200
+    assert cliente.post("/api/compras/proveedores", json=alias, headers=h).status_code == 200  # reintento
+
+    orden = pedido(h, {"uuid": alias["uuid"]})
+    assert orden["proveedor_uuid"] == norte["uuid"]
+    assert orden["proveedor"] == "Norte SAC"
+    frecuentes = cliente.get(f"/api/compras/proveedores/{alias['uuid']}/frecuentes", headers=h)
+    assert [f["nombre_producto"] for f in frecuentes.json()] == ["Arroz", "Azúcar"]
 
 
 @pytest.mark.parametrize("ruc", ["123", "2012345678a", "201234567890"])
