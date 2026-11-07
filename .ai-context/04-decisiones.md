@@ -24,6 +24,7 @@
 | 043 | 2026-11-01 | Aceptada | Llave de IA guardada desde la pantalla, cifrada con DPAPI y solo desde el mismo equipo |
 | 044 | 2026-11-01 | Aceptada | Respaldo con la API de SQLite; cada copia sabe de qué negocio es |
 | 045 | 2026-11-01 | Aceptada | Recepción de compras inmutable; el stock sube solo con cantidad explícita |
+| 046 | 2026-11-07 | Aceptada | Asistente en dos formas, apartado y ventana flotante, con una sola conversación |
 
 ---
 
@@ -220,3 +221,17 @@
   (`alias_proveedores`, migración 0005), así un pedido armado sin red en otra tablet se acepta al sincronizar (D-25).
   Inventario ya tiene pantalla: una recepción errónea se corrige con "Contar lo que hay".
 
+## ADR-046 · Asistente como apartado y como ventana flotante — Aceptada
+
+- **Fecha**: 2026-11-07.
+- **Contexto**: el Asistente era un panel que empujaba el contenido hacia abajo y perdía la conversación al cerrarse. El
+  owner pidió un apartado propio y, además, que pueda verse **mientras** el usuario trabaja: el Asistente guiará y, más
+  adelante, hará cosas en la app, y el usuario debe poder observarlo.
+- **Decisión**: dos formas que comparten `stores/conversacion.ts` (en memoria, por negocio). El **apartado** es una
+  pantalla más (`#asistente`, opción del menú). La **ventana flotante** (`AsistenteFlotante`, botón de la barra) va sobre la
+  pantalla actual y **no se cierra al navegar**: el estado vive en `stores/navegacion.ts` (`asistenteFlotante`, `anterior`).
+  Las sugerencias de navegación (ADR-037) cambian la pantalla de atrás y la ventana sigue a la vista.
+- **Consecuencias**: el futuro "llenado guiado" o las acciones del Asistente podrán ejecutarse con el usuario mirando, sin
+  rediseñar la interfaz. La ventana tapa parte de la pantalla en el teléfono (hoja de 72 % del alto); se cierra o se amplía
+  con un toque. Cualquier acción que el Asistente ejecute por su cuenta seguirá exigiendo una decisión formal nueva: hoy
+  solo sugiere (ADR-037).

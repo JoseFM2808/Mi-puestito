@@ -1,28 +1,34 @@
-/* Panel del Asistente. CSS Module. Solo tokens. */
+/* Apartado del Asistente: un chat de pantalla completa. CSS Module. Solo tokens. */
 
-.asistente {
+.pantalla {
   max-width: 920px;
+  width: 100%;
   margin: 0 auto;
-  padding: var(--esp-3);
+  padding: var(--esp-4) var(--esp-3) 0;
   display: flex;
   flex-direction: column;
   gap: var(--esp-3);
-  border-bottom: 1px solid var(--borde);
+  min-height: calc(100vh - var(--tactil-barra) * 2);
 }
 
-.mensajes {
+.configurar {
   display: flex;
   flex-direction: column;
   gap: var(--esp-2);
-  max-height: 50vh;
-  overflow-y: auto;
+}
+
+.mensajes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
 }
 
 .turno {
   display: flex;
   flex-direction: column;
   gap: var(--esp-1);
-  max-width: 80%;
+  max-width: min(36rem, 88%);
 }
 
 .turnoIa {
@@ -35,10 +41,37 @@
   align-items: flex-end;
 }
 
+/* Quién habla, con palabras: no hay que deducirlo por el color o el lado */
+.quien {
+  font-size: var(--tam-rotulo);
+  font-weight: 700;
+  color: var(--texto-suave);
+}
+
+.burbuja {
+  font-size: var(--tam-subtitulo);
+  line-height: 1.55;
+  padding: var(--esp-2) var(--esp-3);
+  border-radius: var(--radio);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.burbujaIa {
+  background: var(--superficie);
+  border: 1.5px solid var(--borde-fuerte);
+}
+
+.burbujaOperador {
+  background: var(--ia);
+  color: var(--superficie);
+}
+
 .valoracion {
   display: flex;
   gap: var(--esp-1);
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .gracias {
@@ -46,33 +79,130 @@
   color: var(--texto-suave);
 }
 
-.burbuja {
-  font-size: var(--tam-subtitulo);
-  line-height: 1.5;
-  padding: var(--esp-2) var(--esp-3);
-  border-radius: var(--radio-chico);
+.sugerencias {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
 }
 
-.burbujaIa {
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  align-self: flex-start;
+.listaSugerencias {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: var(--esp-2);
 }
 
-.burbujaOperador {
-  background: var(--ia);
-  color: var(--superficie);
-  align-self: flex-end;
-}
-
+/* La caja para escribir queda abajo y siempre a la vista, como en cualquier chat */
 .formulario {
+  position: sticky;
+  bottom: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--esp-2);
+  padding: var(--esp-2) 0 var(--esp-3);
+  background: var(--fondo);
+  border-top: 1px solid var(--borde);
 }
 
 .formulario > div {
   flex: 1;
   min-width: min(14rem, 100%);
+}
+
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+  padding-bottom: var(--esp-4);
+}
+
+/* ---- Ventana flotante: el mismo Asistente sobre la pantalla de trabajo ---- */
+.ventana {
+  position: fixed;
+  right: var(--esp-3);
+  bottom: var(--esp-3);
+  z-index: 150;
+  width: min(27rem, calc(100vw - var(--esp-3) * 2));
+  height: min(34rem, 75vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--fondo);
+  border: 2px solid var(--ia);
+  border-radius: var(--radio);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--texto) 25%, transparent);
+  overflow: hidden;
+}
+
+.ventana:focus {
+  outline: none;
+}
+
+.cabeceraVentana {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-1);
+  padding: var(--esp-1) var(--esp-2);
+  background: var(--ia);
+  color: var(--superficie);
+}
+
+.tituloVentana {
+  font-size: var(--tam-nombre);
+  font-weight: 700;
+}
+
+.accionesVentana {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-1);
+}
+
+.accionesVentana button {
+  min-height: var(--tactil-barra);
+  padding-inline: var(--esp-2);
+  font-size: var(--tam-nota);
+}
+
+/* Dentro de la ventana los mensajes se desplazan y la caja de escribir queda abajo */
+.cuerpoVentana {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  padding: var(--esp-2) var(--esp-2) 0;
+}
+
+.cuerpoVentana .mensajes {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: var(--esp-1);
+}
+
+.cuerpoVentana .turno {
+  max-width: 92%;
+}
+
+.cuerpoVentana .listaSugerencias {
+  grid-template-columns: 1fr;
+}
+
+.cuerpoVentana .formulario {
+  position: static;
+}
+
+/* Teléfono: hoja abajo, a todo lo ancho; arriba se sigue viendo la pantalla de trabajo */
+@media (max-width: 600px) {
+  .ventana {
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 72vh;
+    border-radius: var(--radio) var(--radio) 0 0;
+    border-width: 2px 0 0;
+  }
 }

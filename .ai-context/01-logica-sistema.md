@@ -170,6 +170,11 @@ sequenceDiagram
 Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y una acción sugerida
 nunca se ejecuta sola (ADR-037). Sin Dashboard disponible responde igual, avisando que no tiene cifras.
 
+El Asistente tiene dos formas (ADR-046): **apartado propio** (pantalla `asistente` en el menú, `#asistente`) y **ventana
+flotante** (botón de la barra), que queda sobre la pantalla actual y sigue abierta al navegar: si sugiere "Ir a Fiados" y
+el operador lo toca, Fiados aparece detrás de la ventana. Ambas comparten la conversación de `stores/conversacion.ts`,
+separada por negocio y solo en memoria: nunca se guarda en el dispositivo. Al empezar ofrece preguntas sugeridas.
+
 **Verificador de cifras (ADR-042):** cada monto de la respuesta debe estar en el contexto o en lo que dijo el operador. Si
 un modelo inventa uno, se prueba el siguiente; si todos fallan, se responde con un mensaje de respaldo y el botón a la Caja.
 

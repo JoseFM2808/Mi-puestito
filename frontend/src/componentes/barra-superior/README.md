@@ -17,11 +17,11 @@ tamaño de letra.
 
 ## Qué acciones permite
 
-| Acción              | Resultado                                                                                                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Menú**            | Abre el panel lateral izquierdo: el negocio activo, las pantallas, la copia de los datos y **Salir de este negocio**. Se cierra con **Cerrar menú**, tocando fuera o con Escape |
-| **Asistente**       | Abre o cierra el panel del Asistente (`componentes/asistente`)                                                                                                                  |
-| **Tamaño de letra** | Cambia entre los 3 niveles; persiste durante la sesión                                                                                                                          |
+| Acción              | Resultado                                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Menú**            | Solo en pantalla angosta: abre el menú lateral (`componentes/menu-lateral`). En la ancha el menú ya está a la vista y el botón no aparece |
+| **Asistente**       | Abre o cierra la ventana flotante del Asistente sobre la pantalla actual (`componentes/asistente`). Su apartado completo está en el menú  |
+| **Tamaño de letra** | Cambia entre los 3 niveles; persiste durante la sesión                                                                                    |
 
 Debajo de la barra aparece el estado de conexión cuando hay cambios por enviar o no hay red
 (`componentes/sincronizacion/EstadoSincronizacion.tsx`).
@@ -31,8 +31,7 @@ Debajo de la barra aparece el estado de conexión cuando hay cambios por enviar 
 `data-ai-id` disponibles para que el AI Companion identifique y accione:
 
 - `barra` — el contenedor completo
-- `barra.menu`, `barra.menu-abierto`, `barra.negocio` — Menú y su contenido
-- `barra.ir-caja`, `barra.ir-ventas`, `barra.ir-fiados`, `barra.salir` — navegación
+- `barra.menu` — abre el menú lateral en pantalla angosta (la navegación vive en `menu.*`, ver `componentes/menu-lateral`)
 - `barra.asistente` — botón Asistente (color `--ia`, identidad del Companion)
 - `barra.letra-normal`, `barra.letra-grande`, `barra.letra-muygrande` — selector
 

@@ -383,7 +383,9 @@ export function Inventario() {
 
   return (
     <main className={estilos.pantalla} data-ai-id="inventario">
-      <TituloPagina>Inventario</TituloPagina>
+      <TituloPagina ayuda="Cuánto te queda de cada producto. Baja solo al vender y sube cuando llega un pedido.">
+        Inventario
+      </TituloPagina>
       <OperacionesRechazadas alDescartar={() => void cargar()} />
       {desdeDispositivo && (
         <Aviso tipo="info" aiId="inventario.sin-conexion">

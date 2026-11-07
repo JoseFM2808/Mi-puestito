@@ -70,7 +70,9 @@ export function Fiados() {
 
   return (
     <main className={estilos.pantalla} data-ai-id="fiados">
-      <TituloPagina>Fiados</TituloPagina>
+      <TituloPagina ayuda="Quién te debe y cuánto. Cuando alguien te pague, toca su nombre y anota el pago.">
+        Fiados
+      </TituloPagina>
       <OperacionesRechazadas alDescartar={() => void cargar()} />
       {avisos.map((aviso, indice) => (
         <Aviso key={`${indice}-${aviso}`} tipo="pendiente">

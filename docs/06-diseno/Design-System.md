@@ -61,15 +61,45 @@ Documento de diseño centralizado y **fuente de verdad visual** del proyecto: si
 - Cambia el `font-size` de la raíz → **toda la interfaz re-escala** proporcionalmente.
 - **Persistencia:** se conserva durante toda la sesión del operador. Por defecto, Normal.
 
-## 6. Barra superior fija
+## 6. Menú lateral y barra superior
 
-- Franja propia (`sticky top`), fondo `--superficie`, separada del contenido por borde y sombra sutil (token `--sombra-barra`). No invade contenido.
-- **Izquierda:** botones de texto **Menú** (navegación) y **Asistente** ([[AI-Companion]], en color `--ia`), siempre visibles.
-- **Derecha:** rótulo "Tamaño de letra" + los tres tamaños.
-- En pantalla angosta, el selector de letra baja a una segunda fila sin pisar los botones.
-- **Menú lateral:** "Menú" abre un panel desde la izquierda, a todo el alto y sobre la pantalla actual, con el fondo
-  oscurecido. Una opción por fila, a todo lo ancho. Se cierra con "Cerrar menú", tocando fuera o con Escape, y al elegir
-  una pantalla. Con letra grande el panel se desplaza en vez de cortarse.
+- **Menú siempre a la izquierda**, en el mismo lugar en todas las pantallas:
+  - Pantalla ancha (desde 1000 px: computadora, tablet echada): fijo y siempre visible.
+  - Pantalla angosta (teléfono, tablet parada): el mismo panel entra desde la izquierda con el botón **Menú**, sobre la
+    pantalla y con el fondo oscurecido. Se cierra con "Cerrar menú", tocando fuera, con Escape o al elegir una pantalla.
+- Cada opción lleva **ícono + nombre + para qué sirve** ("Fiados · Quién te debe"). La pantalla actual se marca con
+  color fuerte **y** con las palabras "Aquí estás".
+- Al final del menú, separadas, las acciones del negocio: copia de los datos, reiniciar la práctica y **Salir**.
+- **Barra superior** (`sticky top`, fondo `--superficie`, borde y `--sombra-barra`): a la izquierda **Menú** (solo en
+  pantalla angosta) y **Asistente**; a la derecha "Tamaño de letra" con los tres tamaños. En pantalla angosta el selector
+  baja a una segunda fila.
+
+## 6 bis. Pensado para personas mayores
+
+Criterios tomados de apps diseñadas para personas mayores (teléfonos y launchers simplificados, banca y salud para
+adultos mayores) y de las pautas WCAG 2.2:
+
+- **Siempre se sabe dónde se está:** cada pantalla abre con su título y una frase de para qué sirve
+  (`TituloPagina ayuda=…`), y el menú dice "Aquí estás".
+- **Lo frecuente, primero y grande:** la Caja de hoy empieza con "¿Qué quieres hacer?": accesos grandes con dibujo,
+  nombre y explicación. El más usado (Registrar venta) va relleno; en teléfono ocupa la fila entera.
+- **Nada escondido:** sin gestos, sin menús de tres puntos, sin íconos sin texto. Lo destructivo pide confirmar en dos
+  pasos con palabras ("Sí, reiniciar" / "No, dejarlo así").
+- **Controles grandes y separados:** mínimo `--tactil-min` (56 px en Normal); las opciones del menú y los accesos, más.
+- **Lenguaje de la persona, no del sistema:** "Anotar un pago", "Llegó un pedido", "Cuánto te queda".
+- **Volver al inicio siempre a mano:** el menú lateral está a la vista en pantalla ancha y a un toque en la angosta.
+
+## 6 ter. Asistente: apartado propio y ventana flotante
+
+El [[AI-Companion]] tiene dos formas, con **la misma conversación**:
+
+- **Apartado** (opción "Asistente" del menú): chat a pantalla completa, con quién habla dicho con palabras ("Tú",
+  "Asistente"), preguntas sugeridas para empezar, la caja para escribir fija abajo y "Empezar una conversación nueva".
+- **Ventana flotante** (botón "Asistente" de la barra): sobre la pantalla actual, abajo a la derecha en pantalla ancha y
+  como hoja en la parte de abajo en el teléfono. **Sigue abierta al cambiar de pantalla**: si el Asistente lleva a
+  Fiados, el operador ve Fiados detrás. Así podrá observar al Asistente cuando, más adelante, guíe paso a paso o actúe
+  en la app. Botones "Pantalla completa" y "Cerrar"; desde el apartado, "Usar en ventana mientras trabajo".
+- La ventana no tapa la barra ni el menú, que quedan por encima.
 
 ## 7. Teclado
 
@@ -79,7 +109,8 @@ Documento de diseño centralizado y **fuente de verdad visual** del proyecto: si
 ## 8. Identidad del Asistente
 
 - Color `--ia` (`#1A5A8A`) reservado para el [[AI-Companion]].
-- Siempre el mismo color y lugar (botón "Asistente" en la barra). Única excepción a la regla del color del dinero.
+- Siempre el mismo color y lugar (botón "Asistente" en la barra y su opción en el menú). Única excepción a la regla
+  del color del dinero.
 
 ## Implementación
 

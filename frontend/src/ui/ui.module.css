@@ -164,6 +164,17 @@
   font-weight: 700;
   line-height: 1.2;
 }
+.encabezado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+}
+.ayudaPagina {
+  font-size: var(--tam-subtitulo);
+  color: var(--texto-suave);
+  line-height: 1.45;
+  max-width: 60ch;
+}
 .tituloSeccion {
   font-size: var(--tam-seccion);
   font-weight: 700;

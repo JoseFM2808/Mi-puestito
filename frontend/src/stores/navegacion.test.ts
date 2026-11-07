@@ -38,4 +38,25 @@ describe('navegación entre pantallas', () => {
     useNavegacion.getState().irA('ventas')
     expect(useNavegacion.getState().menuAbierto).toBe(false)
   })
+
+  it('el Asistente es un apartado propio: tiene su pantalla y su enlace', () => {
+    useNavegacion.getState().irA('asistente')
+    expect(useNavegacion.getState().pantalla).toBe('asistente')
+    expect(window.location.hash).toBe('#asistente')
+  })
+
+  it('la ventana del Asistente sigue abierta al cambiar de pantalla', () => {
+    useNavegacion.setState({ asistenteFlotante: true })
+    useNavegacion.getState().irA('ventas')
+    expect(useNavegacion.getState().asistenteFlotante).toBe(true)
+  })
+
+  it('del apartado a la ventana se vuelve a la pantalla de trabajo', () => {
+    useNavegacion.getState().irA('fiados')
+    useNavegacion.getState().irA('asistente')
+    expect(useNavegacion.getState().asistenteFlotante).toBe(false)
+    useNavegacion.getState().asistenteAVentana()
+    expect(useNavegacion.getState().pantalla).toBe('fiados')
+    expect(useNavegacion.getState().asistenteFlotante).toBe(true)
+  })
 })

@@ -1,0 +1,14 @@
+/* Marco de la app: menú a la izquierda y, a su derecha, la barra y la pantalla. */
+
+.marco {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* min-width: 0 deja que el contenido se angoste sin empujar la página hacia los lados */
+.contenido {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
