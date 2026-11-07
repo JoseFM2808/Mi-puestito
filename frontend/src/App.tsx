@@ -6,6 +6,7 @@ import { Login } from './componentes/login/Login'
 import { Compras } from './modules/compras/Compras'
 import { Dashboard } from './modules/dashboard/Dashboard'
 import { Fiados } from './modules/fiados/Fiados'
+import { Inventario } from './modules/inventario/Inventario'
 import { Ventas } from './modules/ventas/Ventas'
 import { iniciarSincronizacion } from './sincronizacion/cola'
 import { useNavegacion } from './stores/navegacion'
@@ -56,6 +57,11 @@ export function App() {
       {pantalla === 'compras' && (
         <LimiteErrores nombreModulo="Compras" idModulo="compras">
           <Compras />
+        </LimiteErrores>
+      )}
+      {pantalla === 'inventario' && (
+        <LimiteErrores nombreModulo="Inventario" idModulo="inventario">
+          <Inventario />
         </LimiteErrores>
       )}
     </>

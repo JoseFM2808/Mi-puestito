@@ -129,7 +129,7 @@ erDiagram
 | Usuarios | `usuarios.json` en la carpeta de datos | `{usuario: {proyecto, sal, pin_hash}}` | `.gitignore` + `test_higiene_repo.py` |
 | Orden de modelos de IA | `ia_modelos.json` en la carpeta de datos | Nombres de modelos, latencias, fecha. **Nunca la llave** | Se regenera con `python -m ia.verificar` |
 | Registro para fine-tuning | `ia_registro_<proyecto>.jsonl` en la carpeta de datos | Intercambios en formato chat, seudonimizados, y valoraciones (ADR-038) | Opt-in; `*.jsonl` ignorado y vigilado |
-| Cola offline | IndexedDB `mi-puestito-<proyecto>` en el navegador | `operaciones`, `ventasAbiertas`, `clientes`, `instantaneas`, `ordenesCompra`, `proveedores` | Por proyecto; vive en el dispositivo |
+| Cola offline | IndexedDB `mi-puestito-<proyecto>` en el navegador | `operaciones`, `ventasAbiertas`, `clientes`, `instantaneas`, `ordenesCompra`, `proveedores`, `productos` | Por proyecto; vive en el dispositivo |
 | Secreto de sesión | `sesion.key` en la carpeta de datos | Firma los tokens en modo local | `*.key` en `.gitignore` y en el test de higiene |
 | Llave de IA | `ia_llave.dpapi` en la carpeta de datos | Cifrada con DPAPI, ligada a la cuenta de Windows (ADR-043) | `*.dpapi` en `.gitignore` y en el test de higiene |
 | Copias automáticas | `respaldos/antes-de-restaurar-<proyecto>-<momento>.db` en la carpeta de datos | Lo que había antes de cada restauración (ADR-044) | `*.db` y `respaldos/` en `.gitignore`. No se borran solas |

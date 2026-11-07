@@ -346,6 +346,32 @@ export interface ProductoFrecuenteCable {
   veces: number
 }
 
+// ------------------------------------------------------------------ inventario
+
+export type Unidad = 'unidad' | 'kg' | 'litro'
+
+/** Cantidades como string decimal con 3 decimales ("5.250"); el frontend las lleva en milésimas. */
+export interface ProductoCable {
+  uuid: string
+  nombre: string
+  unidad: Unidad
+  precio_venta: string | null
+  stock_actual: string
+  stock_minimo: string | null
+  codigo_barras: string | null
+  tiene_vencimiento: boolean
+  bajo_minimo: boolean
+  descuadre: boolean
+}
+
+export interface MovimientoCable {
+  delta: string
+  motivo: 'venta' | 'anulacion_venta' | 'compra' | 'ajuste' | 'merma'
+  origen_tipo: string
+  nota: string | null
+  creado_en: string
+}
+
 // ------------------------------------------------------------------ asistente
 
 export interface EstadoAsistenteCable {
@@ -433,6 +459,19 @@ export const CAMPOS_DEL_CONTRATO = {
   ]),
   ResultadoOrden: camposDe<ResultadoOrdenCable>()(['orden', 'avisos']),
   EstadoAsistente: camposDe<EstadoAsistenteCable>()(['listo', 'puede_guardar_llave', 'llave_guardada']),
+  ProductoConEstado: camposDe<ProductoCable>()([
+    'uuid',
+    'nombre',
+    'unidad',
+    'precio_venta',
+    'stock_actual',
+    'stock_minimo',
+    'codigo_barras',
+    'tiene_vencimiento',
+    'bajo_minimo',
+    'descuadre',
+  ]),
+  MovimientoSalida: camposDe<MovimientoCable>()(['delta', 'motivo', 'origen_tipo', 'nota', 'creado_en']),
   ProductoFrecuente: camposDe<ProductoFrecuenteCable>()(['nombre_producto', 'cantidad', 'monto', 'veces']),
   ClienteSalida: camposDe<ClienteCable>()(['uuid', 'nombre', 'telefono', 'limite_credito', 'creado_en']),
   ClienteConDeuda: camposDe<ClienteConDeudaCable>()([

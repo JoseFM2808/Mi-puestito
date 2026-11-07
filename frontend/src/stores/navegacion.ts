@@ -6,13 +6,14 @@ import { create } from 'zustand'
  * estaba. El AI Companion puede navegar llamando a `irA`.
  */
 
-export type Pantalla = 'caja' | 'ventas' | 'fiados' | 'compras'
+export type Pantalla = 'caja' | 'ventas' | 'fiados' | 'compras' | 'inventario'
 
 export const PANTALLAS: { clave: Pantalla; nombre: string }[] = [
   { clave: 'caja', nombre: 'Caja de hoy' },
   { clave: 'ventas', nombre: 'Ventas' },
   { clave: 'fiados', nombre: 'Fiados' },
   { clave: 'compras', nombre: 'Compras' },
+  { clave: 'inventario', nombre: 'Inventario' },
 ]
 
 function desdeHash(): Pantalla {

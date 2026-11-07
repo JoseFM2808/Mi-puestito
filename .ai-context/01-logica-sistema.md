@@ -176,6 +176,9 @@ un modelo inventa uno, se prueba el siguiente; si todos fallan, se responde con 
 **Calidad medida:** `python -m ia.evaluar` corre 19 casos fijos sobre una demo temporal. Con NVIDIA el 2026-11-01:
 `nemotron-3.5-bolt-e4b` 19/19 en una corrida, mediana 1,4 s, sin nombres reales hacia el proveedor en 30 llamadas (Bolt tuvo
 404 intermitentes, cubiertos por los reintentos). Entre corridas hay variación: hubo 17/18 antes de añadir el caso de Compras.
+El 2026-11-07, con la pantalla de Inventario en la guía: 18/19 y 19/19, mediana 1,2 s. El fallo intermitente es "cómo
+cobrar" sin nombrar el botón. Nombrar "reportes" en la guía hacía que el modelo los mencionara; ahora la guía dice
+que solo hay cifras de hoy. El Asistente no ve el stock: ante "¿cuánto arroz me queda?" ofrece ir a Inventario.
 
 **Dataset:** `python -m ia.dataset salida.jsonl` exporta solo lo valorado "Me sirvió", sin borradores, sin respuestas de
 respaldo y sin cifras ausentes de su contexto. Una valoración posterior negativa saca el ejemplo.
@@ -198,7 +201,15 @@ flowchart TB
 - Recuperar no se ofrece con cambios sin enviar en la cola: se perderían.
 - La copia no lleva los PIN, la llave de IA ni el secreto de sesión; va **sin cifrar** y la custodia el vendedor (D-23).
 
-## 7. Datos de práctica
+## 7. Inventario en pantalla
+
+Código: `frontend/src/modules/inventario/`. El stock no se escribe a mano: **Contar lo que hay** envía cuánto hay y el
+servidor calcula la diferencia (ADR-031); **Registrar merma** resta; las ventas con `producto_uuid` y las compras
+recibidas con cantidad lo mueven solas. Las cantidades viajan con 3 decimales y en el frontend se llevan en milésimas
+enteras, igual que el dinero en céntimos. Todo pasa por la cola offline; "Queda poco" y "Descuadre" se dicen con
+palabras, calculados igual que `_con_estado` del backend.
+
+## 8. Datos de práctica
 
 `POST /api/dashboard/demo/reiniciar` borra lo practicado y vuelve a sembrar con las fechas de hoy; con un negocio real da
 `403`. El botón pide confirmación en dos pasos y limpia también lo guardado en el dispositivo, para que la cola no reenvíe

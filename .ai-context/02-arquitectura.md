@@ -24,13 +24,14 @@ flowchart TB
         App --> Ven[modules/ventas<br/>almacen.ts optimista]
         App --> Fia[modules/fiados]
         App --> Com[modules/compras<br/>almacen.ts optimista]
+        App --> Inv[modules/inventario<br/>almacen.ts optimista]
         App --> Asis[componentes/asistente]
         Barra --> Res[Respaldo · AccionesBarra]
         Pwa[pwa.ts + stores/actualizacion<br/>aviso de versión nueva] -.-> Barra
-        Ven & Fia & Com --> Cola[sincronizacion/cola.ts<br/>FIFO idempotente]
+        Ven & Fia & Com & Inv --> Cola[sincronizacion/cola.ts<br/>FIFO idempotente]
         Cola --> IDB[(IndexedDB por proyecto)]
-        Caja & Ven & Fia & Com & Asis --> Api[api/cliente.ts + api/contrato.ts<br/>céntimos · snake→camel]
-        UI[ui/componentes.tsx<br/>Boton · Campo · Monto · Aviso] -.usa.- Caja & Ven & Fia & Com & Asis
+        Caja & Ven & Fia & Com & Inv & Asis --> Api[api/cliente.ts + api/contrato.ts<br/>céntimos · snake→camel]
+        UI[ui/componentes.tsx<br/>Boton · Campo · Monto · Aviso] -.usa.- Caja & Ven & Fia & Com & Inv & Asis
         Tokens[(docs/06-diseno/tokens.css)] -.alias Vite.-> UI
     end
 
@@ -93,7 +94,7 @@ flowchart LR
   y escribe `ia_modelos.json` (solo nombres y latencias): primero los que responden bien, luego por velocidad. Los modelos
   de razonamiento llevan su ajuste para responder directo; una respuesta que sea un borrador se descarta. Gemma 4 es la
   familia objetivo del modelo local y queda de respaldo hasta que responda a tiempo en NVIDIA.
-- **Acciones:** el modelo propone `ACCION: ir_a <pantalla>`; solo pasan `caja`, `ventas`, `fiados`, `compras`, y se muestran como
+- **Acciones:** el modelo propone `ACCION: ir_a <pantalla>`; solo pasan `caja`, `ventas`, `fiados`, `compras`, `inventario`, y se muestran como
   botones que el operador decide tocar. El Asistente nunca registra, cobra ni navega solo.
 - **Evaluación:** `python -m ia.evaluar` mide cifras, navegación, memoria y honestidad con 19 casos fijos; decide el orden
   de modelos junto con `ia.verificar`. Vigila además que ningún nombre real salga hacia el proveedor.
