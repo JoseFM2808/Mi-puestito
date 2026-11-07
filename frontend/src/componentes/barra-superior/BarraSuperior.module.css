@@ -104,27 +104,79 @@
   color: var(--superficie);
 }
 
+/* Menú lateral: panel desde la izquierda, sobre la pantalla actual */
+.fondoMenu {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: color-mix(in srgb, var(--texto) 45%, transparent);
+}
+
 .menu {
-  border-top: 1px solid var(--borde);
-  padding: var(--esp-2) var(--esp-3) var(--esp-3);
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 201;
+  width: min(21rem, 86vw);
+  background: var(--superficie);
+  border-right: 1.5px solid var(--borde-fuerte);
+  box-shadow: var(--sombra-barra);
+  padding: var(--esp-3);
   display: flex;
   flex-direction: column;
-  gap: var(--esp-2);
-  /* Con letra grande en un teléfono el menú no cabe: se desplaza en vez de quedar cortado */
-  max-height: 65vh;
+  gap: var(--esp-3);
+  /* Con letra grande el menú no cabe: se desplaza en vez de quedar cortado */
   overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.menu:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .menu {
+    animation: entrarMenu 160ms ease-out;
+  }
+  @keyframes entrarMenu {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+}
+
+.cabeceraMenu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
+  padding-bottom: var(--esp-2);
+  border-bottom: 1px solid var(--borde);
 }
 
 .negocio {
   font-size: var(--tam-nota);
   font-weight: 600;
   color: var(--texto-suave);
+  overflow-wrap: anywhere;
 }
 
+/* Una opción por fila, a todo lo ancho del panel */
 .opcionesMenu {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--esp-2);
+}
+
+.opcionesMenu > button,
+.opcionesMenu .confirmacion > button {
+  width: 100%;
+  justify-content: flex-start;
 }
 
 /* En pantalla angosta el selector baja a segunda fila sin pisar los botones */
@@ -158,9 +210,6 @@
   .opcionLetra {
     flex: 1;
     min-width: 0;
-  }
-  .opcionesMenu > button {
-    flex: 1 1 100%;
   }
 }
 

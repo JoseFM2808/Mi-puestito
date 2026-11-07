@@ -17,11 +17,11 @@ tamaño de letra.
 
 ## Qué acciones permite
 
-| Acción              | Resultado                                                                                                       |
-| ------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **Menú**            | Despliega la navegación: **Caja de hoy**, **Ventas**, **Fiados**, el negocio activo y **Salir de este negocio** |
-| **Asistente**       | Abre o cierra el panel del Asistente (`componentes/asistente`)                                                  |
-| **Tamaño de letra** | Cambia entre los 3 niveles; persiste durante la sesión                                                          |
+| Acción              | Resultado                                                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Menú**            | Abre el panel lateral izquierdo: el negocio activo, las pantallas, la copia de los datos y **Salir de este negocio**. Se cierra con **Cerrar menú**, tocando fuera o con Escape |
+| **Asistente**       | Abre o cierra el panel del Asistente (`componentes/asistente`)                                                                                                                  |
+| **Tamaño de letra** | Cambia entre los 3 niveles; persiste durante la sesión                                                                                                                          |
 
 Debajo de la barra aparece el estado de conexión cuando hay cambios por enviar o no hay red
 (`componentes/sincronizacion/EstadoSincronizacion.tsx`).

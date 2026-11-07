@@ -19,7 +19,7 @@ verificado. Las dependencias pesadas (venv, `node_modules`) nunca van en la carp
 ```mermaid
 flowchart TB
     subgraph FE["frontend/ · React 18 + TS + Vite + Zustand + Dexie (PWA)"]
-        App[App.tsx<br/>login · pantallas · LimiteErrores por módulo] --> Barra[BarraSuperior<br/>Menú · Asistente · letra · conexión]
+        App[App.tsx<br/>login · pantallas · LimiteErrores por módulo] --> Barra[BarraSuperior<br/>Menú lateral · Asistente · letra · conexión]
         App --> Caja[modules/dashboard]
         App --> Ven[modules/ventas<br/>almacen.ts optimista]
         App --> Fia[modules/fiados]

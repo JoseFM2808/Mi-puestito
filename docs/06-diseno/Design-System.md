@@ -67,6 +67,9 @@ Documento de diseño centralizado y **fuente de verdad visual** del proyecto: si
 - **Izquierda:** botones de texto **Menú** (navegación) y **Asistente** ([[AI-Companion]], en color `--ia`), siempre visibles.
 - **Derecha:** rótulo "Tamaño de letra" + los tres tamaños.
 - En pantalla angosta, el selector de letra baja a una segunda fila sin pisar los botones.
+- **Menú lateral:** "Menú" abre un panel desde la izquierda, a todo el alto y sobre la pantalla actual, con el fondo
+  oscurecido. Una opción por fila, a todo lo ancho. Se cierra con "Cerrar menú", tocando fuera o con Escape, y al elegir
+  una pantalla. Con letra grande el panel se desplaza en vez de cortarse.
 
 ## 7. Teclado
 
