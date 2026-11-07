@@ -218,4 +218,5 @@
   pantalla (D-22). Compras sigue funcionando sin Inventario.
 - **Actualización 2026-11-07**: un RUC repetido ya no da `409`. El uuid nuevo queda como alias del proveedor existente
   (`alias_proveedores`, migración 0005), así un pedido armado sin red en otra tablet se acepta al sincronizar (D-25).
+  Inventario ya tiene pantalla: una recepción errónea se corrige con "Contar lo que hay".
 

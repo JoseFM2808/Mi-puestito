@@ -84,7 +84,7 @@ El stock **no es un número que se sobreescribe**: es Σ de `movimientos_inventa
 | Producto creado con stock inicial | `+stock_inicial` | `stock_inicial` + uuid del producto |
 | Conteo físico | `contado − stock actual` | `ajuste` + uuid del ajuste |
 | Merma / vencido | `−cantidad` | `merma` + uuid |
-| Pedido recibido **[Pendiente: Fase 4 Compras]** | `+cantidad` | `recepcion` + uuid |
+| Pedido recibido con cantidad (evento `compra.item_recibido`) | `+cantidad_stock` | `item_compra` + uuid del ítem |
 
 ```mermaid
 flowchart TD
