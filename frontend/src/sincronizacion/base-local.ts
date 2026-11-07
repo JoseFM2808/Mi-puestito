@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie'
 import type {
   ClienteCable,
   OrdenCompraCable,
+  ProductoCable,
   ProveedorCable,
   ResumenDashboardCable,
   VentaCable,
@@ -37,6 +38,7 @@ export class BaseLocal extends Dexie {
   instantaneas!: Table<{ clave: string; resumen: ResumenDashboardCable; guardadaEn: string }, string>
   ordenesCompra!: Table<OrdenCompraCable, string>
   proveedores!: Table<ProveedorCable, string>
+  productos!: Table<ProductoCable, string>
 
   constructor(proyecto: string) {
     super(`mi-puestito-${proyecto}`)
@@ -50,6 +52,7 @@ export class BaseLocal extends Dexie {
       ordenesCompra: 'uuid, estado',
       proveedores: 'uuid, nombre',
     })
+    this.version(3).stores({ productos: 'uuid, nombre' })
   }
 }
 

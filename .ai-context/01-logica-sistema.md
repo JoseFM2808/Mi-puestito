@@ -84,7 +84,7 @@ El stock **no es un número que se sobreescribe**: es Σ de `movimientos_inventa
 | Producto creado con stock inicial | `+stock_inicial` | `stock_inicial` + uuid del producto |
 | Conteo físico | `contado − stock actual` | `ajuste` + uuid del ajuste |
 | Merma / vencido | `−cantidad` | `merma` + uuid |
-| Pedido recibido **[Pendiente: Fase 4 Compras]** | `+cantidad` | `recepcion` + uuid |
+| Pedido recibido con cantidad (evento `compra.item_recibido`) | `+cantidad_stock` | `item_compra` + uuid del ítem |
 
 ```mermaid
 flowchart TD
@@ -140,7 +140,8 @@ Reglas (ADR-045):
 - **Sugerencias:** lo más pedido a ese proveedor en sus últimas 30 órdenes (sin borradores), con la cantidad y el monto de
   la última vez.
 - **Offline:** proveedor, pedido, avance, recepción y cierre pasan por la misma cola FIFO que Ventas. Un RUC repetido se
-  avisa en el dispositivo si ya se conoce; si no, el servidor lo rechaza con `409` y el operador lo ve en "rechazadas".
+  avisa en el dispositivo si ya se conoce. Si dos tablets sin red lo registran, el segundo uuid queda como **alias** del
+  primero (`alias_proveedores`): el alta responde `200` con el proveedor existente y sus pedidos se aceptan (D-25).
 
 ## 5. Asistente (AI Companion)
 
@@ -169,12 +170,20 @@ sequenceDiagram
 Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y una acción sugerida
 nunca se ejecuta sola (ADR-037). Sin Dashboard disponible responde igual, avisando que no tiene cifras.
 
+El Asistente tiene dos formas (ADR-046): **apartado propio** (pantalla `asistente` en el menú, `#asistente`) y **ventana
+flotante** (botón de la barra), que queda sobre la pantalla actual y sigue abierta al navegar: si sugiere "Ir a Fiados" y
+el operador lo toca, Fiados aparece detrás de la ventana. Ambas comparten la conversación de `stores/conversacion.ts`,
+separada por negocio y solo en memoria: nunca se guarda en el dispositivo. Al empezar ofrece preguntas sugeridas.
+
 **Verificador de cifras (ADR-042):** cada monto de la respuesta debe estar en el contexto o en lo que dijo el operador. Si
 un modelo inventa uno, se prueba el siguiente; si todos fallan, se responde con un mensaje de respaldo y el botón a la Caja.
 
 **Calidad medida:** `python -m ia.evaluar` corre 19 casos fijos sobre una demo temporal. Con NVIDIA el 2026-11-01:
 `nemotron-3.5-bolt-e4b` 19/19 en una corrida, mediana 1,4 s, sin nombres reales hacia el proveedor en 30 llamadas (Bolt tuvo
 404 intermitentes, cubiertos por los reintentos). Entre corridas hay variación: hubo 17/18 antes de añadir el caso de Compras.
+El 2026-11-07, con la pantalla de Inventario en la guía: 18/19 y 19/19, mediana 1,2 s. El fallo intermitente es "cómo
+cobrar" sin nombrar el botón. Nombrar "reportes" en la guía hacía que el modelo los mencionara; ahora la guía dice
+que solo hay cifras de hoy. El Asistente no ve el stock: ante "¿cuánto arroz me queda?" ofrece ir a Inventario.
 
 **Dataset:** `python -m ia.dataset salida.jsonl` exporta solo lo valorado "Me sirvió", sin borradores, sin respuestas de
 respaldo y sin cifras ausentes de su contexto. Una valoración posterior negativa saca el ejemplo.
@@ -197,7 +206,21 @@ flowchart TB
 - Recuperar no se ofrece con cambios sin enviar en la cola: se perderían.
 - La copia no lleva los PIN, la llave de IA ni el secreto de sesión; va **sin cifrar** y la custodia el vendedor (D-23).
 
-## 7. Datos de práctica
+## 7. Inventario en pantalla
+
+Código: `frontend/src/modules/inventario/`. El stock no se escribe a mano: **Contar lo que hay** envía cuánto hay y el
+servidor calcula la diferencia (ADR-031); **Registrar merma** resta; las ventas con `producto_uuid` y las compras
+recibidas con cantidad lo mueven solas. Las cantidades viajan con 3 decimales y en el frontend se llevan en milésimas
+enteras, igual que el dinero en céntimos. Todo pasa por la cola offline; "Queda poco" y "Descuadre" se dicen con
+palabras, calculados igual que `_con_estado` del backend.
+
+**Vender un producto del inventario:** al escribir el producto en una venta aparecen los que coinciden. Al elegir uno,
+la cantidad se pide en su unidad y el monto se sugiere con `montoPorCantidad` (precio × cantidad, redondeado al céntimo;
+el operador puede cambiarlo). El ítem viaja con `producto_uuid` y `cantidad_num`, y el servidor descuenta por el evento
+`venta.item_registrado`; quitar el ítem lo devuelve. La pantalla refleja el stock al instante con `ajustarLocal`, que no
+encola nada. Sin elegir, se vende con texto libre y el stock no cambia.
+
+## 8. Datos de práctica
 
 `POST /api/dashboard/demo/reiniciar` borra lo practicado y vuelve a sembrar con las fechas de hoy; con un negocio real da
 `403`. El botón pide confirmación en dos pasos y limpia también lo guardado en el dispositivo, para que la cola no reenvíe

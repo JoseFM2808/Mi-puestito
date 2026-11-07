@@ -32,4 +32,9 @@
 - **Avance:** backend completo como libro mayor de movimientos (decisión 31 de [[Decisiones-Tecnicas]]): productos,
   stock que se descuenta solo al vender con `producto_uuid` (si [[Modulo-Ventas]] lo envía), conteo físico, mermas,
   descuadres y conciliación. Ver `backend/modules/inventario/README.md`.
-- **Pendiente:** pantalla, alertas de vencimiento, costo desde la última compra y sugerencia de pedido por stock bajo.
+- **Pantalla (2026-11-07):** alta de productos, stock con "Queda poco" y "Descuadre", conteo, merma, precio y mínimo,
+  historial, todo sin red. Las compras recibidas suman al stock si se dice cuánto ([[Modulo-Compras]]).
+- **Ventas (2026-11-07):** al vender se puede elegir un producto del inventario; la cantidad descuenta el stock y el
+  precio sugiere el monto ([[Modulo-Ventas]]).
+- **Pendiente:** alertas de vencimiento, costo desde la última compra, código de barras y sugerencia de pedido por stock
+  bajo.

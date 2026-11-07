@@ -50,7 +50,7 @@ def test_el_esquema_migrado_coincide_con_los_modelos(motor):
 def test_migrar_dos_veces_no_cambia_nada(motor):
     migrar(motor)
     migrar(motor)
-    assert _revision_actual(motor) == "0004"
+    assert _revision_actual(motor) == "0005"
 
 
 def test_migrar_datos_de_la_demo_1_conserva_items_y_pasa_a_centimos(motor):
@@ -113,7 +113,7 @@ def test_una_base_creada_antes_de_alembic_se_marca_y_se_migra(motor):
 
     migrar(motor)
 
-    assert _revision_actual(motor) == "0004"
+    assert _revision_actual(motor) == "0005"
     assert "productos" in inspect(motor).get_table_names()
 
 
@@ -129,4 +129,4 @@ def test_las_migraciones_se_pueden_revertir(motor):
     assert _revision_actual(motor) == "0001"
     assert "productos" not in inspect(motor).get_table_names()
     migrar(motor)
-    assert _revision_actual(motor) == "0004"
+    assert _revision_actual(motor) == "0005"

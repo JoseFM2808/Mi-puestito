@@ -206,3 +206,19 @@
     flex: 1 1 100%;
   }
 }
+
+/* Productos del inventario que coinciden con lo escrito */
+.sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+.productoElegido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
+  overflow-wrap: anywhere;
+}

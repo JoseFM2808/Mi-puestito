@@ -107,7 +107,7 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 | Método | Ruta | Entrada | Respuesta | Notas |
 |---|---|---|---|---|
 | GET | `/api/compras/proveedores` | `busqueda?`, `limite`, `desde` | `ProveedorSalida[]` | Por nombre, empresa o RUC |
-| POST | `/api/compras/proveedores` | `ProveedorEntrada {uuid, nombre, empresa?, ruc? (11 dígitos), telefono?, categoria?}` | `ProveedorSalida` | `201`/`200`; RUC repetido → `409` |
+| POST | `/api/compras/proveedores` | `ProveedorEntrada {uuid, nombre, empresa?, ruc? (11 dígitos), telefono?, categoria?}` | `ProveedorSalida` | `201`/`200`; un RUC ya registrado devuelve ese proveedor (`200`) y guarda el uuid como alias |
 | GET | `/api/compras/proveedores/{uuid}/frecuentes` | — | `ProductoFrecuente[] {nombre_producto, cantidad, monto, veces}` | Máx. 10 |
 | GET | `/api/compras/ordenes` | `estado?` repetible, `limite`, `desde` | `OrdenCompraSalida[]` con items | |
 | POST | `/api/compras/ordenes` | `OrdenEntrada {uuid, proveedor_uuid, estado? (borrador\|pendiente), fecha_estimada_llegada?, notas?, items (1–100) [{uuid, nombre_producto, cantidad?, monto}]}` | `ResultadoOrden {orden, avisos}` | `201`/`200`; el total lo calcula el servidor |

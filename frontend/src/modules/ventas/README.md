@@ -37,3 +37,9 @@ Los avisos del servidor (límite de crédito, stock negativo) y las operaciones 
 `.quitar-<item>`, `.total`; formularios `ventas-orden-<uuid>.producto|cantidad|monto|agregar`, `ventas.venta-rapida.*`,
 `ventas.selector-cliente.*`, `ventas.rapidas`, `ventas.rapida-<uuid>.*`. El Asistente puede sugerir "Ir a Ventas" y
 explicar los pasos; nunca toca estos botones por el operador.
+
+## Productos del inventario
+
+Al escribir el producto aparecen los del inventario que coinciden (`ventas-*.sugerido-N`). Al elegir uno, la cantidad se
+pide en su unidad, el monto se sugiere con su precio y se puede cambiar. El ítem lleva `producto_uuid` y `cantidad_num`,
+y el servidor descuenta el stock; quitar el ítem lo devuelve. Sin inventario, o sin elegir, todo funciona como antes.

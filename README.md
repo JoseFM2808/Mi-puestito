@@ -15,8 +15,8 @@ Este repo usa el estándar `AGENTS.md` (raíz) como contexto para herramientas d
 **Funcionan de punta a punta, también sin internet**: Caja de hoy, Ventas (orden
 activa, fiado, venta rápida), Fiados y Compras (pedidos a proveedores y checklist de
 recepción). Además: respaldo y restauración de los datos, Asistente con IA que guía
-sin inventar cifras, y ejecutable de escritorio para Windows. Inventario existe en el
-backend y aún no tiene pantalla. Ver el tablero de avance en
+sin inventar cifras, e Inventario (stock, conteo y mermas), con ejecutable de escritorio
+para Windows. Ver el tablero de avance en
 [`docs/05-metodologia/Plan-De-Trabajo.md`](./docs/05-metodologia/Plan-De-Trabajo.md)
 y las decisiones en [`docs/02-arquitectura/Decisiones-Tecnicas.md`](./docs/02-arquitectura/Decisiones-Tecnicas.md).
 

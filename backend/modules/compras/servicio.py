@@ -21,7 +21,14 @@ from sqlalchemy.orm import Session, selectinload
 import eventos
 from fechas import momento_de_operacion
 
-from .models import EstadoOrdenCompra, EstadoRecepcion, ItemOrdenCompra, OrdenCompra, Proveedor
+from .models import (
+    AliasProveedor,
+    EstadoOrdenCompra,
+    EstadoRecepcion,
+    ItemOrdenCompra,
+    OrdenCompra,
+    Proveedor,
+)
 from .schemas import (
     CambioEstadoEntrada,
     OrdenCompraSalida,
@@ -51,8 +58,17 @@ class ErrorDeCompra(Exception):
 
 # ---------------------------------------------------------------- proveedores
 
-def buscar_proveedor(sesion: Session, uuid: str) -> Proveedor:
+def _por_uuid(sesion: Session, uuid: str) -> Proveedor | None:
+    """Por su uuid o por el de un alias: un pedido hecho sin red puede usar cualquiera."""
     proveedor = sesion.scalar(select(Proveedor).where(Proveedor.uuid == uuid))
+    if proveedor is not None:
+        return proveedor
+    alias = sesion.get(AliasProveedor, uuid)
+    return sesion.get(Proveedor, alias.proveedor_id) if alias else None
+
+
+def buscar_proveedor(sesion: Session, uuid: str) -> Proveedor:
+    proveedor = _por_uuid(sesion, uuid)
     if proveedor is None:
         raise ErrorDeCompra("No encontramos a ese proveedor.", 404)
     return proveedor
@@ -74,13 +90,17 @@ def consulta_proveedores(busqueda: str | None):
 
 
 def crear_proveedor(sesion: Session, datos: ProveedorEntrada) -> tuple[Proveedor, bool]:
-    existente = sesion.scalar(select(Proveedor).where(Proveedor.uuid == datos.uuid))
+    existente = _por_uuid(sesion, datos.uuid)
     if existente is not None:
         return existente, False
     if datos.ruc:
         con_ruc = sesion.scalar(select(Proveedor).where(Proveedor.ruc == datos.ruc))
         if con_ruc is not None:
-            raise ErrorDeCompra(f"Ese RUC ya está registrado a nombre de {con_ruc.nombre}.")
+            # El RUC identifica a la empresa: es el mismo proveedor registrado dos veces (D-25)
+            momento = momento_de_operacion(datos.ocurrido_en)
+            sesion.add(AliasProveedor(uuid=datos.uuid, proveedor_id=con_ruc.id, creado_en=momento))
+            sesion.commit()
+            return con_ruc, False
     proveedor = Proveedor(
         uuid=datos.uuid,
         nombre=datos.nombre,

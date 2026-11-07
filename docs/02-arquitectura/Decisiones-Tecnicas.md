@@ -51,3 +51,4 @@
 | 43 | Llave de IA guardada desde la pantalla, cifrada con DPAPI y solo desde el mismo equipo | Solo variable de entorno, archivo en claro | Un vendedor no configura variables; el PIN de demo es público |
 | 44 | Respaldo con la API de SQLite; cada copia sabe de qué negocio es y se revisa antes de restaurar | Copiar el archivo a mano | Con WAL una copia simple puede perder lo último; restaurar la práctica borraría ventas reales |
 | 45 | Recepción de compras inmutable; el stock sube solo con cantidad explícita | Reescribir la recepción, deducir unidades del texto | La cola puede reenviar; "2 packs" no dice cuántas unidades son. Ver [[Modulo-Compras]] |
+| 46 | Asistente en dos formas, apartado propio y ventana flotante que sigue abierta al navegar, con una sola conversación | Panel que empuja el contenido, solo pantalla completa | El usuario debe poder ver la app mientras el Asistente lo guía o, más adelante, actúa. Ver [[AI-Companion]] |
