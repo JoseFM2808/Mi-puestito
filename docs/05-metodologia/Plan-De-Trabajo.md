@@ -205,8 +205,8 @@ Meta: el asistente integrado. Ver [[AI-Companion]] y [[Orquestacion-IA]].
 
 ## Fase 7 — Módulos de Fase 2 del producto
 
-- [ ] [[Modulo-Inventario]] — stock, vencimientos, precios *(pantalla de stock, conteo, merma y precio hecha; faltan
-  vencimientos, costo y elegir producto al vender)*
+- [ ] [[Modulo-Inventario]] — stock, vencimientos, precios *(pantalla de stock, conteo, merma y precio hecha, y Ventas
+  ya elige productos; faltan vencimientos y costo)*
 - [ ] [[Modulo-Analisis]] — rentabilidad y reportes
 - [ ] [[Modulo-Gastos]] — gastos del puesto y del hogar
 

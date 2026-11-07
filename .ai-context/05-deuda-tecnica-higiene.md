@@ -14,7 +14,7 @@
 | D-15 | P2 | El Asistente necesita internet | Sin red no hay ayuda | Modelo local (Ollama/llama.cpp) con Gemma pequeño; luego fine-tuning | ADR-039 |
 | D-17 | P2 | El `.exe` publicado aún tiene el frontend anterior | El vendedor no ve Ventas, Fiados ni Compras hasta publicar uno nuevo | Construido y probado localmente el 2026-11-01. Falta que el owner publique una etiqueta `v*` → flujo `Ejecutable Windows` | ADR-029 |
 | D-21 | P3 | El RUC se escribe a mano | Un RUC válido en forma pero inexistente pasa | Búsqueda en SUNAT: requiere elegir un servicio externo | `Modulo-Compras.md` |
-| D-22 | P3 | Inventario sin costo, vencimientos ni código de barras; Ventas aún no elige productos del inventario | Las ventas no descuentan stock desde la pantalla; las compras no alimentan el costo | Elegir producto al vender; costo desde la última compra; alertas de vencimiento | ADR-045 |
+| D-22 | P3 | Inventario sin costo, vencimientos ni código de barras | Las compras no alimentan el costo; nada avisa antes de que algo venza | Costo desde la última compra; alertas de vencimiento; búsqueda por código | ADR-045 |
 | D-23 | P2 | La copia de respaldo va sin cifrar | Quien tenga el archivo ve clientes, fiados y ventas | Cifrar con una contraseña que elija el vendedor; decidir qué pasa si la olvida | ADR-044 |
 | D-24 | P3 | "Ya le pagué" cierra el pedido pero no descuenta de la caja | La caja no refleja lo pagado a proveedores | Definir el flujo de caja (efectivo inicial, egresos) | `Modulo-Dashboard.md` |
 
@@ -49,6 +49,7 @@
 | — | 2026-11-07 | Vitest 4.1.12 y `npm audit fix`: sin vulnerabilidades críticas ni altas en desarrollo (producción: 0); actions en Node 24 | `npm audit`; 63 tests de frontend |
 | — | 2026-11-07 | Pantalla de Inventario: alta, conteo, merma, precio y mínimo, historial; offline | `modules/inventario/almacen.test.ts`; navegador: 10 → 8.5 → 8 kg, compra recibida +50 kg, conteo sin red entregado; sin desborde a 375 px |
 | — | 2026-11-07 | `ia.evaluar` abortaba en la consola de Windows al imprimir una falla | `sys.stdout.reconfigure` en `main` |
+| — | 2026-11-07 | Ventas elige productos del inventario: cantidad en su unidad, monto sugerido y stock descontado | `almacen.test.ts`; navegador: 2.5 kg a S/ 4.00 → S/ 10.00, stock 58 → 55.5 kg y de vuelta a 58 al quitarlo |
 
 ## 3. Resueltos en la auditoría inicial (2026-09-27, verificados en Staging)
 

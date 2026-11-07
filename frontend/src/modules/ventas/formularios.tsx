@@ -1,6 +1,21 @@
 import { useEffect, useState } from 'react'
-import { leerMontoEscrito, type ClienteCable, type MetodoPago } from '../../api/contrato'
+import {
+  aCentimos,
+  aSoles,
+  leerMontoEscrito,
+  type ClienteCable,
+  type MetodoPago,
+  type ProductoCable,
+} from '../../api/contrato'
+import { useSesion } from '../../stores/sesion'
 import { Boton, Campo, Nota, Tarjeta } from '../../ui/componentes'
+import {
+  aMilesimas,
+  formatearCantidad,
+  leerCantidadEscrita,
+  montoPorCantidad,
+  useInventario,
+} from '../inventario/almacen'
 import { useVentas } from './almacen'
 import estilos from './Ventas.module.css'
 
@@ -9,60 +24,158 @@ import estilos from './Ventas.module.css'
  * de enviar y deja el foco donde el operador lo necesita.
  */
 
+const MAX_SUGERENCIAS = 4
+
+/**
+ * Producto vendido. Si coincide con uno del inventario, se puede elegir: entonces la
+ * cantidad va en su unidad, el monto se sugiere con su precio y el servidor descuenta
+ * el stock (ADR-031). Sin elegir, se vende con texto libre, como siempre: el inventario
+ * es opcional.
+ */
 export function FormularioProducto({
   prefijo,
   alAgregar,
 }: {
   /** Distingue los ids cuando hay más de un formulario en pantalla */
   prefijo: string
-  alAgregar: (datos: { nombre: string; cantidad: string; centimos: number }) => void
+  alAgregar: (datos: {
+    nombre: string
+    cantidad: string
+    centimos: number
+    producto?: { uuid: string; milesimas: number }
+  }) => void
 }) {
+  const proyecto = useSesion((estado) => estado.proyecto)
+  const productos = useInventario((estado) => estado.productos)
+  const proyectoInventario = useInventario((estado) => estado.proyecto)
+  const iniciarInventario = useInventario((estado) => estado.iniciar)
   const [nombre, setNombre] = useState('')
+  const [elegido, setElegido] = useState<ProductoCable | null>(null)
   const [cantidad, setCantidad] = useState('')
   const [monto, setMonto] = useState('')
+  const [montoEscrito, setMontoEscrito] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Sin red se usa lo guardado en el dispositivo; si falla, se vende con texto libre
+    if (proyecto && proyectoInventario !== proyecto) void iniciarInventario(proyecto).catch(() => {})
+  }, [proyecto, proyectoInventario, iniciarInventario])
+
+  const texto = nombre.trim().toLowerCase()
+  const sugerencias =
+    elegido || !texto
+      ? []
+      : productos.filter((p) => p.nombre.toLowerCase().includes(texto)).slice(0, MAX_SUGERENCIAS)
+
+  const cambiarCantidad = (valor: string) => {
+    setCantidad(valor)
+    if (!elegido?.precio_venta || montoEscrito) return
+    const milesimas = leerCantidadEscrita(valor)
+    setMonto(milesimas ? aSoles(montoPorCantidad(aCentimos(elegido.precio_venta), milesimas)) : '')
+  }
+
+  const elegir = (producto: ProductoCable) => {
+    setElegido(producto)
+    setNombre(producto.nombre)
+    setCantidad('')
+    setMonto('')
+    setMontoEscrito(false)
+    setError(null)
+  }
+
+  const soltar = () => {
+    setElegido(null)
+    setCantidad('')
+    setMonto('')
+    setMontoEscrito(false)
+  }
 
   const enviar = (evento: React.FormEvent) => {
     evento.preventDefault()
     const centimos = leerMontoEscrito(monto)
     if (!nombre.trim()) return setError('Escribe qué producto vendiste.')
+    let producto: { uuid: string; milesimas: number } | undefined
+    if (elegido) {
+      const milesimas = leerCantidadEscrita(cantidad)
+      if (!milesimas)
+        return setError(`Escribe cuántos ${unidadEnPlural(elegido.unidad)} vendiste, por ejemplo 2`)
+      producto = { uuid: elegido.uuid, milesimas }
+    }
     if (centimos === null) return setError('Escribe el monto en soles, por ejemplo 12.50')
-    alAgregar({ nombre: nombre.trim(), cantidad: cantidad.trim(), centimos })
+    alAgregar({
+      nombre: nombre.trim(),
+      cantidad: elegido && producto ? formatearCantidad(producto.milesimas, elegido.unidad) : cantidad.trim(),
+      centimos,
+      producto,
+    })
     setNombre('')
-    setCantidad('')
-    setMonto('')
+    soltar()
     setError(null)
   }
 
   return (
     <form className={estilos.formulario} onSubmit={enviar} noValidate>
-      <Campo
-        id={`${prefijo}-producto`}
-        aiId={`${prefijo}.producto`}
-        etiqueta="Producto"
-        valor={nombre}
-        alCambiar={setNombre}
-        autoComplete="off"
-        maxLength={120}
-      />
+      {elegido ? (
+        <div className={estilos.productoElegido} data-ai-id={`${prefijo}.producto-elegido`}>
+          <span>
+            <strong>{elegido.nombre}</strong>
+            {` · quedan ${formatearCantidad(aMilesimas(elegido.stock_actual), elegido.unidad)}`}
+          </span>
+          <Boton aiId={`${prefijo}.soltar-producto`} variante="discreto" onClick={soltar}>
+            Escribir otro producto
+          </Boton>
+        </div>
+      ) : (
+        <Campo
+          id={`${prefijo}-producto`}
+          aiId={`${prefijo}.producto`}
+          etiqueta="Producto"
+          valor={nombre}
+          alCambiar={setNombre}
+          autoComplete="off"
+          maxLength={120}
+        />
+      )}
+      {sugerencias.length > 0 && (
+        <div className={estilos.sugerencias} data-ai-id={`${prefijo}.sugerencias`}>
+          {sugerencias.map((producto, indice) => (
+            <Boton
+              key={producto.uuid}
+              aiId={`${prefijo}.sugerido-${indice}`}
+              variante="secundario"
+              onClick={() => elegir(producto)}
+            >
+              {`${producto.nombre} (quedan ${formatearCantidad(aMilesimas(producto.stock_actual), producto.unidad)})`}
+            </Boton>
+          ))}
+        </div>
+      )}
       <div className={estilos.filaCampos}>
         <Campo
           id={`${prefijo}-cantidad`}
           aiId={`${prefijo}.cantidad`}
-          etiqueta="Cantidad (opcional)"
-          ayuda="Por ejemplo: 2 kg"
+          etiqueta={elegido ? `¿Cuántos ${unidadEnPlural(elegido.unidad)}?` : 'Cantidad (opcional)'}
+          ayuda={elegido ? 'Se descuenta del inventario' : 'Por ejemplo: 2 kg'}
           valor={cantidad}
-          alCambiar={setCantidad}
+          alCambiar={cambiarCantidad}
           autoComplete="off"
+          inputMode={elegido ? 'decimal' : undefined}
           maxLength={60}
         />
         <Campo
           id={`${prefijo}-monto`}
           aiId={`${prefijo}.monto`}
           etiqueta="Monto en soles"
-          ayuda="Lo que cobras por este producto"
+          ayuda={
+            elegido?.precio_venta
+              ? 'Calculado con el precio; puedes cambiarlo'
+              : 'Lo que cobras por este producto'
+          }
           valor={monto}
-          alCambiar={setMonto}
+          alCambiar={(valor) => {
+            setMonto(valor)
+            setMontoEscrito(true)
+          }}
           inputMode="decimal"
           autoComplete="off"
           error={error}
@@ -73,6 +186,10 @@ export function FormularioProducto({
       </Boton>
     </form>
   )
+}
+
+function unidadEnPlural(unidad: ProductoCable['unidad']): string {
+  return unidad === 'unidad' ? 'unidades' : unidad === 'kg' ? 'kilos' : 'litros'
 }
 
 export function FormularioNuevaOrden({ alTerminar }: { alTerminar: () => void }) {

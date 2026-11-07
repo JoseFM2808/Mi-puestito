@@ -36,4 +36,5 @@ lo confirma.
 ## Límites conocidos
 
 - Sin búsqueda por código de barras, foto, alertas de vencimiento ni costo desde la última compra (pendientes del módulo).
-- Las ventas descuentan stock solo si llevan `producto_uuid`; la pantalla de Ventas aún no elige productos del inventario.
+- Las ventas descuentan stock solo si el operador elige el producto del inventario al venderlo (`FormularioProducto`);
+  con texto libre no se toca el stock.

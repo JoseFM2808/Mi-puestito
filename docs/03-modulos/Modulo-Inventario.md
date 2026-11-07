@@ -34,5 +34,7 @@
   descuadres y conciliación. Ver `backend/modules/inventario/README.md`.
 - **Pantalla (2026-11-07):** alta de productos, stock con "Queda poco" y "Descuadre", conteo, merma, precio y mínimo,
   historial, todo sin red. Las compras recibidas suman al stock si se dice cuánto ([[Modulo-Compras]]).
-- **Pendiente:** alertas de vencimiento, costo desde la última compra, código de barras, sugerencia de pedido por stock
-  bajo y elegir el producto al vender en [[Modulo-Ventas]].
+- **Ventas (2026-11-07):** al vender se puede elegir un producto del inventario; la cantidad descuenta el stock y el
+  precio sugiere el monto ([[Modulo-Ventas]]).
+- **Pendiente:** alertas de vencimiento, costo desde la última compra, código de barras y sugerencia de pedido por stock
+  bajo.

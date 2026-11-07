@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { ProductoCable } from '../../api/contrato'
-import { aCantidad, aMilesimas, conEstado, formatearCantidad, leerCantidadEscrita } from './almacen'
+import {
+  aCantidad,
+  aMilesimas,
+  conEstado,
+  formatearCantidad,
+  leerCantidadEscrita,
+  montoPorCantidad,
+} from './almacen'
 
 describe('cantidades en milésimas', () => {
   it.each([
@@ -59,5 +66,13 @@ describe('estado del producto, igual que el backend', () => {
     const negativo = conEstado({ ...base, stock_actual: '-1.000', stock_minimo: null })
     expect(negativo.descuadre).toBe(true)
     expect(negativo.bajo_minimo).toBe(false)
+  })
+})
+
+describe('monto sugerido al vender por cantidad', () => {
+  it('precio por kilo × peso, redondeado al céntimo', () => {
+    expect(montoPorCantidad(380, 2500)).toBe(950) // 2.5 kg a S/ 3.80 = S/ 9.50
+    expect(montoPorCantidad(450, 333)).toBe(150) // 0.333 kg a S/ 4.50 = S/ 1.4985 → S/ 1.50
+    expect(montoPorCantidad(250, 3000)).toBe(750) // 3 unidades a S/ 2.50
   })
 })

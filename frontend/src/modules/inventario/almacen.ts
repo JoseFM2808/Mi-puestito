@@ -50,6 +50,14 @@ export function formatearCantidad(milesimas: number, unidad: Unidad): string {
   return `${aCantidad(milesimas)} ${milesimas === 1000 ? singular : plural}`
 }
 
+/**
+ * Monto de una venta por cantidad: precio (céntimos por unidad, kg o litro) × milésimas.
+ * Redondea al céntimo, como el vendedor lo cobraría. Solo sugiere: el operador puede cambiarlo.
+ */
+export function montoPorCantidad(precioCentimos: number, milesimas: number): number {
+  return Math.round((precioCentimos * milesimas) / 1000)
+}
+
 /** Igual que `_con_estado` del backend: la pantalla lo dice con palabras al instante. */
 export function conEstado(producto: ProductoCable): ProductoCable {
   const stock = aMilesimas(producto.stock_actual)
@@ -78,6 +86,11 @@ interface EstadoInventario {
   editar: (uuid: string, cambios: { precioVenta?: string; stockMinimo?: number }) => Promise<void>
   contar: (uuid: string, contado: number) => Promise<void>
   merma: (uuid: string, cantidad: number, nota?: string) => Promise<void>
+  /**
+   * Refleja al instante lo que movió OTRO módulo (una venta). No encola nada: el
+   * movimiento real lo hace el servidor por evento al recibir la venta (ADR-031).
+   */
+  ajustarLocal: (uuid: string, deltaMilesimas: number) => void
 }
 
 export const useInventario = create<EstadoInventario>()((set, get) => {
@@ -231,6 +244,13 @@ export const useInventario = create<EstadoInventario>()((set, get) => {
         cantidad: aCantidad(cantidad),
         nota: nota || null,
       })
+    },
+
+    ajustarLocal: (uuid, deltaMilesimas) => {
+      cambiarLocal(uuid, (p) => ({
+        ...p,
+        stock_actual: aCantidad(aMilesimas(p.stock_actual) + deltaMilesimas),
+      }))
     },
   }
 })

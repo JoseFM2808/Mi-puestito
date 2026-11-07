@@ -209,6 +209,12 @@ recibidas con cantidad lo mueven solas. Las cantidades viajan con 3 decimales y 
 enteras, igual que el dinero en céntimos. Todo pasa por la cola offline; "Queda poco" y "Descuadre" se dicen con
 palabras, calculados igual que `_con_estado` del backend.
 
+**Vender un producto del inventario:** al escribir el producto en una venta aparecen los que coinciden. Al elegir uno,
+la cantidad se pide en su unidad y el monto se sugiere con `montoPorCantidad` (precio × cantidad, redondeado al céntimo;
+el operador puede cambiarlo). El ítem viaja con `producto_uuid` y `cantidad_num`, y el servidor descuenta por el evento
+`venta.item_registrado`; quitar el ítem lo devuelve. La pantalla refleja el stock al instante con `ajustarLocal`, que no
+encola nada. Sin elegir, se vende con texto libre y el stock no cambia.
+
 ## 8. Datos de práctica
 
 `POST /api/dashboard/demo/reiniciar` borra lo practicado y vuelve a sembrar con las fechas de hoy; con un negocio real da
