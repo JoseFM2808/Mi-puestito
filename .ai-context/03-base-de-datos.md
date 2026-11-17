@@ -124,6 +124,12 @@ erDiagram
 
 ## 2. Fuera de la base de datos
 
+> **Datos de práctica (`datos_demo.py`).** La demo siembra ventas, fiados, pedidos y, desde el 2026-11-08, **7 productos**
+> en `productos` (Arroz Costeño, Fideos Anita, Azúcar rubia, Aceite Primor, Leche Gloria, Papa amarilla, Pollo), cada uno
+> con su stock inicial como movimiento `ajuste` / `stock_inicial`, igual que al crearlo desde la pantalla. Papa y leche
+> quedan bajo su mínimo. Sin cambios de esquema. La orden que llena el Asistente (ADR-049) no se guarda en ninguna
+> tabla hasta que el operador toca «Guardar orden»: antes vive solo en memoria del navegador.
+
 | Qué | Dónde | Contenido | Protección |
 |---|---|---|---|
 | Usuarios | `usuarios.json` en la carpeta de datos | `{usuario: {proyecto, sal, pin_hash}}` | `.gitignore` + `test_higiene_repo.py` |

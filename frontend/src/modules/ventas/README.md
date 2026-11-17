@@ -38,6 +38,13 @@ Los avisos del servidor (límite de crédito, stock negativo) y las operaciones 
 `ventas.selector-cliente.*`, `ventas.rapidas`, `ventas.rapida-<uuid>.*`. El Asistente puede sugerir "Ir a Ventas" y
 explicar los pasos; nunca toca estos botones por el operador.
 
+**Orden llenada por el Asistente (ADR-049).** `BorradorAsistente.tsx` muestra, arriba de todo, la orden que el Asistente
+llenó (`stores/borradorAsistente.ts`): nombre de la orden, y por producto nombre, cantidad y precio, todo editable.
+**Guardar orden** la crea con `abrirOrden` + `agregarItem`, igual que a mano y sin red; **Descartar** la quita. Cada línea
+se enlaza con su producto del inventario por nombre (`inventario/nombres.ts`) y, si falta el precio, propone el suyo.
+`data-ai-id`: `ventas.borrador-asistente`, `ventas.borrador-nombre-orden`, `ventas.borrador-nombre|cantidad|precio-<n>`,
+`ventas.borrador-guardar`, `ventas.borrador-descartar`.
+
 ## Productos del inventario
 
 Al escribir el producto aparecen los del inventario que coinciden (`ventas-*.sugerido-N`). Al elegir uno, la cantidad se

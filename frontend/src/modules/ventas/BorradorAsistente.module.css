@@ -1,0 +1,48 @@
+/* Orden llenada por el Asistente (ADR-049). CSS Module. Solo tokens. */
+
+/* Borde del color del Asistente: se ve de un vistazo que la llenó él y que falta confirmarla */
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  border: 2px solid var(--ia);
+}
+
+.linea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  padding-bottom: var(--esp-2);
+  border-bottom: 1px solid var(--borde);
+}
+
+/* Tres columnas solo si caben de verdad: en una tablet vertical o un teléfono se apilan */
+.campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+  gap: var(--esp-2);
+}
+
+.detalle {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+}
+
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
+}
+
+.total {
+  font-size: var(--tam-monto-orden);
+  font-weight: 700;
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}

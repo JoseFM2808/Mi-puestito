@@ -25,6 +25,9 @@
 | 044 | 2026-11-01 | Aceptada | Respaldo con la API de SQLite; cada copia sabe de qué negocio es |
 | 045 | 2026-11-01 | Aceptada | Recepción de compras inmutable; el stock sube solo con cantidad explícita |
 | 046 | 2026-11-07 | Aceptada | Asistente en dos formas, apartado y ventana flotante, con una sola conversación |
+| 047 | 2026-11-08 | Aceptada | El Asistente abre pantallas y señala partes de ellas cuando el operador lo pide; nunca llena datos |
+| 048 | 2026-11-08 | Aceptada | Núcleo de marca en `docs/design-system/` con el estándar de Design System del workspace |
+| 049 | 2026-11-08 | Aceptada | El Asistente llena órdenes de venta que el operador revisa y guarda; voz por dictado del navegador |
 
 ---
 
@@ -133,6 +136,7 @@
   el botón; Nemotron olvidaba el formato y los modelos pequeños lo harán más.
 - **Consecuencias**: el modelo no puede inducir acciones fuera de la lista; ampliar el catálogo es agregar entradas a
   `PANTALLAS` y al prompt.
+- **Ampliada por ADR-047** (2026-11-08): además de sugerir, la app navega y señala sola cuando el operador lo pide.
 
 ## ADR-038 · Registro para entrenar un modelo propio — Aceptada
 
@@ -235,3 +239,66 @@
   rediseñar la interfaz. La ventana tapa parte de la pantalla en el teléfono (hoja de 72 % del alto); se cierra o se amplía
   con un toque. Cualquier acción que el Asistente ejecute por su cuenta seguirá exigiendo una decisión formal nueva: hoy
   solo sugiere (ADR-037).
+
+## ADR-047 · El Asistente abre pantallas y señala partes de ellas — Aceptada
+
+- **Fecha**: 2026-11-08.
+- **Contexto**: el owner pidió que, al decir "quiero registrar una compra", la app lleve a Compras y deje llenar los datos
+  mientras se conversa con el Asistente, y que el Asistente pueda llevar a partes de la pantalla o resaltarlas. Hasta aquí
+  solo sugería botones (ADR-037), la conversación desaparecía al navegar desde el apartado, y la ventana tapaba el
+  formulario (en teléfono, el 72 % de la pantalla).
+- **Decisión**:
+  1. **Navegar y señalar, nunca escribir.** Nueva acción `ACCION: resaltar <apartado>`, con una lista blanca `APARTADOS` de
+     `data-ai-id` reales (`ia/acciones.py`). La app trae esa parte a la vista y la marca 4 s (`senalar.ts`).
+  2. **Quién decide hacerlo solo: una regla fija, no el modelo.** La primera acción es `automatica` si el mensaje del
+     operador pide ir o hacer algo ("quiero", "llévame", "registrar", "anotar"…) o pregunta dónde está algo ("¿dónde…?",
+     "¿qué botón toco?"). Una pregunta de cifras deja solo el botón, aunque el modelo agregue una acción.
+  3. **La conversación siempre a la vista.** `llevarConAsistente` cambia de pantalla y deja el Asistente en ventana. En
+     pantalla ancha la ventana es una columna junto a la pantalla; en teléfono y tablet, una hoja que se achica a su barra.
+  4. El frontend envía `pantalla_actual` para que el Asistente hable de lo que el operador tiene delante.
+- **Consecuencias**: se cumple la capacidad 3 de `docs/04-ia/AI-Companion.md` (navegar) y parte de la Fase 6 (leer la UI por
+  `data-ai-id`). `ia.evaluar` pasa de 19 a 24 casos y vigila qué se abre solo. Quedan fuera, y exigirían otra decisión
+  formal: llenar campos, tocar botones o guardar por el operador. Un `data-ai-id` renombrado rompe un test del backend
+  (`test_todo_apartado_existe_en_el_frontend`) en vez de fallar en silencio.
+
+## ADR-048 · Núcleo de marca en el estándar de Design System del workspace — Aceptada
+
+- **Fecha**: 2026-11-08.
+- **Contexto**: el owner adoptó un estándar de Design System para todos sus proyectos (alternativa C, ADR-008 de
+  Estudio-Contenido): el núcleo de marca vive en cada proyecto, en `docs/design-system/`, y las aplicaciones por medio
+  (social, video, web…) en el hub del Estudio. Mi Puestito tenía su sistema en `docs/06-diseno/` (bóveda Obsidian con
+  `[[wikilinks]]`), que el estándar no admite, y el Estudio no tenía capa para el proyecto.
+- **Decisión**:
+  1. **Copia, no traslado.** `docs/design-system/` recibe el núcleo: `tokens/tokens.json` (W3C DTCG, roles comunes con
+     alias a `--fondo`, `--primario`, `--deuda`…), `marca/01–07` con enlaces markdown normales, `README.md` y
+     `CHANGELOG.md`. `docs/06-diseno/` queda como está: el frontend sigue importando su `tokens.css`.
+  2. `ds-validar` comprueba en cada sync que los colores de `docs/06-diseno/tokens.css` sigan iguales a `tokens.json`.
+  3. Mover `06-diseno/` a `docs/design-system/` espera la aprobación del owner (mover archivos la requiere).
+- **Consecuencias**: colores sin cambios. El Estudio gana la capa `mi-puestito` (social, video y web, con Lexend). Hasta
+  el traslado, un cambio de color va en los dos archivos (D-27).
+
+## ADR-049 · El Asistente llena órdenes y el operador las guarda; voz por el navegador — Aceptada
+
+- **Fecha**: 2026-11-08.
+- **Contexto**: el owner pidió que, al decir "quiero registrar una orden de 2 fideos Anita a 4.80", el Asistente haga el
+  registro; que se le pueda hablar; y que los productos que nombra lleven a su inventario. Hasta ADR-047 el Asistente
+  solo navegaba y señalaba. El owner eligió entre dos opciones: (a) **llena y el operador confirma**, o (b) guarda directo
+  con "Deshacer". Eligió (a). Para la voz eligió el **dictado del navegador** antes que NVIDIA en el servidor o un modelo
+  local. En la prueba real (2026-11-08) el Asistente fue "demasiado literal": "regístrala por mí" no contaba como pedido,
+  decía "revisa la orden" sin haberla llenado, y no tomaba el nombre de la clienta.
+- **Decisión**:
+  1. **Llenar, nunca guardar.** El modelo escribe `VENTA: <cantidad> x <producto> a <precio>` y `PARA: <nombre>`;
+     `ia/borrador.py` lo convierte en `RespuestaSalida.borrador`. La app lo muestra en Ventas, editable, y solo
+     «Guardar orden» crea la venta con las mismas acciones offline de siempre.
+  2. **Reglas fijas, no del modelo:** hay orden llenada solo si el operador pidió registrar (este mensaje o el anterior);
+     un precio que el operador no dijo se descarta y se propone el del inventario; nada de "revisa la orden" sin orden;
+     ninguna línea de control llega a la pantalla. El verificador de cifras acepta el producto de dos cifras del operador.
+  3. **Voz:** Web Speech API en `es-PE`. Chrome y Edge envían el audio a Google o Microsoft. Esa voz **no se puede
+     seudonimizar**, así que en un negocio real se avisa debajo del botón. Donde no existe (Firefox), el botón no aparece.
+  4. **Productos como enlaces:** `inventario/nombres.ts` reconoce nombres con plurales y tildes; el modelo recibe solo
+     los nombres del inventario (sin stock ni precios), para escribirlos exactos.
+- **Consecuencias**: se cumple en parte la capacidad 4 de `docs/04-ia/AI-Companion.md` (rellenar formularios), con el
+  operador como único que guarda. Todo error del modelo queda a la vista antes de contar en caja. Solo órdenes de venta: llenar
+  compras o pagos exigirá ampliar este ADR. La voz depende de un tercero y de internet; el dictado local (Whisper) queda
+  como opción futura. La demo trae 7 productos para practicar. `ia.evaluar` pasa a 29 casos, con la conversación real
+  del owner incluida.

@@ -59,4 +59,24 @@ describe('navegación entre pantallas', () => {
     expect(useNavegacion.getState().pantalla).toBe('fiados')
     expect(useNavegacion.getState().asistenteFlotante).toBe(true)
   })
+
+  it('el Asistente lleva a una pantalla sin perder la conversación, aunque esté en su apartado', () => {
+    useNavegacion.getState().irA('asistente')
+    useNavegacion.setState({ asistenteAchicado: true })
+    useNavegacion.getState().llevarConAsistente('compras')
+    const estado = useNavegacion.getState()
+    expect(estado.pantalla).toBe('compras')
+    expect(window.location.hash).toBe('#compras')
+    // Queda en ventana, abierta y grande: se sigue hablando mientras se llenan los datos
+    expect(estado.asistenteFlotante).toBe(true)
+    expect(estado.asistenteAchicado).toBe(false)
+  })
+
+  it('la ventana se achica a su barra y se vuelve a agrandar', () => {
+    useNavegacion.setState({ asistenteFlotante: true, asistenteAchicado: false })
+    useNavegacion.getState().alternarAchicado()
+    expect(useNavegacion.getState().asistenteAchicado).toBe(true)
+    useNavegacion.getState().alternarAchicado()
+    expect(useNavegacion.getState().asistenteAchicado).toBe(false)
+  })
 })

@@ -282,14 +282,36 @@ export interface AbonoCable {
 // ------------------------------------------------------------------ asistente
 
 export interface AccionSugeridaCable {
-  tipo: 'ir_a'
+  /** "ir_a" abre una pantalla; "resaltar" además señala una parte de ella (ADR-047) */
+  tipo: 'ir_a' | 'resaltar'
   pantalla: string
   etiqueta: string
+  /** El operador pidió ir o hacer algo: la app abre la pantalla sola (ADR-047) */
+  automatica: boolean
+  /** Solo en "resaltar": el data-ai-id de la parte que se señala */
+  apartado: string | null
+}
+
+/** Un producto de la orden que el Asistente llenó (ADR-049) */
+export interface ItemBorradorCable {
+  nombre: string
+  /** Decimal en texto ("2", "1.5") */
+  cantidad: string
+  /** Precio de UNA unidad, solo si el operador lo dijo */
+  precio: string | null
+}
+
+/** Orden que el Asistente llenó; el operador la revisa y la guarda (ADR-049) */
+export interface BorradorVentaCable {
+  items: ItemBorradorCable[]
+  /** Para quién es ("Sra. Bertha"), si el operador lo dijo: el nombre de la orden */
+  para: string | null
 }
 
 export interface RespuestaAsistenteCable {
   respuesta: string
   acciones: AccionSugeridaCable[]
+  borrador: BorradorVentaCable | null
   id_respuesta: string
   modelo: string
 }
@@ -482,8 +504,16 @@ export const CAMPOS_DEL_CONTRATO = {
     'creado_en',
     'deuda',
   ]),
-  RespuestaSalida: camposDe<RespuestaAsistenteCable>()(['respuesta', 'acciones', 'id_respuesta', 'modelo']),
-  AccionSugerida: camposDe<AccionSugeridaCable>()(['tipo', 'pantalla', 'etiqueta']),
+  RespuestaSalida: camposDe<RespuestaAsistenteCable>()([
+    'respuesta',
+    'acciones',
+    'borrador',
+    'id_respuesta',
+    'modelo',
+  ]),
+  BorradorVenta: camposDe<BorradorVentaCable>()(['items', 'para']),
+  ItemBorrador: camposDe<ItemBorradorCable>()(['nombre', 'cantidad', 'precio']),
+  AccionSugerida: camposDe<AccionSugeridaCable>()(['tipo', 'pantalla', 'etiqueta', 'automatica', 'apartado']),
   AbonoSalida: camposDe<AbonoCable>()([
     'uuid',
     'cliente_uuid',

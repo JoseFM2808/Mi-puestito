@@ -4,6 +4,8 @@
 
 Documento de diseño centralizado y **fuente de verdad visual** del proyecto: si un token cambia aquí, cambia en toda la interfaz. Los componentes React importan estos valores desde un punto central (variables CSS, ver `tokens.css`); ningún componente usa colores, tamaños ni espaciados "a mano".
 
+> **Núcleo del estándar (ADR-048):** la marca también vive en [docs/design-system/](../design-system/README.md) (`tokens/tokens.json` y `marca/`), con el formato común a todos los proyectos. Este documento y su `tokens.css` siguen siendo lo que usa el frontend; si cambias un color aquí, cámbialo también en `tokens.json` (el sync avisa si se separan).
+
 > Paleta elegida: **A — "Mercado"** (cálida, familiar). Validada en preview (`assets/preview-caja-diaria.html`) sobre la pantalla de [[Modulo-Dashboard]].
 
 ## 1. Colores (tokens)
@@ -95,11 +97,19 @@ El [[AI-Companion]] tiene dos formas, con **la misma conversación**:
 
 - **Apartado** (opción "Asistente" del menú): chat a pantalla completa, con quién habla dicho con palabras ("Tú",
   "Asistente"), preguntas sugeridas para empezar, la caja para escribir fija abajo y "Empezar una conversación nueva".
-- **Ventana flotante** (botón "Asistente" de la barra): sobre la pantalla actual, abajo a la derecha en pantalla ancha y
-  como hoja en la parte de abajo en el teléfono. **Sigue abierta al cambiar de pantalla**: si el Asistente lleva a
-  Fiados, el operador ve Fiados detrás. Así podrá observar al Asistente cuando, más adelante, guíe paso a paso o actúe
-  en la app. Botones "Pantalla completa" y "Cerrar"; desde el apartado, "Usar en ventana mientras trabajo".
-- La ventana no tapa la barra ni el menú, que quedan por encima.
+- **Ventana** (botón "Asistente" de la barra): **junto a** la pantalla de trabajo, para llenar un formulario mientras se
+  conversa. En pantalla ancha (o teléfono acostado) es una columna a la derecha que no tapa nada; en teléfono y tablet de
+  pie, una hoja abajo con **"Achicar"** / **"Agrandar"**, y la pantalla gana espacio al final para que todo campo quede por
+  encima. **Sigue abierta al cambiar de pantalla.** Botones "Pantalla completa" (no en el teléfono: la hoja ya ocupa casi
+  todo) y "Cerrar"; desde el apartado, "Usar en ventana mientras trabajo".
+- **El Asistente lleva y señala** (ADR-047): si el operador pide ir o hacer algo, la pantalla se abre sola y el Asistente
+  lo cuenta ("Abrí Compras. Sigo aquí…"); si pregunta dónde está algo, además **marca** esa parte con un marco grueso del
+  color del Asistente, que late tres veces (sin animación si el sistema pide menos movimiento).
+- **Orden llenada** (ADR-049): tarjeta arriba de Ventas con borde del color del Asistente, título "El Asistente llenó
+  esta orden" y la frase "Aún no se guardó nada". Todo editable; **«Guardar orden»** y **«Descartar»**. Los productos
+  que se nombran en la conversación se subrayan en el color del Asistente y llevan a su tarjeta del inventario.
+- **Hablar**: botón con texto junto a «Enviar pregunta»; mientras escucha dice «Listo, enviar». Solo aparece si el
+  navegador tiene dictado, y en un negocio real avisa que la voz va a Google o Microsoft.
 
 ## 7. Teclado
 

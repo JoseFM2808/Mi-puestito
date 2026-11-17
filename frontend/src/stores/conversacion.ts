@@ -3,7 +3,7 @@ import type { AccionSugeridaCable } from '../api/contrato'
 
 /**
  * Conversación con el Asistente. Vive aquí y no dentro de la pantalla para que no se
- * pierda al ir a Ventas y volver: el Asistente es un apartado propio, como un chat.
+ * pierda al ir a Ventas y volver, y para que el apartado y la ventana muestren la misma.
  * Solo en memoria: se borra al cerrar la app o al cambiar de negocio (no se guarda en
  * el dispositivo lo que se le preguntó).
  */
@@ -14,6 +14,10 @@ export interface MensajeAsistente {
   acciones?: AccionSugeridaCable[]
   idRespuesta?: string
   valorada?: boolean
+  /** Lo que la app hizo sola con esta respuesta, dicho al operador: "Abrí Compras…" (ADR-047) */
+  hecho?: string
+  /** Esta respuesta dejó una orden llenada en Ventas, por guardar (ADR-049) */
+  conBorrador?: boolean
 }
 
 export const SALUDO = 'Hola, soy tu Asistente. Pregúntame por tu caja de hoy o cómo hacer algo en la app.'

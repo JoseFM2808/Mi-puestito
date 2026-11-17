@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { ErrorApi, SinConexion, pedir } from '../../api/cliente'
-import type { EstadoAsistenteCable, RespuestaAsistenteCable } from '../../api/contrato'
+import type {
+  AccionSugeridaCable,
+  EstadoAsistenteCable,
+  ProductoCable,
+  RespuestaAsistenteCable,
+} from '../../api/contrato'
+import { useInventario } from '../../modules/inventario/almacen'
+import { trozosConProductos } from '../../modules/inventario/nombres'
+import { useBorradorAsistente } from '../../stores/borradorAsistente'
 import { useConversacion } from '../../stores/conversacion'
 import { PANTALLAS, useNavegacion, type Pantalla } from '../../stores/navegacion'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Campo, Nota, TituloPagina } from '../../ui/componentes'
 import estilos from './Asistente.module.css'
+import { useDictado } from './dictado'
+import { estaALaVista, senalar } from './senalar'
 
 /**
  * El Asistente (AI Companion), en dos formas que comparten la MISMA conversación:
@@ -16,13 +26,101 @@ import estilos from './Asistente.module.css'
  *   o, más adelante, actúa en ella (Design-System §6 ter, ADR-046).
  *
  * Responde con el mismo resumen que ve el operador en la Caja de hoy, nunca con datos de
- * otro proyecto (lo garantiza el backend con el token). Puede SUGERIR ir a una pantalla
- * (ADR-037): un botón con texto completo que el operador decide tocar. "Me sirvió" / "No me
+ * otro proyecto (lo garantiza el backend con el token). Puede sugerir ir a una pantalla
+ * (ADR-037): un botón con texto completo. Si el operador pidió ir o hacer algo ("quiero
+ * registrar una compra"), la app abre esa pantalla sola y el Asistente queda en ventana, para
+ * seguir hablando mientras se llenan los datos (ADR-047). Si pide registrar una venta, el
+ * Asistente la LLENA en Ventas y el operador la revisa y la guarda: el Asistente nunca guarda
+ * (ADR-049). Se le puede hablar en vez de escribir (dictado del navegador), y los productos
+ * del inventario que nombra son enlaces a su tarjeta. "Me sirvió" / "No me
  * sirvió" ayuda a mejorar un futuro modelo local (ADR-038). Privacidad (ADR-034): el backend
  * cambia los nombres de clientes y proveedores por códigos antes de enviar la pregunta.
  */
 
 const TURNOS_DE_MEMORIA = 6
+
+/** Solo pantallas que existen: lo que el modelo invente no se muestra ni se abre */
+const esPantalla = (pantalla: string): pantalla is Pantalla => PANTALLAS.some((p) => p.clave === pantalla)
+
+const nombreDe = (pantalla: Pantalla) => PANTALLAS.find((p) => p.clave === pantalla)?.nombre ?? pantalla
+
+/**
+ * Sigue una acción del Asistente: lleva a su pantalla sin perder la conversación y, si es
+ * "resaltar", señala esa parte. Solo navega y marca: nunca llena ni guarda nada (ADR-047).
+ */
+function seguir(accion: AccionSugeridaCable) {
+  if (!esPantalla(accion.pantalla)) return
+  const { pantalla, asistenteFlotante, llevarConAsistente } = useNavegacion.getState()
+  if (pantalla !== accion.pantalla || !asistenteFlotante) llevarConAsistente(accion.pantalla)
+  if (accion.tipo === 'resaltar' && accion.apartado) void senalar(accion.apartado)
+}
+
+/**
+ * Lo que la app hace sola con una respuesta (solo la acción que el backend marcó
+ * `automatica`: el operador pidió ir o hacer algo, o preguntó dónde está algo), y cómo se le
+ * cuenta. Se dice solo lo que seguro pasó.
+ */
+function hacerSolo(acciones: AccionSugeridaCable[]): string | undefined {
+  const pedida = acciones.find((accion) => accion.automatica && esPantalla(accion.pantalla))
+  if (!pedida || !esPantalla(pedida.pantalla)) return undefined
+  if (pedida.pantalla !== useNavegacion.getState().pantalla) {
+    seguir(pedida)
+    return `Abrí ${nombreDe(pedida.pantalla)}. Sigo aquí: llena los datos y pregúntame lo que necesites.`
+  }
+  // En la misma pantalla: se marca solo si esa parte está a la vista ahora (con un formulario
+  // abierto, el botón de la pantalla no existe y no se busca)
+  if (pedida.apartado && estaALaVista(pedida.apartado)) {
+    seguir(pedida)
+    return 'Te lo marqué en la pantalla.'
+  }
+  return undefined
+}
+
+const APARTADO_BORRADOR = 'ventas.borrador-asistente'
+
+/** Lleva a Ventas, donde espera la orden que llenó el Asistente, y la señala */
+function verBorrador() {
+  const { pantalla, asistenteFlotante, llevarConAsistente } = useNavegacion.getState()
+  if (pantalla !== 'ventas' || !asistenteFlotante) llevarConAsistente('ventas')
+  void senalar(APARTADO_BORRADOR)
+}
+
+/** Lleva a la tarjeta del producto en Inventario y la señala */
+function verProducto(producto: ProductoCable) {
+  const { pantalla, asistenteFlotante, llevarConAsistente } = useNavegacion.getState()
+  if (pantalla !== 'inventario' || !asistenteFlotante) llevarConAsistente('inventario')
+  void senalar(`inventario.producto-${producto.uuid}`)
+}
+
+/**
+ * Un mensaje (del Asistente o del operador), con cada producto del inventario que nombra convertido
+ * en un enlace a su tarjeta ("Fideos Anita" → Inventario, marcado). El resto queda igual.
+ */
+function TextoConProductos({ texto, prefijo, indice }: { texto: string; prefijo: string; indice: number }) {
+  const productos = useInventario((estado) => estado.productos)
+  let numero = 0
+  return (
+    <>
+      {trozosConProductos(texto, productos).map((trozo, i) => {
+        if (!trozo.producto) return <span key={i}>{trozo.texto}</span>
+        const producto = trozo.producto
+        numero += 1
+        return (
+          <button
+            key={i}
+            type="button"
+            className={estilos.enlaceProducto}
+            data-ai-id={`${prefijo}.producto-${indice}-${numero}`}
+            title={`Ver ${producto.nombre} en Inventario`}
+            onClick={() => verProducto(producto)}
+          >
+            {trozo.texto}
+          </button>
+        )
+      })}
+    </>
+  )
+}
 
 /** Para empezar sin tener que pensar qué escribir: un toque y se pregunta */
 const PREGUNTAS_SUGERIDAS = [
@@ -110,14 +208,23 @@ function PedirLlave({ alGuardar }: { alGuardar: (estado: EstadoAsistenteCable) =
  */
 function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' }) {
   const proyecto = useSesion((estado) => estado.proyecto)
-  const irA = useNavegacion((estado) => estado.irA)
+  const esReal = useSesion((estado) => estado.esReal)
   const { mensajes, enviando, usarProyecto, agregar, marcarValorada, setEnviando } = useConversacion()
+  const borradorPendiente = useBorradorAsistente((estado) => estado.borrador)
+  const proyectoInventario = useInventario((estado) => estado.proyecto)
+  const iniciarInventario = useInventario((estado) => estado.iniciar)
   const [pregunta, setPregunta] = useState('')
   const final = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (proyecto) usarProyecto(proyecto)
   }, [proyecto, usarProyecto])
+
+  // Los nombres del inventario, para enlazar los productos que nombra el Asistente. Sin red se
+  // usan los guardados en el dispositivo; si no hay, el texto se muestra sin enlaces
+  useEffect(() => {
+    if (proyecto && proyectoInventario !== proyecto) void iniciarInventario(proyecto).catch(() => {})
+  }, [proyecto, proyectoInventario, iniciarInventario])
 
   // Lo último dicho siempre a la vista, sin tener que bajar a buscarlo
   useEffect(() => {
@@ -138,12 +245,25 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
       const respuesta = await pedir<RespuestaAsistenteCable>('POST', '/api/asistente/preguntar', {
         mensaje: texto,
         historial,
+        // Para que pueda decir "toca este botón" donde el operador está
+        pantalla_actual: useNavegacion.getState().pantalla,
       })
+      // Pidió registrar una venta: el Asistente la deja llenada en Ventas para que la confirme
+      const items = respuesta.borrador?.items ?? []
+      if (items.length > 0 && proyecto) {
+        useBorradorAsistente.getState().poner(proyecto, items, respuesta.borrador?.para)
+        verBorrador()
+      }
       agregar({
         quienHabla: 'asistente',
         texto: respuesta.respuesta,
-        acciones: respuesta.acciones,
+        acciones: items.length > 0 ? [] : respuesta.acciones,
         idRespuesta: respuesta.id_respuesta,
+        conBorrador: items.length > 0,
+        hecho:
+          items.length > 0
+            ? 'La orden está en Ventas, arriba. Hasta que toques «Guardar orden» no se guarda nada.'
+            : hacerSolo(respuesta.acciones),
       })
     } catch (error) {
       const aviso =
@@ -158,6 +278,11 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
     }
   }
 
+  const dictado = useDictado({
+    alEscuchar: setPregunta,
+    alTerminar: (texto) => void preguntar(texto),
+  })
+
   const valorar = (indice: number, util: boolean) => {
     const mensaje = mensajes[indice]
     if (!mensaje.idRespuesta || mensaje.valorada) return
@@ -168,7 +293,6 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
     )
   }
 
-  const esPantalla = (pantalla: string): pantalla is Pantalla => PANTALLAS.some((p) => p.clave === pantalla)
   const soloSaludo = mensajes.length === 1
 
   return (
@@ -183,18 +307,23 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
             <p
               className={`${estilos.burbuja} ${mensaje.quienHabla === 'asistente' ? estilos.burbujaIa : estilos.burbujaOperador}`}
             >
-              {mensaje.texto}
+              <TextoConProductos texto={mensaje.texto} prefijo={prefijo} indice={indice} />
             </p>
+            {mensaje.hecho && <Nota>{mensaje.hecho}</Nota>}
+            {mensaje.conBorrador && borradorPendiente?.proyecto === proyecto && (
+              <Boton aiId={`${prefijo}.ver-borrador-${indice}`} variante="secundario" onClick={verBorrador}>
+                Revisar la orden por guardar
+              </Boton>
+            )}
             {mensaje.acciones?.map((accion) => {
               const destino = accion.pantalla
-              // Solo pantallas que existen: lo que el modelo invente no se muestra
               if (!esPantalla(destino)) return null
               return (
                 <Boton
                   key={destino}
                   aiId={`${prefijo}.accion-${indice}-${destino}`}
                   variante="secundario"
-                  onClick={() => irA(destino)}
+                  onClick={() => seguir(accion)}
                 >
                   {accion.etiqueta}
                 </Boton>
@@ -274,15 +403,34 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
           maxLength={500}
           autoComplete="off"
         />
-        <Boton
-          tipo="submit"
-          aiId={`${prefijo}.enviar`}
-          variante="ia"
-          deshabilitado={enviando || !pregunta.trim()}
-        >
-          Enviar pregunta
-        </Boton>
+        <div className={estilos.botonesPregunta}>
+          {dictado.soportado && (
+            <Boton
+              aiId={`${prefijo}.hablar`}
+              variante="secundario"
+              deshabilitado={enviando && !dictado.escuchando}
+              presionado={dictado.escuchando}
+              onClick={dictado.escuchando ? dictado.detener : dictado.empezar}
+            >
+              {dictado.escuchando ? 'Listo, enviar' : 'Hablar'}
+            </Boton>
+          )}
+          <Boton
+            tipo="submit"
+            aiId={`${prefijo}.enviar`}
+            variante="ia"
+            deshabilitado={enviando || dictado.escuchando || !pregunta.trim()}
+          >
+            Enviar pregunta
+          </Boton>
+        </div>
       </form>
+      {dictado.escuchando && <Nota>Te escucho… habla y toca «Listo, enviar» al terminar.</Nota>}
+      {dictado.aviso && <Nota>{dictado.aviso}</Nota>}
+      {/* La voz no se puede seudonimizar: en un negocio real se avisa a dónde va (ADR-049) */}
+      {dictado.soportado && esReal && (
+        <Nota>Si hablas, tu navegador envía tu voz a Google o Microsoft para pasarla a texto.</Nota>
+      )}
     </>
   )
 }
@@ -348,12 +496,15 @@ export function Asistente() {
 }
 
 /**
- * La ventana flotante: el mismo Asistente sobre la pantalla actual. No tapa la barra ni el
- * menú, y sigue abierta al cambiar de pantalla. En teléfono ocupa la mitad de abajo.
+ * La ventana: el mismo Asistente junto a la pantalla de trabajo, y sigue abierta al cambiar
+ * de pantalla. En pantalla ancha es una columna a la derecha que no tapa nada; en teléfono y
+ * tablet es una hoja abajo que se achica a su barra para llenar los datos de atrás.
  */
 export function AsistenteFlotante() {
   const irA = useNavegacion((estado) => estado.irA)
   const cerrar = useNavegacion((estado) => estado.cerrarAsistenteFlotante)
+  const achicado = useNavegacion((estado) => estado.asistenteAchicado)
+  const alternarAchicado = useNavegacion((estado) => estado.alternarAchicado)
   const [estado] = useEstadoAsistente()
   const panel = useRef<HTMLElement>(null)
 
@@ -366,7 +517,7 @@ export function AsistenteFlotante() {
   return (
     <section
       ref={panel}
-      className={estilos.ventana}
+      className={`${estilos.ventana} ${achicado ? estilos.achicada : ''}`}
       data-ai-id="asistente-ventana"
       role="dialog"
       aria-modal="false"
@@ -378,15 +529,24 @@ export function AsistenteFlotante() {
           Asistente
         </h2>
         <div className={estilos.accionesVentana}>
-          <Boton aiId="asistente-ventana.ampliar" variante="discreto" onClick={() => irA('asistente')}>
-            Pantalla completa
-          </Boton>
+          {/* Solo en la hoja de abajo: en la columna de la derecha no tapa nada */}
+          <span className={estilos.soloHoja}>
+            <Boton aiId="asistente-ventana.achicar" variante="discreto" onClick={alternarAchicado}>
+              {achicado ? 'Agrandar' : 'Achicar'}
+            </Boton>
+          </span>
+          {/* En el teléfono la hoja ya ocupa casi todo: el apartado completo sigue en el menú */}
+          <span className={estilos.noEnTelefono}>
+            <Boton aiId="asistente-ventana.ampliar" variante="discreto" onClick={() => irA('asistente')}>
+              Pantalla completa
+            </Boton>
+          </span>
           <Boton aiId="asistente-ventana.cerrar" variante="discreto" onClick={cerrar}>
             Cerrar
           </Boton>
         </div>
       </header>
-      {sinLlave ? (
+      {achicado ? null : sinLlave ? (
         <div className={estilos.cuerpoVentana}>
           <Nota>Falta configurar la llave del Asistente.</Nota>
           <Boton aiId="asistente-ventana.configurar" variante="ia" onClick={() => irA('asistente')}>

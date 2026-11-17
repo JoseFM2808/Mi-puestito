@@ -5,7 +5,9 @@
 - Toda llamada a un modelo pasa por `ia.servicio` (capa agnóstica, AGENTS.md).
 - Lo que sale hacia el proveedor va seudonimizado (ADR-034): el modelo ve
   "Cliente 1", el operador lee "Sra. Flora". También el historial.
-- Las acciones que propone son botones que el operador decide tocar (ADR-037).
+- Las acciones que propone son botones que el operador decide tocar (ADR-037); si el
+  operador pidió ir o hacer algo, la primera se abre sola (ADR-047). Solo navegar.
+- Puede LLENAR una orden (`borrador`) que el operador revisa y guarda (ADR-049); nunca la guarda.
 - No depende del router del Dashboard (D-06): usa su servicio de cálculo y,
   si no está disponible, responde igual pero sin cifras.
 """
@@ -19,7 +21,8 @@ from sqlalchemy.orm import Session
 import seguridad
 from database import obtener_sesion
 from fechas import dia_peruano
-from ia import configuracion, llave_local, registro
+from ia import borrador, configuracion, llave_local, registro
+from ia.acciones import marcar_automatica, pide_ir_o_hacer
 from ia.privacidad import seudonimizar_resumen
 from ia.servicio import AsistenteNoDisponible, armar_mensajes, preguntar
 from seguridad import proyecto_autenticado
@@ -70,7 +73,26 @@ def _resumen_del_proyecto(sesion: Session) -> dict:
         resumen["clientes_que_deben"] = _clientes_que_deben(sesion)
     except Exception:  # noqa: BLE001 — sin Ventas, se responde con lo que hay
         sesion.rollback()
+    try:
+        resumen["productos_del_inventario"] = _nombres_de_productos(sesion)
+    except Exception:  # noqa: BLE001 — sin Inventario, la orden se llena con el nombre que dijo el operador
+        sesion.rollback()
     return resumen
+
+
+MAX_PRODUCTOS_EN_CONTEXTO = 80
+
+
+def _nombres_de_productos(sesion: Session) -> list[str]:
+    """Solo los nombres (no stock ni precios): para que una orden llenada use el nombre
+    exacto del producto ("Leche Gloria", no "leches gloria") y la app lo enlace (ADR-049)."""
+    from sqlalchemy import select
+
+    from modules.inventario.models import Producto
+
+    return list(
+        sesion.scalars(select(Producto.nombre).order_by(Producto.nombre).limit(MAX_PRODUCTOS_EN_CONTEXTO))
+    )
 
 
 @router.post("/preguntar", response_model=RespuestaSalida)
@@ -81,6 +103,8 @@ async def preguntar_endpoint(
 ) -> RespuestaSalida:
     # El Asistente responde con el mismo resumen que ve el operador: no inventa cifras
     resumen = _resumen_del_proyecto(sesion)
+    if datos.pantalla_actual:
+        resumen["pantalla_actual"] = datos.pantalla_actual
     anonimo, alias = seudonimizar_resumen(resumen)
     contexto = json.dumps(anonimo, ensure_ascii=False)
     pregunta = alias.ocultar_en_texto(datos.mensaje)
@@ -100,9 +124,29 @@ async def preguntar_endpoint(
         respuesta_del_modelo=respuesta.texto,
         modelo=respuesta.modelo,
     )
+    # Orden llenada (ADR-049): solo si el operador pidió registrar (ahora, o en su mensaje anterior:
+    # "regístrala por mí"), y solo con precios que él dijo
+    del_operador = [t.texto for t in datos.historial if t.rol == "operador"]
+    lo_pidio = pide_ir_o_hacer(datos.mensaje) or bool(del_operador and pide_ir_o_hacer(del_operador[-1]))
+    items = []
+    if respuesta.borrador and lo_pidio:
+        dicho = " ".join([datos.mensaje, *del_operador])
+        items = [
+            {**item, "nombre": alias.reidentificar(item["nombre"])}
+            for item in borrador.validar(respuesta.borrador, dicho)
+        ]
+    texto = alias.reidentificar(respuesta.texto)
+    # Nunca "revisa la orden" si no hay orden llenada: el operador la buscaría y no estaría
+    if not items and borrador.HABLA_DE_UNA_ORDEN_LLENADA.search(texto):
+        texto = borrador.PEDIR_PRODUCTOS
     return RespuestaSalida(
-        respuesta=alias.reidentificar(respuesta.texto),
-        acciones=respuesta.acciones,
+        respuesta=texto,
+        acciones=marcar_automatica(datos.mensaje, respuesta.acciones),
+        borrador=(
+            {"items": items, "para": alias.reidentificar(respuesta.para) if respuesta.para else None}
+            if items
+            else None
+        ),
         id_respuesta=id_respuesta,
         modelo=respuesta.modelo,
     )

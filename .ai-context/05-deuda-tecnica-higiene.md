@@ -16,6 +16,10 @@
 | D-21 | P3 | El RUC se escribe a mano | Un RUC válido en forma pero inexistente pasa | Búsqueda en SUNAT: requiere elegir un servicio externo | `Modulo-Compras.md` |
 | D-22 | P3 | Inventario sin costo, vencimientos ni código de barras | Las compras no alimentan el costo; nada avisa antes de que algo venza | Costo desde la última compra; alertas de vencimiento; búsqueda por código | ADR-045 |
 | D-23 | P2 | La copia de respaldo va sin cifrar | Quien tenga el archivo ve clientes, fiados y ventas | Cifrar con una contraseña que elija el vendedor; decidir qué pasa si la olvida | ADR-044 |
+| D-26 | P3 | La conversación con el Asistente se borra al recargar o al actualizar la app | Se pierde el hilo si la app se recarga a mitad de una tarea | Guardarla en `sessionStorage` (dura la sesión) choca con "nunca se guarda en el dispositivo" (ADR-046): lo decide el owner | ADR-046 |
+| D-27 | P3 | Dos fuentes de color: `docs/06-diseno/tokens.css` (lo que importa el frontend) y `docs/design-system/tokens/tokens.json` (núcleo del estándar) | Un cambio hecho en uno solo los separa; `ds-validar` avisa en el sync | Con el OK del owner, mover `06-diseno/` a `docs/design-system/` y que el alias `@tokens` apunte a `tokens/tokens.css` generado más los tokens propios del producto | ADR-048 |
+| D-28 | P3 | El Asistente solo llena órdenes de venta | Compras, pagos de fiado o mermas aún se escriben a mano | Ampliar el borrador (ADR-049) por tipo: misma regla de confirmar antes de guardar | ADR-049 |
+| D-29 | P3 | El dictado envía la voz a Google o Microsoft y necesita internet | Privacidad de los nombres dichos en voz alta; sin red no hay voz | Dictado local (Whisper pequeño) cuando el equipo del vendedor lo aguante | ADR-049 |
 | D-24 | P3 | "Ya le pagué" cierra el pedido pero no descuenta de la caja | La caja no refleja lo pagado a proveedores | Definir el flujo de caja (efectivo inicial, egresos) | `Modulo-Dashboard.md` |
 
 ## 2. Hechos
@@ -50,6 +54,12 @@
 | — | 2026-11-07 | Pantalla de Inventario: alta, conteo, merma, precio y mínimo, historial; offline | `modules/inventario/almacen.test.ts`; navegador: 10 → 8.5 → 8 kg, compra recibida +50 kg, conteo sin red entregado; sin desborde a 375 px |
 | — | 2026-11-07 | `ia.evaluar` abortaba en la consola de Windows al imprimir una falla | `sys.stdout.reconfigure` en `main` |
 | — | 2026-11-07 | Ventas elige productos del inventario: cantidad en su unidad, monto sugerido y stock descontado | `almacen.test.ts`; navegador: 2.5 kg a S/ 4.00 → S/ 10.00, stock 58 → 55.5 kg y de vuelta a 58 al quitarlo |
+| — | 2026-11-08 | El Asistente abre la pantalla que se le pide y señala botones y partes de ella; la conversación queda al lado del formulario (ADR-047) | `tests/test_asistente.py`, `senalar.test.ts`, `navegacion.test.ts`; `ia.evaluar` 23–24/24; navegador a 1280, 887×347, 768 y 375 px: "Quiero registrar una compra" abre Compras, "¿Dónde está el botón…?" marca Nuevo pedido, el buscador conserva lo escrito al preguntar |
+| — | 2026-11-08 | "¿Dónde veo a todos los que me deben?" llevaba a la Caja en vez de Fiados | Guía del Asistente; caso nuevo en `ia.evaluar` |
+| — | 2026-11-08 | En una pantalla baja la ventana del Asistente escondía su cabecera y la conversación | Columna a todo el alto y caja de escribir en una fila; navegador a 887×347 px |
+| — | 2026-11-08 | El Asistente llena órdenes de venta que el operador revisa y guarda; se le puede hablar; los productos que se nombran llevan a su inventario (ADR-049) | `tests/test_asistente.py` (orden llenada, precios del operador, líneas de control), `nombres.test.ts`, `dictado.test.ts`; `ia.evaluar` 28/29; navegador: "2 fideos anita a 4.80" → Orden 4 por S/ 9.60 y stock 30 → 28 |
+| — | 2026-11-08 | Prueba del owner: "regístrala por mí" no contaba, "revisa la orden" sin orden, nombre de la clienta perdido, "ACCION: ventas" visible | Regla por raíz del verbo y mensaje anterior; texto corregido sin orden; `PARA:`; red final de líneas de control; navegador: orden "Bertha" con Arroz Costeño 1 kg a S/ 4.20 |
+| — | 2026-11-08 | La demo no traía inventario | 7 productos sembrados con movimiento `stock_inicial` |
 
 ## 3. Resueltos en la auditoría inicial (2026-09-27, verificados en Staging)
 

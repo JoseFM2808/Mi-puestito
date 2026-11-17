@@ -12,3 +12,29 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Con el Asistente en hoja abajo (teléfono y tablet de pie), el contenido gana espacio al final:
+   todo campo se puede subir por encima de la hoja y llenar mientras se conversa (ADR-047) */
+@media (max-width: 600px) {
+  .conHoja .contenido {
+    padding-bottom: 72vh;
+  }
+
+  /* La hoja sube con letra muy grande (componentes/asistente): el espacio también */
+  :global(html[data-letra='muygrande']) .conHoja .contenido {
+    padding-bottom: 85vh;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 999px) and (min-height: 641px) {
+  .conHoja .contenido {
+    padding-bottom: 55vh;
+  }
+}
+
+@media (max-width: 999px) and (min-height: 641px), (max-width: 600px) {
+  .conHojaAchicada .contenido {
+    /* Alcanza también para la barra de dos filas (título arriba) con letra muy grande */
+    padding-bottom: calc(var(--tactil-barra) * 2 + var(--esp-4));
+  }
+}

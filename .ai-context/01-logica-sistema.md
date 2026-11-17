@@ -161,19 +161,66 @@ sequenceDiagram
         S->>M: chat/completions (≤ 12 s por modelo)
         M-->>S: texto o error → siguiente modelo
     end
-    S-->>R: texto + líneas "ACCION: ir_a <pantalla>"
-    R->>R: acciones de la lista blanca → botones · registro opt-in (seudonimizado)
+    S-->>R: texto + "ACCION: ir_a <pantalla>" o "ACCION: resaltar <apartado>"
+    R->>R: acciones de la lista blanca · la 1.ª automatica si pidió ir/hacer o preguntó dónde (ADR-047)
     R-->>UI: {respuesta con nombres reales, acciones, id_respuesta, modelo}
-    UI-->>UI: botón "Ir a Ventas" (el operador decide) · "Me sirvió" / "No me sirvió"
+    UI-->>UI: automatica → abre la pantalla y marca la parte · si no, botón · "Me sirvió"
 ```
 
-Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y una acción sugerida
-nunca se ejecuta sola (ADR-037). Sin Dashboard disponible responde igual, avisando que no tiene cifras.
+Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y solo navega y señala:
+abre una pantalla o marca una parte de ella, nunca llena ni guarda datos (ADR-037, ADR-047). Sin Dashboard disponible responde igual, avisando que no tiene cifras.
 
 El Asistente tiene dos formas (ADR-046): **apartado propio** (pantalla `asistente` en el menú, `#asistente`) y **ventana
 flotante** (botón de la barra), que queda sobre la pantalla actual y sigue abierta al navegar: si sugiere "Ir a Fiados" y
 el operador lo toca, Fiados aparece detrás de la ventana. Ambas comparten la conversación de `stores/conversacion.ts`,
 separada por negocio y solo en memoria: nunca se guarda en el dispositivo. Al empezar ofrece preguntas sugeridas.
+
+**Trabajar con el Asistente a la vista (ADR-047).** La ventana va junto a la pantalla, no encima: en pantalla ancha (o
+teléfono acostado) es una columna a la derecha; en teléfono y tablet de pie, una hoja abajo que se **achica** a su barra,
+y el contenido gana espacio al final para que todo campo quede por encima. Llevar a otra pantalla desde el apartado pasa
+la conversación a la ventana (`llevarConAsistente`): nunca se pierde de vista. La app actúa sola solo en dos casos, que
+decide una regla fija sobre lo que escribió el operador (`ia/acciones.py`, nunca el modelo):
+
+| El operador… | Ejemplo | La app |
+|---|---|---|
+| pide ir o hacer algo | "Quiero registrar una compra" | abre Compras con el Asistente al lado: "Abrí Compras. Sigo aquí…" |
+| pregunta dónde está algo o qué tocar | "¿Qué botón toco para hacer un pedido?" | abre la pantalla y **marca** `compras.nuevo-pedido` 4 s |
+| pregunta una cifra o cómo se hace algo | "¿Qué pedido llega mañana?" | solo deja el botón ("Ir a…", "Muéstrame…") |
+
+El modelo señala con `ACCION: resaltar <apartado>`: el apartado es un `data-ai-id` real de la lista blanca `APARTADOS`
+(16 partes, solo lo visible al abrir cada pantalla; un test verifica que existan en el frontend). La app lo trae a la
+vista debajo de la barra y lo marca con el color del Asistente (`componentes/asistente/senalar.ts`). En la pantalla abierta
+solo se marca si esa parte está dibujada en ese momento, y el aviso dice solo lo que pasó. El backend recibe además
+`pantalla_actual` para decir "toca este botón" donde el operador está.
+
+La regla que decide qué hace sola la app reconoce **toda forma del verbo** ("registrar", "anota", "regístrala por mí",
+"¿cómo registro…?"), excepto el pasado ("dime que ya registraste…"). Una pregunta de cifras ("¿cuánto vendí hoy?") no
+mueve nada. Ante "¿cómo…?" el Asistente da los pasos con los nombres de los botones y ofrece hacerlo.
+
+**El Asistente llena la orden; el operador la guarda (ADR-049).** Si el operador pide registrar una venta y dice qué
+lleva, el modelo escribe una línea por producto y, si dijo para quién, una línea `PARA`:
+
+```
+VENTA: 1 x Arroz Costeño
+PARA: Sra. Bertha
+```
+
+`ia/borrador.py` la lee (tolera "1 kg x", "1 kilo de" y precios de relleno como `a <precio>`) y la app abre Ventas con la
+tarjeta **"El Asistente llenó esta orden"**: nombre de la orden, producto, cantidad y precio, todo editable, y nada
+guardado hasta tocar **«Guardar orden»**. Invariantes, ninguna depende del modelo:
+
+- Solo hay orden llenada si el operador pidió registrar, en este mensaje o en el anterior ("regístrala por mí").
+- **Un precio que el operador no dijo se descarta**: la línea queda con el precio del inventario, o en blanco.
+- Cada línea se enlaza con su producto si el nombre calza, sin importar mayúsculas, tildes ni plurales
+  (`inventario/nombres.ts`): así descuenta stock al guardarse.
+- Si el texto del modelo habla de "revisa la orden" y no hay orden llenada, se reemplaza por un pedido de los productos:
+  el operador nunca busca una orden que no existe. Ninguna línea de control (`ACCION`, `VENTA`, `PARA`) llega a la pantalla.
+- El verificador de cifras acepta también el **producto** de dos cifras del operador (2 × 4.80 = 9.60).
+
+Para escribir bien los nombres, el modelo recibe `productos_del_inventario`: solo los nombres, sin stock ni precios.
+En la conversación, cada producto del inventario que se nombra (lo diga el Asistente o el operador) es un **enlace** a su
+tarjeta en Inventario, que se abre y se marca. Se le puede **hablar** al Asistente (botón «Hablar»): el dictado del
+navegador escribe lo entendido mientras se habla y lo envía al terminar.
 
 **Verificador de cifras (ADR-042):** cada monto de la respuesta debe estar en el contexto o en lo que dijo el operador. Si
 un modelo inventa uno, se prueba el siguiente; si todos fallan, se responde con un mensaje de respaldo y el botón a la Caja.

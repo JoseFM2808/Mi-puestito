@@ -39,6 +39,8 @@ interface EstadoNavegacion {
    * de pantalla: el operador ve la app mientras el Asistente lo guía o actúa en ella.
    */
   asistenteFlotante: boolean
+  /** La ventana achicada a su barra de título: deja ver y llenar la pantalla de atrás */
+  asistenteAchicado: boolean
   irA: (pantalla: Pantalla, opciones?: { ventaRapida?: boolean }) => void
   alternarMenu: () => void
   cerrarMenu: () => void
@@ -46,6 +48,12 @@ interface EstadoNavegacion {
   cerrarAsistenteFlotante: () => void
   /** Del apartado a la ventana: vuelve a la pantalla de trabajo con el Asistente encima */
   asistenteAVentana: () => void
+  /**
+   * Lleva a una pantalla SIN perder la conversación: el Asistente queda en ventana, a la
+   * vista y abierto, para seguir hablando mientras se llenan los datos (ADR-047).
+   */
+  llevarConAsistente: (pantalla: Pantalla) => void
+  alternarAchicado: () => void
   ventaRapidaAtendida: () => void
 }
 
@@ -55,6 +63,7 @@ export const useNavegacion = create<EstadoNavegacion>()((set, get) => ({
   abrirVentaRapida: false,
   menuAbierto: false,
   asistenteFlotante: false,
+  asistenteAchicado: false,
   irA: (pantalla, opciones) => {
     // pushState y no replaceState: el botón Atrás de la tablet debe volver a la pantalla anterior
     if (window.location.hash !== `#${pantalla}`) window.history.pushState(null, '', `#${pantalla}`)
@@ -71,12 +80,19 @@ export const useNavegacion = create<EstadoNavegacion>()((set, get) => ({
   },
   alternarMenu: () => set((estado) => ({ menuAbierto: !estado.menuAbierto })),
   cerrarMenu: () => set({ menuAbierto: false }),
-  alternarAsistenteFlotante: () => set((estado) => ({ asistenteFlotante: !estado.asistenteFlotante })),
+  alternarAsistenteFlotante: () =>
+    set((estado) => ({ asistenteFlotante: !estado.asistenteFlotante, asistenteAchicado: false })),
   cerrarAsistenteFlotante: () => set({ asistenteFlotante: false }),
   asistenteAVentana: () => {
     get().irA(get().anterior)
-    set({ asistenteFlotante: true })
+    set({ asistenteFlotante: true, asistenteAchicado: false })
   },
+  llevarConAsistente: (pantalla) => {
+    if (pantalla === 'asistente') return get().irA('asistente')
+    get().irA(pantalla)
+    set({ asistenteFlotante: true, asistenteAchicado: false })
+  },
+  alternarAchicado: () => set((estado) => ({ asistenteAchicado: !estado.asistenteAchicado })),
   ventaRapidaAtendida: () => set({ abrirVentaRapida: false }),
 }))
 

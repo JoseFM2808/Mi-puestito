@@ -7,7 +7,7 @@ revisión sí lo es: todo monto de la respuesta debe existir en los datos o en l
 que dijo el operador. Si no, la respuesta se descarta.
 
 Se permite aritmética solo con cifras que dio el operador ("vendí 120 y me deben
-45" → 165). Una suma entre cifras del contexto se rechaza a propósito: con tantas
+45" → 165; "2 fideos a 4.80" → 9.60). Una suma entre cifras del contexto se rechaza a propósito: con tantas
 cifras, casi cualquier monto inventado saldría de alguna combinación (45 − 32.50
 "justificaría" el S/ 12.50 inventado de este mes).
 """
@@ -52,5 +52,6 @@ def cifras_no_respaldadas(respuesta: str, contexto: str, dicho_por_el_operador: 
     permitidos = _numeros(contexto) | del_operador | {Decimal("0.00")}
     for a in del_operador:
         for b in del_operador:
-            permitidos |= {a + b, abs(a - b)}
+            # El producto es cantidad × precio ("2 fideos a 4.80" → 9.60), lo más común al vender
+            permitidos |= {a + b, abs(a - b), (a * b).quantize(Decimal("0.01"))}
     return montos_en(respuesta) - permitidos

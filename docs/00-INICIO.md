@@ -37,7 +37,8 @@ App web tablet-first para vendedores informales en Perú, con un AI Companion in
 - [[Agentes-De-Desarrollo]] — roles de agentes IA en el desarrollo
 
 ### 6. Diseño
-- [[Design-System]] — tokens de diseño centralizados
+- [[Design-System]] — tokens de diseño centralizados (lo que importa el frontend)
+- [Núcleo de marca del estándar](design-system/README.md) — `tokens.json`, marca y `DESIGN.md` del estándar de Design System del workspace (ADR-048)
 
 ## Principios del proyecto
 

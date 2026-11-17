@@ -24,6 +24,7 @@ export function App() {
   const proyecto = useSesion((estado) => estado.proyecto)
   const pantalla = useNavegacion((estado) => estado.pantalla)
   const asistenteFlotante = useNavegacion((estado) => estado.asistenteFlotante)
+  const asistenteAchicado = useNavegacion((estado) => estado.asistenteAchicado)
 
   // La cola de cambios offline de ESTE proyecto se envía en segundo plano
   useEffect(() => {
@@ -33,8 +34,11 @@ export function App() {
 
   if (!autenticado) return <Login />
 
+  const conVentana = asistenteFlotante && pantalla !== 'asistente'
+  const claseVentana = conVentana ? (asistenteAchicado ? estilos.conHojaAchicada : estilos.conHoja) : ''
+
   return (
-    <div className={estilos.marco}>
+    <div className={`${estilos.marco} ${claseVentana}`}>
       <MenuLateral />
       <div className={estilos.contenido}>
         <BarraSuperior />
@@ -69,8 +73,8 @@ export function App() {
           </LimiteErrores>
         )}
       </div>
-      {/* Sobre la pantalla actual: el operador ve la app mientras el Asistente lo guía */}
-      {asistenteFlotante && pantalla !== 'asistente' && (
+      {/* Junto a la pantalla actual: el operador llena los datos mientras habla con el Asistente */}
+      {conVentana && (
         <LimiteErrores nombreModulo="Asistente" idModulo="asistente-ventana">
           <AsistenteFlotante />
         </LimiteErrores>
