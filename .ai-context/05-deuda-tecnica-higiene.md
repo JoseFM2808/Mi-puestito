@@ -15,7 +15,6 @@
 | D-30 | P3 | El código de barras se lee con un lector o se escribe | Sin lector, hay que tipear el código | Escanear con la cámara (`BarcodeDetector`, Chrome en Android) en el buscador y al crear el producto | D-22 |
 | D-23 | P2 | La copia de respaldo va sin cifrar | Quien tenga el archivo ve clientes, fiados y ventas | Cifrar con una contraseña que elija el vendedor. **Decidido (owner, 2026-11-17):** si la olvida, se le envía un enlace a su Gmail mediante una conexión con Google Cloud. Falta que el owner cree el proyecto de Google Cloud (credenciales OAuth / API de Gmail) | ADR-044 |
 | D-26 | P3 | La conversación con el Asistente se borra al recargar o al actualizar la app | Se pierde el hilo si la app se recarga a mitad de una tarea | **Decidido (owner, 2026-11-17):** la conversación se guarda y, como en los asistentes grandes, hay una memoria que se alimenta de los datos del usuario, con un límite que obliga a repensar qué conservar para mejorar con el tiempo. En desarrollo | ADR-046 |
-| D-28 | P3 | El Asistente solo llena órdenes de venta | Compras, pagos de fiado o mermas aún se escriben a mano | Ampliar el borrador (ADR-049) por tipo: misma regla de confirmar antes de guardar | ADR-049 |
 
 ## 2. Hechos
 
@@ -61,6 +60,9 @@
 | D-17 | 2026-11-17 | El `.exe` nuevo está publicado: release `v0.1.0` con `MiPuestito.exe` adjunto | Flujo `Ejecutable Windows` en verde; https://github.com/JoseFM2808/Mi-puestito/releases/tag/v0.1.0 |
 | D-24 | 2026-11-17 | La caja empieza con efectivo y Yape, suma lo cobrado y resta los gastos; "Ya le pagué" pide el medio y lo descuenta (ADR-051) | `tests/test_caja.py` (13 casos); navegador: abrir con S/ 50 y S/ 20 → S/ 451.50 y S/ 104.00; gasto de S/ 5 → S/ 446.50; el Asistente lo dice |
 | D-22 | 2026-11-17 | Costo de la última compra y ganancia por unidad, vencimientos con aviso en Inventario y en la Caja, búsqueda por código de barras | `test_compras.py`, `test_inventario.py`, `almacen.test.ts`; navegador: Leche "Costó S/ 3.60 · ganas S/ 0.60", "Vence el 20 nov.", Caja "2 productos vencen esta semana" |
+| D-28 | 2026-11-17 | El Asistente llena pagos de fiado, gastos y mermas en sus pantallas; el operador los guarda | `tests/test_asistente.py`; `ia.evaluar` 32/32; navegador: "la señora Rosa me pagó 10 soles por Yape" → Fiados con S/ 10.00 y Yape marcado; al guardar, Yape de la caja S/ 84 → S/ 94 |
+| — | 2026-11-17 | "señora Rosa" viajaba con el nombre real al proveedor y el pago se llenaba a otra clienta | La seudonimización reconoce las formas del tratamiento; test con 5 maneras de escribirlo |
+| — | 2026-11-17 | Todo abono entraba a la caja como efectivo | El pago de fiado pregunta efectivo o Yape |
 | — | 2026-11-17 | Módulo Gastos (Fase 7): del puesto o de la casa, por medio de pago, offline | `almacen.test.ts`; navegador |
 | D-10 | 2026-11-17 | El TestClient usa `httpx2`; el aviso de Starlette ahora es error | Control negativo: sin `httpx2` los tests no arrancan |
 | — | 2026-11-17 | Asistente: "Ir a la Caja" se corrige hacia la pantalla del tema y un pedido de hacer algo sin acción abre la suya | `tests/test_asistente.py`; `ia.evaluar` 30/30 |

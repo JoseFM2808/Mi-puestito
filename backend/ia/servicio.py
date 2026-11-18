@@ -13,7 +13,7 @@ cualquier API compatible con OpenAI a través de `compatible_openai.py`.
 import logging
 from dataclasses import dataclass, field
 
-from . import borrador, configuracion
+from . import borrador, configuracion, formularios
 from .acciones import APARTADOS, PANTALLAS, extraer, texto_si_solo_hubo_accion
 from .cifras import cifras_no_respaldadas
 from .compatible_openai import ProveedorCompatibleOpenAI, es_transitorio, motivo_error
@@ -90,6 +90,16 @@ VENTA: 1 x Arroz Costeño
 PARA: Sra. Lucía
 La app abre Ventas con la orden llenada. Dile en una frase que la revise y toque «Guardar orden». \
 En ese caso no agregues ACCION.
+- Si pide anotar que un cliente PAGÓ lo que debía, un GASTO o una MERMA (algo que se perdió o \
+venció), llénalo con UNA línea al final (el monto solo si el operador lo dijo; si no, déjalo vacío):
+ABONO: <cliente> | <monto> | <efectivo o yape>
+GASTO: <monto> | <categoría> | <efectivo o yape> | <puesto o hogar> | <nota>
+(categoría: alquiler, servicios, transporte, alimentacion, educacion u otros)
+MERMA: <cantidad> x <producto> | <qué pasó>
+Ejemplos: "anota que Cliente 9 me pagó 10 soles" → ABONO: Cliente 9 | 10.00 | efectivo
+"anota un gasto de 5 soles de pasaje" → GASTO: 5.00 | transporte | efectivo | puesto | pasaje
+"se vencieron 2 leches gloria" → MERMA: 2 x Leche Gloria | vencido
+Dile que lo revise y toque «Guardar». En ese caso no agregues ACCION.
 - Si preguntan CÓMO hacer algo, explica los pasos con los nombres exactos de los botones, en 2 o \
 3 frases, y ofrece hacerlo por él. Ejemplo para una venta: toca «Nueva orden», agrega lo que \
 lleva y toca «Cobrar en efectivo», «Cobrar con Yape o Plin» o «Fiar a un cliente»; o dime qué \
@@ -127,8 +137,13 @@ class RespuestaIA:
     borrador: list[dict[str, str | None]] = field(default_factory=list)
     # Para quién es esa orden ("Sra. Bertha"), si el operador lo dijo
     para: str | None = None
+    # Un pago de fiado, un gasto o una merma llenados para que el operador los confirme (D-28)
+    formulario: dict | None = None
 
 
+TEXTO_SI_SOLO_HUBO_FORMULARIO = (
+    "Te lo dejé llenado. Revísalo y toca «Guardar»: hasta entonces no se guarda nada."
+)
 TEXTO_SI_SOLO_HUBO_BORRADOR = "Te dejé la orden llenada en Ventas. Revísala y toca «Guardar orden»."
 
 
@@ -184,14 +199,15 @@ async def preguntar(
         # Primero las líneas VENTA (borrador, ADR-049) y luego las ACCION
         sin_borrador, items = borrador.separar(texto)
         sin_para, para = borrador.separar_para(sin_borrador)
-        limpio, acciones = extraer(sin_para)
+        sin_formulario, formulario = formularios.separar(sin_para)
+        limpio, acciones = extraer(sin_formulario)
         # Un monto inventado nunca llega al operador (ADR-042)
         if cifras_no_respaldadas(limpio, contexto_json, dicho_por_el_operador):
             alguna_cifra_rechazada = True
             registro.warning("Respuesta de %s descartada: monto sin respaldo en los datos", modelo)
             continue
-        if not limpio and items:
-            limpio = TEXTO_SI_SOLO_HUBO_BORRADOR
+        if not limpio and (items or formulario):
+            limpio = TEXTO_SI_SOLO_HUBO_BORRADOR if items else TEXTO_SI_SOLO_HUBO_FORMULARIO
         elif not limpio and acciones:
             limpio = texto_si_solo_hubo_accion(acciones)
         return RespuestaIA(
@@ -200,6 +216,7 @@ async def preguntar(
             acciones=acciones,
             borrador=items,
             para=para if items else None,
+            formulario=formulario,
         )
 
     if alguna_cifra_rechazada:

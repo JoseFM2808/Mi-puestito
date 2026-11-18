@@ -312,3 +312,27 @@ flowchart LR
   cuántos hay (`productos_por_vencer`) y lleva a Inventario.
 - **Código de barras**: se guarda al crear el producto y la búsqueda acepta el código exacto: un lector USB o Bluetooth
   lo "escribe" en el buscador. Escanear con la cámara queda pendiente (D-30).
+
+## 11. Pago de fiado, gasto y merma llenados por el Asistente (D-28)
+
+Mismo principio que la orden de venta (ADR-049): **el Asistente llena, el operador guarda**. Una línea por respuesta
+(`ia/formularios.py`):
+
+```
+ABONO: Cliente 3 | 10.00 | yape
+GASTO: 5.00 | transporte | efectivo | puesto | pasaje
+MERMA: 2 x Leche Gloria | vencido
+```
+
+La app abre Fiados, Gastos o Inventario con el formulario de siempre ya llenado y la frase "Lo llenó el Asistente:
+revísalo y toca «Guardar …». Aún no se guardó nada". Reglas fijas: solo si el operador pidió anotar; el monto solo si lo
+dijo; medio, ámbito y categoría de listas cerradas (un "otros" del modelo se corrige por palabras claras: pasaje →
+transporte, luz → servicios); el cliente se busca en la lista de los que deben y el producto en el inventario, sin
+importar plurales ni tildes; si no aparece, se dice.
+
+**Seudónimos y tratamientos**: "Sra. Rosa" también se oculta cuando llega como "señora Rosa", "sra rosa" o "doña Rosa"
+(y "Don Julio" como "señor Julio"). Sin esto, el modelo veía el nombre real y llenaba el pago a otra clienta (visto en
+`ia.evaluar`). El nombre solo, sin tratamiento, no se toca ("rosa" también es un color).
+
+**Abono por medio de pago**: el formulario de Fiados pregunta "Pagó en efectivo / Pagó por Yape o Plin"; antes todo
+abono entraba como efectivo y la caja lo sumaba en la gaveta aunque llegara por Yape.

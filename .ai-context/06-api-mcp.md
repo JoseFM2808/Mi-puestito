@@ -180,3 +180,10 @@ esquema de cada herramienta.
 - `POST /api/compras/ordenes/{uuid}/recepcion`: cada ítem acepta `vence_el` (fecha del lote), que viaja en
   `compra.item_recibido`.
 - `GET /api/dashboard/resumen` suma `productos_por_vencer`.
+
+### Formularios llenados por el Asistente (D-28)
+
+`RespuestaSalida.formulario` (`FormularioLlenado`, o `null`): `{tipo: abono|gasto|merma, cliente?, producto?, monto?,
+cantidad?, medio?: efectivo|yape_plin, ambito?: puesto|hogar, categoria?, nota?}`. Viene de una línea `ABONO:`,
+`GASTO:` o `MERMA:` del modelo; solo si el operador pidió anotar y con el monto solo si él lo dijo. La app lo abre en
+Fiados, Gastos o Inventario sin guardarlo.

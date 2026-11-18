@@ -27,13 +27,21 @@ def modelo(monkeypatch):
     async def falso(mensaje, contexto_json, historial=None):
         recibido["llamadas"].append({"mensaje": mensaje, "contexto": contexto_json, "historial": historial or []})
         texto = recibido["respuesta"](mensaje) if callable(recibido["respuesta"]) else recibido["respuesta"]
-        from ia import borrador
+        from ia import borrador, formularios
         from ia.acciones import extraer
 
         sin_borrador, items = borrador.separar(texto)
         sin_para, para = borrador.separar_para(sin_borrador)
-        limpio, acciones = extraer(sin_para)
-        return RespuestaIA(texto=limpio, modelo="modelo-de-prueba", acciones=acciones, borrador=items, para=para)
+        sin_formulario, formulario = formularios.separar(sin_para)
+        limpio, acciones = extraer(sin_formulario)
+        return RespuestaIA(
+            texto=limpio,
+            modelo="modelo-de-prueba",
+            acciones=acciones,
+            borrador=items,
+            para=para,
+            formulario=formulario,
+        )
 
     monkeypatch.setattr(router_asistente, "preguntar", falso)
     return recibido
@@ -103,6 +111,27 @@ def test_el_historial_tambien_viaja_seudonimizado(cliente, cabeceras_demo, model
     turnos = modelo["llamadas"][0]["historial"]
     assert [rol for rol, _ in turnos] == ["operador", "asistente"]
     assert all("flora" not in texto.lower() for _, texto in turnos)
+
+
+@pytest.mark.parametrize(
+    "como_lo_escribe",
+    ["la señora Rosa", "la Sra Rosa", "la SEÑORA rosa", "doña Rosa", "la senora   Rosa"],
+)
+def test_el_tratamiento_escrito_de_otra_forma_tambien_se_oculta(cliente, cabeceras_demo, modelo, como_lo_escribe):
+    """Caso real (ia.evaluar, 2026-11-17): "señora Rosa" viajaba con el nombre real y el pago se
+    llenaba a otra clienta. "Sra. Rosa" está guardada así en la demo."""
+    preguntar(cliente, cabeceras_demo, f"Anota que {como_lo_escribe} me pagó 10 soles")
+    enviado = modelo["llamadas"][0]["mensaje"]
+    assert "rosa" not in enviado.lower()
+    assert "Cliente " in enviado
+
+
+def test_el_nombre_solo_sin_tratamiento_no_se_toca():
+    from ia.privacidad import Seudonimos
+
+    seudonimos = Seudonimos()
+    seudonimos.cliente("Sra. Rosa")
+    assert seudonimos.ocultar_en_texto("Quiero el polo rosa") == "Quiero el polo rosa"
 
 
 def test_los_rotulos_genericos_no_se_ocultan():
@@ -892,3 +921,95 @@ def test_el_dataset_de_un_proyecto_sin_registro_esta_vacio(monkeypatch, tmp_path
 
     monkeypatch.setattr(rutas, "directorio_datos", lambda: tmp_path)
     assert dataset.armar("demo") == []
+
+
+# ---- D-28: pago de fiado, gasto y merma llenados por el Asistente ----
+
+
+def test_llena_el_pago_de_un_fiado_con_el_cliente_real(cliente, cabeceras_demo, modelo):
+    # "Sra. Rosa" es clienta de la demo: el modelo ve un seudónimo y el operador lee su nombre
+    def responder(mensaje):
+        codigo = mensaje.split("que ")[1].split(" me")[0]
+        return f"Revísalo y toca Guardar.\nABONO: {codigo} | 10.00 | yape"
+
+    modelo["respuesta"] = responder
+    datos = preguntar(cliente, cabeceras_demo, "Anota que Sra. Rosa me pagó 10 soles").json()
+    assert datos["formulario"]["tipo"] == "abono"
+    assert (datos["formulario"]["cliente"], datos["formulario"]["monto"], datos["formulario"]["medio"]) == (
+        "Sra. Rosa",
+        "10.00",
+        "yape_plin",
+    )
+    assert "ABONO" not in datos["respuesta"]
+
+
+def test_llena_un_gasto_y_descarta_el_monto_que_no_dijo(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Revísalo.\nGASTO: 7.50 | transporte | efectivo | puesto | mototaxi"
+    formulario = preguntar(cliente, cabeceras_demo, "Anota un gasto de pasaje").json()["formulario"]
+    assert formulario == {
+        "tipo": "gasto",
+        "cliente": None,
+        "producto": None,
+        "monto": None,  # el operador no dijo cuánto: lo escribe él
+        "cantidad": None,
+        "medio": "efectivo",
+        "ambito": "puesto",
+        "categoria": "transporte",
+        "nota": "mototaxi",
+    }
+
+
+def test_llena_una_merma(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Revísalo.\nMERMA: 2 x Leche Gloria | vencido"
+    pedido = "Anota que se vencieron 2 leches gloria"
+    formulario = preguntar(cliente, cabeceras_demo, pedido).json()["formulario"]
+    assert (formulario["tipo"], formulario["producto"], formulario["cantidad"], formulario["nota"]) == (
+        "merma",
+        "Leche Gloria",
+        "2",
+        "vencido",
+    )
+
+
+def test_sin_pedido_de_anotar_no_hay_formulario(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Te debe S/ 32.50.\nABONO: Sra. Rosa | 32.50 | efectivo"
+    datos = preguntar(cliente, cabeceras_demo, "¿Cuánto me debe la Sra. Rosa?").json()
+    assert datos["formulario"] is None
+    assert "ABONO" not in datos["respuesta"]
+
+
+@pytest.mark.parametrize(
+    ("linea", "esperado"),
+    [
+        ("GASTO: 5 | lujo | bitcoin | oficina", {"categoria": "otros", "medio": "efectivo", "ambito": "puesto"}),
+        ("GASTO: 20.00 | alimentacion | yape | hogar | almuerzo", {"categoria": "alimentacion", "ambito": "hogar"}),
+        ("MERMA: 0 x Pan | roto", None),
+        ("MERMA: Pan roto", None),
+        ("ABONO: | 10.00", None),
+    ],
+)
+def test_lectura_de_formularios_con_listas_cerradas(linea, esperado):
+    from ia.formularios import separar
+
+    texto, formulario = separar(f"Hola.\n{linea}")
+    assert texto == "Hola."
+    if esperado is None:
+        assert formulario is None
+    else:
+        assert {k: formulario[k] for k in esperado} == esperado
+
+
+@pytest.mark.parametrize(
+    ("pedido", "categoria"),
+    [
+        ("Anota un gasto de 5 soles de pasaje", "transporte"),
+        ("Anota que pagué la luz", "servicios"),
+        ("Anota un gasto del almuerzo de la casa", "alimentacion"),
+        ("Anota un gasto de 3 soles", "otros"),
+    ],
+)
+def test_un_gasto_en_otros_se_clasifica_por_lo_que_dijo_el_operador(pedido, categoria):
+    from ia.formularios import validar
+
+    formulario = {"tipo": "gasto", "monto": None, "categoria": "otros", "medio": "efectivo"}
+    assert validar(formulario, pedido)["categoria"] == categoria

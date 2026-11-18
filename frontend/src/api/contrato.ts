@@ -312,10 +312,25 @@ export interface BorradorVentaCable {
   para: string | null
 }
 
+/** Un pago de fiado, un gasto o una merma que el Asistente llenó; el operador lo guarda (D-28) */
+export interface FormularioLlenadoCable {
+  tipo: 'abono' | 'gasto' | 'merma'
+  cliente: string | null
+  producto: string | null
+  /** Solo si el operador lo dijo */
+  monto: string | null
+  cantidad: string | null
+  medio: 'efectivo' | 'yape_plin' | null
+  ambito: 'puesto' | 'hogar' | null
+  categoria: string | null
+  nota: string | null
+}
+
 export interface RespuestaAsistenteCable {
   respuesta: string
   acciones: AccionSugeridaCable[]
   borrador: BorradorVentaCable | null
+  formulario: FormularioLlenadoCable | null
   id_respuesta: string
   modelo: string
 }
@@ -589,11 +604,23 @@ export const CAMPOS_DEL_CONTRATO = {
     'respuesta',
     'acciones',
     'borrador',
+    'formulario',
     'id_respuesta',
     'modelo',
   ]),
   BorradorVenta: camposDe<BorradorVentaCable>()(['items', 'para']),
   ItemBorrador: camposDe<ItemBorradorCable>()(['nombre', 'cantidad', 'precio']),
+  FormularioLlenado: camposDe<FormularioLlenadoCable>()([
+    'tipo',
+    'cliente',
+    'producto',
+    'monto',
+    'cantidad',
+    'medio',
+    'ambito',
+    'categoria',
+    'nota',
+  ]),
   AccionSugerida: camposDe<AccionSugeridaCable>()(['tipo', 'pantalla', 'etiqueta', 'automatica', 'apartado']),
   AbonoSalida: camposDe<AbonoCable>()([
     'uuid',

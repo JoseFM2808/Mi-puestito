@@ -304,6 +304,10 @@
   compras o pagos exigirá ampliar este ADR. La voz depende de un tercero y de internet; el dictado local (Whisper) queda
   como opción futura. La demo trae 7 productos para practicar. `ia.evaluar` pasa a 29 casos, con la conversación real
   del owner incluida.
+- **Ampliación (2026-11-17, D-28)**: el mismo patrón llena un **pago de fiado**, un **gasto** o una **merma**
+  (`ia/formularios.py`, `RespuestaSalida.formulario`), con las mismas reglas: solo si el operador lo pidió, montos solo
+  suyos, listas cerradas, y nada se guarda hasta su botón. La seudonimización (ADR-034) reconoce las formas del tratamiento
+  ("señora Rosa" = "Sra. Rosa").
 
 ## ADR-050 · Una sola fuente de color: el sistema de diseño entero en `docs/design-system/` — Aceptada
 

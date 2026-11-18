@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ItemBorradorCable } from '../api/contrato'
+import type { FormularioLlenadoCable, ItemBorradorCable } from '../api/contrato'
 
 /**
  * La orden que el Asistente llenó y espera que el operador revise y guarde (ADR-049).
@@ -18,14 +18,34 @@ export interface BorradorAsistente {
   version: number
 }
 
+/** Pago de fiado, gasto o merma llenado (D-28): la pantalla de destino lo abre y lo quita */
+export interface FormularioAsistente {
+  proyecto: string
+  formulario: FormularioLlenadoCable
+  version: number
+}
+
 interface EstadoBorrador {
   borrador: BorradorAsistente | null
+  formulario: FormularioAsistente | null
+  ponerFormulario: (proyecto: string, formulario: FormularioLlenadoCable) => void
+  /** La pantalla lo toma una vez: lo abre en su formulario de siempre y lo quita de aquí */
+  tomarFormulario: (tipo: FormularioLlenadoCable['tipo'], proyecto: string) => FormularioLlenadoCable | null
   poner: (proyecto: string, items: ItemBorradorCable[], para?: string | null) => void
   descartar: () => void
 }
 
 export const useBorradorAsistente = create<EstadoBorrador>()((set, get) => ({
   borrador: null,
+  formulario: null,
+  ponerFormulario: (proyecto, formulario) =>
+    set({ formulario: { proyecto, formulario, version: (get().formulario?.version ?? 0) + 1 } }),
+  tomarFormulario: (tipo, proyecto) => {
+    const actual = get().formulario
+    if (!actual || actual.formulario.tipo !== tipo || actual.proyecto !== proyecto) return null
+    set({ formulario: null })
+    return actual.formulario
+  },
   poner: (proyecto, items, para = null) =>
     set({ borrador: { proyecto, items, para, version: (get().borrador?.version ?? 0) + 1 } }),
   descartar: () => set({ borrador: null }),

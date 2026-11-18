@@ -71,6 +71,8 @@ class Caso:
     pantalla_actual: str | None = None  # la pantalla que el operador tiene abierta
     # Orden que debe llenar (ADR-049): (producto, cantidad, precio o None) por item
     llena: tuple[tuple[str, str, str | None], ...] = ()
+    # Formulario que debe llenar (D-28): campos esperados, p. ej. {"tipo": "abono", "monto": "10.00"}
+    formulario: dict | None = None
 
 
 CASOS = [
@@ -90,7 +92,25 @@ CASOS = [
     # --- Navegación: debe ofrecer el botón correcto
     Caso("ir a vender", "Quiero registrar una venta", pantalla="ventas", abre_sola=True),
     Caso("registrar compra", "Quiero registrar una compra", pantalla="compras", abre_sola=True),
-    Caso("anotar un gasto", "Quiero anotar un gasto de 5 soles de pasaje", pantalla="gastos", abre_sola=True),
+    # --- Pago de fiado, gasto y merma llenados para que el operador los guarde (D-28)
+    Caso(
+        "anotar un gasto",
+        "Quiero anotar un gasto de 5 soles de pasaje",
+        formulario={"tipo": "gasto", "monto": "5.00", "categoria": "transporte", "medio": "efectivo"},
+        abre_sola=None,
+    ),
+    Caso(
+        "anotar un pago de fiado",
+        "Anota que la señora Rosa me pagó 10 soles por Yape",
+        formulario={"tipo": "abono", "cliente": "Sra. Rosa", "monto": "10.00", "medio": "yape_plin"},
+        abre_sola=None,
+    ),
+    Caso(
+        "anotar una merma",
+        "Anota que se vencieron 2 leches gloria",
+        formulario={"tipo": "merma", "producto": "Leche Gloria", "cantidad": "2"},
+        abre_sola=None,
+    ),
     # --- Llenar una orden para que el operador la confirme (ADR-049)
     Caso(
         "llenar una orden",
@@ -207,6 +227,17 @@ def revisar(caso: Caso, cuerpo: dict) -> list[str]:
     esperado = [(nombre.lower(), cantidad, precio) for nombre, cantidad, precio in caso.llena]
     if caso.llena and llenado != esperado:
         fallas.append(f"llenó {llenado or 'nada'} (esperaba {esperado})")
+    lleno = cuerpo.get("formulario") or {}
+    if caso.formulario:
+        distinto = {
+            clave: lleno.get(clave)
+            for clave, valor in caso.formulario.items()
+            if str(lleno.get(clave) or "").lower() != valor.lower()
+        }
+        if distinto:
+            fallas.append(f"llenó {distinto or 'nada'} (esperaba {caso.formulario})")
+    elif lleno:
+        fallas.append(f"llenó un formulario sin que se lo pidieran: {lleno.get('tipo')}")
     if not caso.llena and llenado:
         fallas.append(f"llenó una orden sin que se la pidieran: {llenado}")
     if caso.abre_sola and automaticas != [caso.pantalla]:

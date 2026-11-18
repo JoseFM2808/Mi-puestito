@@ -7,6 +7,8 @@ import {
   type MedioPago,
 } from '../../api/contrato'
 import { OperacionesRechazadas } from '../../componentes/sincronizacion/EstadoSincronizacion'
+import type { FormularioLlenadoCable } from '../../api/contrato'
+import { useBorradorAsistente } from '../../stores/borradorAsistente'
 import { useSincronizacion } from '../../sincronizacion/cola'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Campo, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
@@ -37,13 +39,24 @@ const CATEGORIAS: Record<AmbitoGasto, CategoriaGasto[]> = {
 
 const NOMBRE_MEDIO: Record<MedioPago, string> = { efectivo: 'Efectivo', yape_plin: 'Yape o Plin' }
 
-function FormularioGasto({ alTerminar }: { alTerminar: () => void }) {
+function FormularioGasto({
+  alTerminar,
+  inicial,
+}: {
+  alTerminar: () => void
+  /** Lo que llenó el Asistente (D-28); el operador lo revisa y lo guarda */
+  inicial?: FormularioLlenadoCable | null
+}) {
   const anotar = useGastos((estado) => estado.anotar)
-  const [monto, setMonto] = useState('')
-  const [medio, setMedio] = useState<MedioPago>('efectivo')
-  const [ambito, setAmbito] = useState<AmbitoGasto>('puesto')
-  const [categoria, setCategoria] = useState<CategoriaGasto>('otros')
-  const [descripcion, setDescripcion] = useState('')
+  const ambitoInicial: AmbitoGasto = inicial?.ambito ?? 'puesto'
+  const categoriaInicial = (inicial?.categoria ?? 'otros') as CategoriaGasto
+  const [monto, setMonto] = useState(inicial?.monto ?? '')
+  const [medio, setMedio] = useState<MedioPago>(inicial?.medio ?? 'efectivo')
+  const [ambito, setAmbito] = useState<AmbitoGasto>(ambitoInicial)
+  const [categoria, setCategoria] = useState<CategoriaGasto>(
+    CATEGORIAS[ambitoInicial].includes(categoriaInicial) ? categoriaInicial : 'otros',
+  )
+  const [descripcion, setDescripcion] = useState(inicial?.nota ?? '')
   const [error, setError] = useState<string | null>(null)
 
   const guardar = (evento: FormEvent) => {
@@ -63,6 +76,9 @@ function FormularioGasto({ alTerminar }: { alTerminar: () => void }) {
     <Tarjeta aiId="gastos.nuevo">
       <form className={estilos.formulario} onSubmit={guardar} noValidate>
         <TituloSeccion>Anotar un gasto</TituloSeccion>
+        {inicial && (
+          <Nota>Lo llenó el Asistente: revísalo y toca «Guardar gasto». Aún no se guardó nada.</Nota>
+        )}
         {error && (
           <Aviso tipo="error" aiId="gastos.nuevo-error">
             {error}
@@ -155,6 +171,17 @@ export function Gastos() {
   const pendientes = useSincronizacion((estado) => estado.pendientes)
   const [anotando, setAnotando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [llenado, setLlenado] = useState<FormularioLlenadoCable | null>(null)
+  const formularioAsistente = useBorradorAsistente((estado) => estado.formulario)
+
+  // El Asistente dejó un gasto llenado (D-28): se abre el formulario con sus datos, sin guardar
+  useEffect(() => {
+    if (!proyecto || formularioAsistente?.formulario.tipo !== 'gasto') return
+    const pedido = useBorradorAsistente.getState().tomarFormulario('gasto', proyecto)
+    if (!pedido) return
+    setLlenado(pedido)
+    setAnotando(true)
+  }, [proyecto, formularioAsistente])
 
   useEffect(() => {
     if (proyecto) iniciar(proyecto).catch(() => setError('No se pudieron leer los gastos.'))
@@ -192,7 +219,16 @@ export function Gastos() {
         </Aviso>
       )}
 
-      {anotando && <FormularioGasto alTerminar={() => setAnotando(false)} />}
+      {anotando && (
+        <FormularioGasto
+          key={llenado ? JSON.stringify(llenado) : 'nuevo'}
+          inicial={llenado}
+          alTerminar={() => {
+            setAnotando(false)
+            setLlenado(null)
+          }}
+        />
+      )}
 
       <div className={estilos.resumen}>
         <Tarjeta aiId="gastos.total-hoy">

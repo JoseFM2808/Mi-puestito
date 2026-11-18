@@ -110,19 +110,16 @@ _TEMA_CON_PANTALLA = [
 
 
 def corregir_destino(mensaje_del_operador: str, acciones: list[dict]) -> list[dict]:
-    """Cambia un "Ir a la Caja de hoy" por la pantalla del tema del mensaje, si es una sola."""
+    """Cambia una acción hacia la Caja de hoy ("Ir a la Caja" o señalar una de sus tarjetas, que
+    solo resumen) por la pantalla del tema del mensaje, si es una sola."""
     temas = {pantalla for patron, pantalla in _TEMA_CON_PANTALLA if patron.search(mensaje_del_operador)}
     if len(temas) != 1:
         return acciones
     (destino,) = temas
     if any(a["pantalla"] == destino for a in acciones):
         return acciones
-    return [
-        {"tipo": "ir_a", "pantalla": destino, "etiqueta": PANTALLAS[destino]}
-        if a["tipo"] == "ir_a" and a["pantalla"] == "caja"
-        else a
-        for a in acciones
-    ]
+    hacia_el_tema = {"tipo": "ir_a", "pantalla": destino, "etiqueta": PANTALLAS[destino]}
+    return [dict(hacia_el_tema) if a["pantalla"] == "caja" else a for a in acciones]
 
 
 # Para cuando el operador pide HACER algo y el modelo no propuso pantalla ("quiero registrar una

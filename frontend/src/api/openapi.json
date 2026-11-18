@@ -231,6 +231,22 @@
       "ocurrido_en"
     ]
   },
+  "FormularioLlenado": {
+    "required": [
+      "tipo"
+    ],
+    "properties": [
+      "ambito",
+      "cantidad",
+      "categoria",
+      "cliente",
+      "medio",
+      "monto",
+      "nota",
+      "producto",
+      "tipo"
+    ]
+  },
   "GastoEntrada": {
     "required": [
       "medio",
@@ -681,6 +697,7 @@
     "properties": [
       "acciones",
       "borrador",
+      "formulario",
       "id_respuesta",
       "modelo",
       "respuesta"

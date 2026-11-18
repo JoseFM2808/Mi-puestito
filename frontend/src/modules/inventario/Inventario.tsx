@@ -11,7 +11,10 @@ import {
 import { OperacionesRechazadas } from '../../componentes/sincronizacion/EstadoSincronizacion'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Campo, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
+import { senalar } from '../../componentes/asistente/senalar'
+import { useBorradorAsistente } from '../../stores/borradorAsistente'
 import { aMilesimas, formatearCantidad, leerCantidadEscrita, useInventario } from './almacen'
+import { productoPorNombre } from './nombres'
 import estilos from './Inventario.module.css'
 
 /**
@@ -173,18 +176,21 @@ function AccionProducto({
   producto,
   accion,
   alTerminar,
+  llenado,
 }: {
   producto: ProductoCable
   accion: Accion
   alTerminar: () => void
+  /** Merma que llenó el Asistente (D-28): cantidad y qué pasó */
+  llenado?: { cantidad: string; nota: string } | null
 }) {
   const contar = useInventario((estado) => estado.contar)
   const merma = useInventario((estado) => estado.merma)
   const editar = useInventario((estado) => estado.editar)
-  const [valor, setValor] = useState('')
+  const [valor, setValor] = useState(llenado?.cantidad ?? '')
   const [minimo, setMinimo] = useState(producto.stock_minimo ?? '')
   const [venceEl, setVenceEl] = useState(producto.vence_el ?? '')
-  const [nota, setNota] = useState('')
+  const [nota, setNota] = useState(llenado?.nota ?? '')
   const [error, setError] = useState<string | null>(null)
   const [movimientos, setMovimientos] = useState<MovimientoCable[] | null>(null)
 
@@ -267,6 +273,7 @@ function AccionProducto({
   return (
     <form className={estilos.bloque} onSubmit={guardar} data-ai-id={`inventario.${accion}-${producto.uuid}`}>
       {error && <Aviso tipo="error">{error}</Aviso>}
+      {llenado && <Nota>Lo llenó el Asistente: revísalo y toca «Guardar merma». Aún no se guardó nada.</Nota>}
       {accion === 'contar' && (
         <Nota>Cuenta lo que hay en el puesto. El sistema calcula la diferencia y la guarda como conteo.</Nota>
       )}
@@ -324,8 +331,17 @@ function AccionProducto({
   )
 }
 
-function TarjetaProducto({ producto }: { producto: ProductoCable }) {
-  const [accion, setAccion] = useState<Accion | null>(null)
+function TarjetaProducto({
+  producto,
+  merma,
+}: {
+  producto: ProductoCable
+  merma?: { cantidad: string; nota: string; version: number } | null
+}) {
+  const [accion, setAccion] = useState<Accion | null>(merma ? 'merma' : null)
+  useEffect(() => {
+    if (merma) setAccion('merma')
+  }, [merma])
   const stock = aMilesimas(producto.stock_actual)
   return (
     <Tarjeta aiId={`inventario.producto-${producto.uuid}`} className={estilos.tarjeta}>
@@ -392,7 +408,13 @@ function TarjetaProducto({ producto }: { producto: ProductoCable }) {
         </Aviso>
       )}
       {accion ? (
-        <AccionProducto producto={producto} accion={accion} alTerminar={() => setAccion(null)} />
+        <AccionProducto
+          key={merma && accion === 'merma' ? `llenada-${merma.version}` : accion}
+          producto={producto}
+          accion={accion}
+          alTerminar={() => setAccion(null)}
+          llenado={accion === 'merma' ? merma : null}
+        />
       ) : (
         <div className={estilos.acciones}>
           <Boton
@@ -439,6 +461,32 @@ export function Inventario() {
   const [soloPoco, setSoloPoco] = useState(false)
   const [porVencer, setPorVencer] = useState(false)
   const [creando, setCreando] = useState(false)
+  const formularioAsistente = useBorradorAsistente((estado) => estado.formulario)
+  const [mermaLlenada, setMermaLlenada] = useState<{
+    uuid: string
+    cantidad: string
+    nota: string
+    version: number
+  } | null>(null)
+
+  // El Asistente dejó una merma llenada (D-28): se abre en la tarjeta de ese producto, sin guardar
+  useEffect(() => {
+    if (!proyecto || productos.length === 0 || formularioAsistente?.formulario.tipo !== 'merma') return
+    const pedido = useBorradorAsistente.getState().tomarFormulario('merma', proyecto)
+    if (!pedido?.producto) return
+    const producto = productoPorNombre(productos, pedido.producto)
+    if (!producto) return
+    setBusqueda('')
+    setSoloPoco(false)
+    setPorVencer(false)
+    setMermaLlenada({
+      uuid: producto.uuid,
+      cantidad: pedido.cantidad ?? '',
+      nota: pedido.nota ?? '',
+      version: Date.now(),
+    })
+    void senalar(`inventario.producto-${producto.uuid}`)
+  }, [proyecto, productos, formularioAsistente])
 
   useEffect(() => {
     if (proyecto) void iniciar(proyecto)
@@ -509,7 +557,11 @@ export function Inventario() {
           </Boton>
           {visibles.length === 0 && <Nota>Ningún producto coincide.</Nota>}
           {visibles.map((producto) => (
-            <TarjetaProducto key={producto.uuid} producto={producto} />
+            <TarjetaProducto
+              key={producto.uuid}
+              producto={producto}
+              merma={mermaLlenada?.uuid === producto.uuid ? mermaLlenada : null}
+            />
           ))}
         </>
       )}

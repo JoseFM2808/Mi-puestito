@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 import seguridad
 from database import obtener_sesion
 from fechas import dia_peruano
-from ia import borrador, configuracion, llave_local, registro
+from ia import borrador, configuracion, formularios, llave_local, registro
 from ia.acciones import accion_por_tema, corregir_destino, marcar_automatica, pide_ir_o_hacer
 from ia.privacidad import seudonimizar_resumen
 from ia.servicio import AsistenteNoDisponible, armar_mensajes, preguntar
@@ -143,9 +143,16 @@ async def preguntar_endpoint(
             {**item, "nombre": alias.reidentificar(item["nombre"])}
             for item in borrador.validar(respuesta.borrador, dicho)
         ]
+    # Pago de fiado, gasto o merma llenados (D-28): mismas reglas que la orden de venta
+    formulario = None
+    if respuesta.formulario and lo_pidio:
+        dicho = " ".join([datos.mensaje, *del_operador])
+        formulario = formularios.validar(respuesta.formulario, dicho)
+        if formulario.get("cliente"):
+            formulario = {**formulario, "cliente": alias.reidentificar(formulario["cliente"])}
     texto = alias.reidentificar(respuesta.texto)
     # Nunca "revisa la orden" si no hay orden llenada: el operador la buscaría y no estaría
-    if not items and borrador.HABLA_DE_UNA_ORDEN_LLENADA.search(texto):
+    if not items and not formulario and borrador.HABLA_DE_UNA_ORDEN_LLENADA.search(texto):
         texto = borrador.PEDIR_PRODUCTOS
     return RespuestaSalida(
         respuesta=texto,
@@ -158,6 +165,7 @@ async def preguntar_endpoint(
             if items
             else None
         ),
+        formulario=formulario,
         id_respuesta=id_respuesta,
         modelo=respuesta.modelo,
     )

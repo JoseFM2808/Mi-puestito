@@ -3,6 +3,7 @@ import { ErrorApi, SinConexion, pedir } from '../../api/cliente'
 import type {
   AccionSugeridaCable,
   EstadoAsistenteCable,
+  FormularioLlenadoCable,
   ProductoCable,
   RespuestaAsistenteCable,
 } from '../../api/contrato'
@@ -77,6 +78,18 @@ function hacerSolo(acciones: AccionSugeridaCable[]): string | undefined {
 }
 
 const APARTADO_BORRADOR = 'ventas.borrador-asistente'
+
+/** Dónde se abre cada formulario que llena el Asistente, y con qué botón se guarda (D-28) */
+const PANTALLA_DEL_FORMULARIO: Record<FormularioLlenadoCable['tipo'], Pantalla> = {
+  abono: 'fiados',
+  gasto: 'gastos',
+  merma: 'inventario',
+}
+const BOTON_DEL_FORMULARIO: Record<FormularioLlenadoCable['tipo'], string> = {
+  abono: 'Guardar abono',
+  gasto: 'Guardar gasto',
+  merma: 'Guardar merma',
+}
 
 /** Lleva a Ventas, donde espera la orden que llenó el Asistente, y la señala */
 function verBorrador() {
@@ -250,6 +263,14 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
       })
       // Pidió registrar una venta: el Asistente la deja llenada en Ventas para que la confirme
       const items = respuesta.borrador?.items ?? []
+      // O un pago de fiado, un gasto o una merma (D-28): se abre su pantalla con el formulario llenado
+      const formulario = items.length === 0 ? respuesta.formulario : null
+      if (formulario && proyecto) {
+        useBorradorAsistente.getState().ponerFormulario(proyecto, formulario)
+        const destino = PANTALLA_DEL_FORMULARIO[formulario.tipo]
+        const { pantalla, asistenteFlotante, llevarConAsistente } = useNavegacion.getState()
+        if (pantalla !== destino || !asistenteFlotante) llevarConAsistente(destino)
+      }
       if (items.length > 0 && proyecto) {
         useBorradorAsistente.getState().poner(proyecto, items, respuesta.borrador?.para)
         verBorrador()
@@ -257,11 +278,12 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
       agregar({
         quienHabla: 'asistente',
         texto: respuesta.respuesta,
-        acciones: items.length > 0 ? [] : respuesta.acciones,
+        acciones: items.length > 0 || formulario ? [] : respuesta.acciones,
         idRespuesta: respuesta.id_respuesta,
         conBorrador: items.length > 0,
-        hecho:
-          items.length > 0
+        hecho: formulario
+          ? `Lo dejé llenado en ${nombreDe(PANTALLA_DEL_FORMULARIO[formulario.tipo])}. Revísalo y toca «${BOTON_DEL_FORMULARIO[formulario.tipo]}»: hasta entonces no se guarda nada.`
+          : items.length > 0
             ? 'La orden está en Ventas, arriba. Hasta que toques «Guardar orden» no se guarda nada.'
             : hacerSolo(respuesta.acciones),
       })

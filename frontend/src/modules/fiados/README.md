@@ -25,3 +25,11 @@ Si alguien paga de más, el servidor avisa que tiene saldo a favor.
 `data-ai-id`: `fiados`, `fiados.total`, `fiados.sin-conexion`, `fiados.cliente-<uuid>` y sus `.abonar`,
 `.monto-abono`, `.guardar-abono`, `.cancelar-abono`. El Asistente responde "¿quién me debe más?" con el resumen de caja
 (nombres seudonimizados hacia el modelo) y puede sugerir "Ir a Fiados".
+
+## Medio de pago y pago llenado por el Asistente (D-24, D-28)
+
+- Al registrar un pago se elige **Pagó en efectivo** o **Pagó por Yape o Plin** (`fiados.cliente-<uuid>.medio-…`): así la
+  caja lo suma donde llegó.
+- Si el Asistente llenó un pago ("la señora Rosa me pagó 10 soles por Yape"), la tarjeta de ese cliente se abre con el
+  monto y el medio, marcada, con la nota "Lo llenó el Asistente… Aún no se guardó nada". Si el cliente no está entre los
+  que deben, se avisa con palabras.
