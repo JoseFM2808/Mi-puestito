@@ -7,8 +7,10 @@ import '@fontsource/lexend/500.css'
 import '@fontsource/lexend/600.css'
 import '@fontsource/lexend/700.css'
 
-// Fuente de verdad visual: se importa UNA sola vez desde docs/06-diseno
-import '@tokens/tokens.css'
+// Fuente de verdad visual, UNA sola vez y en este orden (ADR-050): los tokens del estándar,
+// generados desde tokens.json (colores, fuente, radios), y luego lo propio de la interfaz
+import '@tokens/tokens/tokens.css'
+import '@tokens/producto/tokens-producto.css'
 import './estilos-base.css'
 
 import { App } from './App'

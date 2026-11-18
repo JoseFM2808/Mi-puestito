@@ -11,7 +11,7 @@ La documentación completa vive en `docs/` como bóveda Obsidian navegable con w
 - Módulos (qué construir): `docs/03-modulos/`
 - Capa de IA: `docs/04-ia/`
 - Metodología de desarrollo: `docs/05-metodologia/`
-- Sistema de diseño y tokens: `docs/06-diseno/`
+- Sistema de diseño y tokens: `docs/design-system/` (núcleo del estándar; lo propio de la interfaz en `producto/`)
 
 Antes de construir un módulo, leer su documento en `docs/03-modulos/` y el `Design-System.md`.
 

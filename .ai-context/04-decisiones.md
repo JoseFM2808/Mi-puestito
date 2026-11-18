@@ -28,6 +28,7 @@
 | 047 | 2026-11-08 | Aceptada | El Asistente abre pantallas y señala partes de ellas cuando el operador lo pide; nunca llena datos |
 | 048 | 2026-11-08 | Aceptada | Núcleo de marca en `docs/design-system/` con el estándar de Design System del workspace |
 | 049 | 2026-11-08 | Aceptada | El Asistente llena órdenes de venta que el operador revisa y guarda; voz por dictado del navegador |
+| 050 | 2026-11-17 | Aceptada | `docs/06-diseno/` pasa a `docs/design-system/producto/`; los colores salen solo de `tokens.json` |
 
 ---
 
@@ -302,3 +303,27 @@
   compras o pagos exigirá ampliar este ADR. La voz depende de un tercero y de internet; el dictado local (Whisper) queda
   como opción futura. La demo trae 7 productos para practicar. `ia.evaluar` pasa a 29 casos, con la conversación real
   del owner incluida.
+
+## ADR-050 · Una sola fuente de color: el sistema de diseño entero en `docs/design-system/` — Aceptada
+
+- **Fecha**: 2026-11-17.
+- **Contexto**: ADR-048 copió el núcleo de marca a `docs/design-system/` sin mover `docs/06-diseno/`, porque mover archivos
+  necesita la aprobación del owner. Quedaron dos fuentes de color (D-27): `tokens.css` del producto, que importaba el
+  frontend, y `tokens.json` del estándar. `ds-validar` avisaba si se separaban, pero solo después de pasar. El owner aprobó
+  el traslado el 2026-11-17.
+- **Decisión**:
+  1. `docs/06-diseno/` pasa con `git mv` a `docs/design-system/producto/`: `Design-System.md` (bóveda Obsidian; el validador
+     solo revisa los `.md` de la raíz del núcleo y de `marca/`, así que sus wikilinks siguen sirviendo), `assets/` y
+     `tokens.css`, que pasa a llamarse `tokens-producto.css`.
+  2. Los colores de marca, la fuente y los radios **solo** están en `tokens/tokens.json`. El frontend importa, en este
+     orden, `tokens/tokens.css` (generado por `py run.py ds-generar`, con los alias del producto) y
+     `producto/tokens-producto.css` (espaciado, escala tipográfica, tamaños táctiles, tintes, sombra), que no define
+     colores de marca.
+  3. `vite.config.ts` lee los colores de la PWA del archivo generado siguiendo los alias (`--primario` → `--color-accion`
+     → hex). Se quita `css_producto` de `tokens.json`: comparaba dos copias que ya no existen.
+  4. Nuevo test `todo token que usa un CSS existe en el sistema de diseño`: falla si un CSS usa una variable que no
+     está en ninguno de los dos archivos.
+- **Consecuencias**: un cambio de color ya no puede quedar a medias; se hace en `tokens.json` y se regenera. La PWA
+  sigue con los mismos colores (`#1E6E42`, `#FAF7F2`). `AGENTS.md`, `CLAUDE.md`, el README, los README de `ui` y de la
+  barra, el subagente revisor y estas pestañas apuntan a la ruta nueva. Las menciones a `06-diseno/` que quedan son
+  historia (ADR-048, el changelog).

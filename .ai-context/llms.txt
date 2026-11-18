@@ -9,7 +9,7 @@ Reglas no negociables: offline-first; nunca acoplar a un proveedor de IA (todo p
 - [Lógica del sistema](01-logica-sistema.md): ciclo de venta, cobro offline idempotente, inventario como libro mayor, recepción de compras, flujo del Asistente
 - [Arquitectura](02-arquitectura.md): Staging vs Producción, dependencias de módulos, capa de IA, seguridad por capas
 - [Base de datos](03-base-de-datos.md): diagrama ER y diccionario de datos (implementado y propuesto)
-- [Decisiones (ADR)](04-decisiones.md): ADR-028 a ADR-049, con estado Aceptada/Propuesta
+- [Decisiones (ADR)](04-decisiones.md): ADR-028 a ADR-050, con estado Aceptada/Propuesta
 - [Deuda técnica e higiene](05-deuda-tecnica-higiene.md): deuda priorizada y estado de `.gitignore`
 - [API y MCP](06-api-mcp.md): endpoints REST por módulo, autenticación por proyecto, idempotencia y estado de MCP
 
@@ -18,7 +18,7 @@ Reglas no negociables: offline-first; nunca acoplar a un proveedor de IA (todo p
 - [AGENTS.md](../AGENTS.md): convenciones, stack, comandos y reglas no negociables
 - [Índice de la bóveda](../docs/00-INICIO.md): documentación funcional (Obsidian)
 - [Decisiones técnicas 1–27](../docs/02-arquitectura/Decisiones-Tecnicas.md): registro histórico
-- [Design System](../docs/06-diseno/Design-System.md) y [tokens.css](../docs/06-diseno/tokens.css): fuente de verdad visual
+- [Design System](../docs/design-system/producto/Design-System.md), [núcleo](../docs/design-system/README.md) y [tokens del producto](../docs/design-system/producto/tokens-producto.css): fuente de verdad visual
 
 ## Optional
 

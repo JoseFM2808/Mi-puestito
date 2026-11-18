@@ -4,7 +4,7 @@
 
 Los componentes que todos los módulos usan en vez de definir sus propios estilos (ADR-040): `Boton`, `Campo`,
 `Tarjeta`, `Aviso`, `Monto`, `TituloPagina`, `TituloSeccion`, `Nota`. Sus estilos están en `ui.module.css` y salen
-solo de los tokens de `docs/06-diseno/tokens.css`.
+solo de los tokens de `docs/design-system/` (`tokens/tokens.css` y `producto/tokens-producto.css`).
 
 ## Qué datos maneja
 

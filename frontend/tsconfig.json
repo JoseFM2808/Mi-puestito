@@ -19,7 +19,7 @@
     "noEmit": true,
 
     "paths": {
-      "@tokens/*": ["../docs/06-diseno/*"]
+      "@tokens/*": ["../docs/design-system/*"]
     }
   },
   "include": ["src", "vite.config.ts"]

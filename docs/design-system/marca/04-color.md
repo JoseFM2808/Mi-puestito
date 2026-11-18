@@ -29,7 +29,7 @@ solo: siempre con palabra (también cubre el daltonismo).
 | `color.peligro` | `#A33A2E` | Fiado, vencidos, errores |
 | `color.info` | `#1A5A8A` | Identidad del Asistente |
 
-Los tintes suaves (`--tinte-*`), `--borde-fuerte` y las sombras son del producto y siguen en `docs/06-diseno/tokens.css`.
+Los tintes suaves (`--tinte-*`), `--borde-fuerte` y las sombras son del producto y están en [producto/tokens-producto.css](../producto/tokens-producto.css).
 
 ## Así sí / Así no
 - Así sí: "Te deben S/ 45" en rojo ladrillo y con la palabra

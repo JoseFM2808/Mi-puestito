@@ -33,7 +33,9 @@ pytest                                        # tests
 - Backend modular: `backend/modules/<nombre>/` con router, modelos, esquemas y `README.md` propios.
 - Nombres de variables, funciones y comentarios en español (el dominio es peruano: ventas, compras, fiado, proveedores).
 - Cada módulo es independiente: el fallo de uno no debe derribar otro. No crear dependencias cruzadas obligatorias entre módulos.
-- Estilos: usar exclusivamente los tokens de `docs/06-diseno/tokens.css`. Ningún color, tamaño o espaciado "a mano".
+- Estilos: usar exclusivamente los tokens de `docs/design-system/`: `tokens/tokens.css` (generado desde `tokens.json`:
+  colores, fuente, radios) y `producto/tokens-producto.css` (espaciado, tamaños, tintes). Ningún color, tamaño o espaciado
+  "a mano". Un color se cambia en `tokens/tokens.json` y se regenera con `py run.py ds-generar` (Estudio-Contenido).
 
 ## Documentación obligatoria
 
