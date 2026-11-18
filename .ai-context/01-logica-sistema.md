@@ -300,3 +300,15 @@ flowchart LR
   `no_disponibles`.
 - **El Asistente** recibe `caja_abierta` y `en_caja` en su contexto: "¿cuánto tengo en efectivo?" se responde con la cifra
   real. Lleva a Gastos ("quiero anotar un gasto") y corrige hacia Gastos un "Ir a la Caja" cuando se habla de gastos.
+
+## 10. Costo, vencimientos y código de barras (D-22)
+
+- **Costo de la última compra**: al recibir un pedido con cantidad (`compra.item_recibido`), Inventario guarda
+  `costo_ultimo = monto ÷ cantidad`, redondeado al céntimo, solo si el movimiento es nuevo (un reenvío no lo cambia). La
+  tarjeta dice "Costó S/ 3.60 · ganas S/ 0.60 por unidad" (en rojo si se vende por debajo del costo).
+- **Vencimiento**: cada producto guarda la fecha del lote que vence primero y aún no venció (`vence_el`). Un lote nuevo
+  la cambia si es más temprano, o si la guardada ya pasó. Se corrige o se borra a mano ("ya no queda ese lote").
+  `vence_pronto` = vence en 7 días o menos (o ya venció) **y queda stock**; `vencido` = ya pasó. La Caja de hoy avisa
+  cuántos hay (`productos_por_vencer`) y lleva a Inventario.
+- **Código de barras**: se guarda al crear el producto y la búsqueda acepta el código exacto: un lector USB o Bluetooth
+  lo "escribe" en el buscador. Escanear con la cámara queda pendiente (D-30).

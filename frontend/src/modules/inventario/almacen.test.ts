@@ -53,9 +53,31 @@ describe('estado del producto, igual que el backend', () => {
     stock_minimo: '5.000',
     codigo_barras: null,
     tiene_vencimiento: false,
+    costo_ultimo: null,
+    vence_el: null,
     bajo_minimo: false,
     descuadre: false,
+    vence_pronto: false,
+    vencido: false,
   }
+
+  const diaLima = (desdeHoy: number) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(
+      new Date(Date.now() + desdeHoy * 86_400_000),
+    )
+
+  it('avisa lo que vence en una semana o ya venció, solo si queda stock (D-22)', () => {
+    expect(conEstado({ ...base, vence_el: diaLima(3) })).toMatchObject({ vence_pronto: true, vencido: false })
+    expect(conEstado({ ...base, vence_el: diaLima(-1) })).toMatchObject({ vence_pronto: true, vencido: true })
+    expect(conEstado({ ...base, vence_el: diaLima(30) })).toMatchObject({
+      vence_pronto: false,
+      vencido: false,
+    })
+    expect(conEstado({ ...base, stock_actual: '0.000', vence_el: diaLima(-1) })).toMatchObject({
+      vence_pronto: false,
+      vencido: false,
+    })
+  })
 
   it('en el mínimo ya es "queda poco"', () => {
     expect(conEstado(base).bajo_minimo).toBe(true)

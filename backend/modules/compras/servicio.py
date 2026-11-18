@@ -268,6 +268,7 @@ def registrar_recepcion(
             nombre_producto=item.producto_sustituto if cambiado else item.nombre_producto,
             cantidad=entrada.cantidad_stock,
             monto=item.monto_sustituto if cambiado else item.monto,
+            vence_el=entrada.vence_el,
             ocurrido_en=datos.ocurrido_en,
         )
 

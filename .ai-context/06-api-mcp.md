@@ -170,3 +170,13 @@ esquema de cada herramienta.
 2. `cd backend && python exportar_openapi.py` actualiza `frontend/src/api/openapi.json`.
 3. `pytest` (incluye `test_contrato.py`) y `npm run test` (incluye `contrato.test.ts`) deben pasar.
 4. Actualiza esta pestaña y ejecuta el sync de contexto del workspace.
+
+### Inventario: costo, vencimiento y código (D-22)
+
+- `ProductoConEstado` suma `costo_ultimo`, `vence_el`, `vence_pronto` y `vencido`.
+- `GET /api/inventario/productos?buscar=` busca por nombre **o** por código de barras exacto; `por_vencer=true` deja solo
+  lo que vence en 7 días o menos (con stock).
+- `PATCH /api/inventario/productos/{uuid}` acepta `vence_el`; enviar `null` la borra, omitirla no la toca.
+- `POST /api/compras/ordenes/{uuid}/recepcion`: cada ítem acepta `vence_el` (fecha del lote), que viaja en
+  `compra.item_recibido`.
+- `GET /api/dashboard/resumen` suma `productos_por_vencer`.

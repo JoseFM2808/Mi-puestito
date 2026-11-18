@@ -66,6 +66,21 @@ def _seccion_ventas(sesion: Session, hoy: date) -> dict:
     }
 
 
+def _seccion_inventario(sesion: Session, hoy: date) -> dict:
+    """Lo que hay que vender o rematar antes de que venza (D-22). Sin Inventario, se omite."""
+    from modules.inventario.models import Producto
+    from modules.inventario.router import DIAS_AVISO_VENCE
+
+    cuantos = sesion.scalar(
+        select(func.count()).select_from(Producto).where(
+            Producto.vence_el.is_not(None),
+            Producto.vence_el <= hoy + timedelta(days=DIAS_AVISO_VENCE),
+            Producto.stock_actual > 0,
+        )
+    )
+    return {"productos_por_vencer": cuantos or 0}
+
+
 def _seccion_compras(sesion: Session, hoy: date) -> dict:
     from modules.compras.models import EstadoOrdenCompra, OrdenCompra
 
@@ -115,9 +130,14 @@ def calcular_resumen(sesion: Session, hoy: date) -> ResumenDashboard:
         "proyeccion_manana": CERO,
         "motivo_proyeccion": "Aún no hay pedidos por llegar",
         "pedidos_por_llegar": [],
+        "productos_por_vencer": 0,
     }
     no_disponibles = []
-    for nombre, seccion in (("ventas", _seccion_ventas), ("compras", _seccion_compras)):
+    for nombre, seccion in (
+        ("ventas", _seccion_ventas),
+        ("compras", _seccion_compras),
+        ("inventario", _seccion_inventario),
+    ):
         try:
             datos.update(seccion(sesion, hoy))
         except Exception:  # noqa: BLE001 — un módulo caído no tumba la caja

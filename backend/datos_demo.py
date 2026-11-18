@@ -29,16 +29,17 @@ VENTAS_COBRADAS = [
 ]
 VENTAS_RAPIDAS = [D("22.00"), D("29.50"), D("32.50")]
 
-# Inventario para practicar (nombre, unidad, precio de venta, stock, mínimo). Papa y leche
-# quedan bajo su mínimo: así "lo que se está acabando" tiene qué mostrar.
+# Inventario para practicar (nombre, unidad, precio de venta, stock, mínimo, costo de la última
+# compra, días hasta que vence o None). Papa y leche quedan bajo su mínimo; la leche y el pollo
+# vencen esta semana: así "queda poco" y "vence pronto" tienen qué mostrar (D-22).
 INVENTARIO = [
-    ("Arroz Costeño", "kg", D("4.20"), D("50"), D("10")),
-    ("Fideos Anita", "unidad", D("4.80"), D("30"), D("6")),
-    ("Azúcar rubia", "kg", D("3.80"), D("40"), D("10")),
-    ("Aceite Primor", "litro", D("9.50"), D("12"), D("4")),
-    ("Leche Gloria", "unidad", D("4.20"), D("5"), D("6")),
-    ("Papa amarilla", "kg", D("3.50"), D("3"), D("5")),
-    ("Pollo", "kg", D("9.90"), D("8"), D("3")),
+    ("Arroz Costeño", "kg", D("4.20"), D("50"), D("10"), D("3.40"), None),
+    ("Fideos Anita", "unidad", D("4.80"), D("30"), D("6"), D("3.90"), 180),
+    ("Azúcar rubia", "kg", D("3.80"), D("40"), D("10"), D("3.10"), None),
+    ("Aceite Primor", "litro", D("9.50"), D("12"), D("4"), D("8.20"), 240),
+    ("Leche Gloria", "unidad", D("4.20"), D("5"), D("6"), D("3.60"), 3),
+    ("Papa amarilla", "kg", D("3.50"), D("3"), D("5"), D("2.50"), None),
+    ("Pollo", "kg", D("9.90"), D("8"), D("3"), D("8.50"), 2),
 ]
 
 # Clientes con fiado: deuda = fiado − abonos. Total S/ 132.50 entre 4.
@@ -177,9 +178,11 @@ def cargar_si_vacio() -> bool:
             ))
 
         # Productos del inventario, con su stock inicial como movimiento (igual que al crearlos)
-        for nombre, unidad, precio, stock, minimo in INVENTARIO:
+        for nombre, unidad, precio, stock, minimo, costo, vence_en in INVENTARIO:
             producto = Producto(
-                nombre=nombre, unidad=Unidad(unidad), precio_venta=precio, stock_minimo=minimo
+                nombre=nombre, unidad=Unidad(unidad), precio_venta=precio, stock_minimo=minimo,
+                costo_ultimo=costo, tiene_vencimiento=vence_en is not None,
+                vence_el=hoy + timedelta(days=vence_en) if vence_en is not None else None,
             )
             sesion.add(producto)
             sesion.flush()

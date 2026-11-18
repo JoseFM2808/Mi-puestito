@@ -328,3 +328,37 @@ def test_si_inventario_falla_la_recepcion_se_guarda_igual(h, monkeypatch):
 def test_compras_exige_sesion():
     assert cliente.get("/api/compras/ordenes").status_code == 401
     assert cliente.post("/api/compras/proveedores", json={}).status_code == 401
+
+
+# ---- D-22: costo de la última compra y vencimiento del lote ----
+
+
+def _producto_con(h, nombre: str) -> dict:
+    productos = cliente.get("/api/inventario/productos", headers=h).json()
+    return next(p for p in productos if p["nombre"] == nombre)
+
+
+def test_recibir_guarda_el_costo_de_una_unidad(h):
+    _producto(h)
+    orden = pedido(h, proveedor(h), [("Arroz", "105.00"), ("Azúcar", "50.50")])
+    recibir(h, orden, {"estado": "recibido", "cantidad_stock": "50"}, "no_recibido")
+    assert _producto_con(h, "Arroz")["costo_ultimo"] == "2.10"
+
+
+def test_un_reenvio_no_cambia_el_costo_ni_el_vencimiento(h):
+    _producto(h)
+    orden = pedido(h, proveedor(h), [("Arroz", "100.00"), ("Azúcar", "50.50")])
+    entrada = {"estado": "recibido", "cantidad_stock": "50", "vence_el": "2099-01-31"}
+    recibir(h, orden, entrada, "no_recibido")
+    recibir(h, orden, entrada, "no_recibido")
+    arroz = _producto_con(h, "Arroz")
+    assert (arroz["costo_ultimo"], arroz["vence_el"]) == ("2.00", "2099-01-31")
+
+
+def test_se_guarda_el_lote_que_vence_primero(h):
+    _producto(h)
+    prov = proveedor(h)
+    for fecha in ("2099-03-01", "2099-02-01", "2099-04-01"):
+        orden = pedido(h, prov, [("Arroz", "10.00")])
+        recibir(h, orden, {"estado": "recibido", "cantidad_stock": "1", "vence_el": fecha})
+    assert _producto_con(h, "Arroz")["vence_el"] == "2099-02-01"

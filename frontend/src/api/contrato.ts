@@ -104,6 +104,7 @@ export interface ResumenDashboardCable {
   clientes_con_fiado: number
   ventas_rapidas_pendientes: number
   pedidos_por_llegar: PedidoPorLlegarCable[]
+  productos_por_vencer: number
   secciones_no_disponibles: string[]
 }
 
@@ -123,6 +124,8 @@ export interface ResumenCaja {
   clientesConFiado: number
   ventasRapidasPendientes: number
   pedidosPorLlegar: { uuid: string; proveedor: string; fechaEstimada: Date; monto: number }[]
+  /** Productos con stock que vencen esta semana o ya vencieron (D-22) */
+  productosPorVencer: number
   seccionesNoDisponibles: string[]
 }
 
@@ -153,6 +156,7 @@ export function leerResumen(cable: ResumenDashboardCable): ResumenCaja {
       fechaEstimada: fechaPeruana(pedido.fecha_estimada),
       monto: aCentimos(pedido.monto),
     })),
+    productosPorVencer: cable.productos_por_vencer,
     seccionesNoDisponibles: cable.secciones_no_disponibles,
   }
 }
@@ -382,8 +386,15 @@ export interface ProductoCable {
   stock_minimo: string | null
   codigo_barras: string | null
   tiene_vencimiento: boolean
+  /** Lo que costó UNA unidad (kg, litro) en la última compra recibida (D-22) */
+  costo_ultimo: string | null
+  /** "2026-11-24": cuándo vence lo más antiguo que queda (D-22) */
+  vence_el: string | null
   bajo_minimo: boolean
   descuadre: boolean
+  /** Vence en 7 días o menos (o ya venció) y aún queda stock */
+  vence_pronto: boolean
+  vencido: boolean
 }
 
 export interface MovimientoCable {
@@ -481,6 +492,7 @@ export const CAMPOS_DEL_CONTRATO = {
     'clientes_con_fiado',
     'ventas_rapidas_pendientes',
     'pedidos_por_llegar',
+    'productos_por_vencer',
     'secciones_no_disponibles',
   ]),
   OrdenActivaResumen: camposDe<OrdenActivaResumenCable>()([
@@ -555,8 +567,12 @@ export const CAMPOS_DEL_CONTRATO = {
     'stock_minimo',
     'codigo_barras',
     'tiene_vencimiento',
+    'costo_ultimo',
+    'vence_el',
     'bajo_minimo',
     'descuadre',
+    'vence_pronto',
+    'vencido',
   ]),
   MovimientoSalida: camposDe<MovimientoCable>()(['delta', 'motivo', 'origen_tipo', 'nota', 'creado_en']),
   ProductoFrecuente: camposDe<ProductoFrecuenteCable>()(['nombre_producto', 'cantidad', 'monto', 'veces']),

@@ -96,6 +96,8 @@ class ItemRecepcionEntrada(BaseModel):
     monto_sustituto: MontoNoNegativo | None = None
     # Cuánto entra al stock, si ese producto se lleva en Inventario
     cantidad_stock: CantidadPositiva | None = None
+    # Cuándo vence este lote (si vence): Inventario avisa antes (D-22)
+    vence_el: date | None = None
 
     @model_validator(mode="after")
     def _cambio_completo(self):

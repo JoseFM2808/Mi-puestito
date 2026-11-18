@@ -38,3 +38,11 @@ lo confirma.
 - Sin búsqueda por código de barras, foto, alertas de vencimiento ni costo desde la última compra (pendientes del módulo).
 - Las ventas descuentan stock solo si el operador elige el producto del inventario al venderlo (`FormularioProducto`);
   con texto libre no se toca el stock.
+
+## Costo, vencimiento y código de barras (D-22)
+
+- La tarjeta dice cuánto costó en la última compra y cuánto se gana por unidad, y avisa "Vence el …: véndelo primero"
+  o "Venció el …" con palabras (`inventario.vence-pronto-<uuid>`, `inventario.vencido-<uuid>`).
+- **Cambiar precio, mínimo o vencimiento** (`inventario.precio-vence`) corrige la fecha; vaciarla la borra.
+- **Solo lo que vence pronto** (`inventario.por-vencer`) filtra; el buscador acepta el código de barras y **Nuevo
+  producto** tiene el campo `inventario.codigo-barras` (un lector USB o Bluetooth lo escribe solo).

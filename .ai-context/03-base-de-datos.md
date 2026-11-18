@@ -1,7 +1,7 @@
 # 03 · Base de datos
 
 > Modelo entidad-relación y diccionario de datos. Última revisión: 2026-11-01.
-> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0006).
+> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0007).
 > Un archivo SQLite **por proyecto** (`mi_puestito_demo.db`, `mi_puestito_<real>.db`), mismo esquema en cada uno.
 > `backend/tests/test_migraciones.py` falla si un modelo cambia sin su migración.
 
@@ -108,6 +108,8 @@ erDiagram
         int stock_actual "milésimas; caché de Σ movimientos"
         int stock_minimo "milésimas"
         bool tiene_vencimiento
+        int costo_ultimo "céntimos, última compra"
+        date vence_el "lote que vence primero"
         datetime creado_en
         datetime actualizado_en
     }
@@ -217,3 +219,10 @@ erDiagram
 | `gastos.creado_en` | DATETIME | no | índice | Hora real en el dispositivo (UTC) |
 
 En IndexedDB (versión 4): `cajas` (por día) y `gastos` (con su día), para ver la caja y los gastos sin red.
+
+### Costo y vencimiento (migración 0007, D-22)
+
+| Tabla.columna | Tipo SQL | Nulo | Significado |
+|---|---|---|---|
+| `productos.costo_ultimo` | INTEGER | sí | Céntimos que costó UNA unidad (kg, litro) en la última compra recibida con cantidad |
+| `productos.vence_el` | DATE | sí | Día peruano en que vence el lote más antiguo que queda |

@@ -212,3 +212,47 @@ def test_items_simultaneos_en_la_misma_orden_suman_bien():
         venta = servicio.buscar_venta(sesion, orden_uuid)
         assert len(venta.items) == 40
         assert venta.monto_total == Decimal("100.00")
+
+
+# ---- D-22: vencimientos y búsqueda por código de barras ----
+
+
+def test_avisa_lo_que_vence_pronto_o_ya_vencio_si_queda_stock(api):
+    from datetime import timedelta
+
+    from fechas import dia_peruano
+
+    hoy = dia_peruano()
+    pronto = crear_producto(api, "Leche", "unidad", "6", tiene_vencimiento=True)
+    vencido = crear_producto(api, "Yogur", "unidad", "2", tiene_vencimiento=True)
+    lejos = crear_producto(api, "Atún", "unidad", "5", tiene_vencimiento=True)
+    sin_stock = crear_producto(api, "Queso", "unidad", "0", tiene_vencimiento=True)
+    for uuid, dias in ((pronto, 3), (vencido, -1), (lejos, 60), (sin_stock, 1)):
+        r = api.patch(f"/api/inventario/productos/{uuid}", json={"vence_el": str(hoy + timedelta(days=dias))})
+        assert r.status_code == 200, r.text
+    estados = {p["nombre"]: (p["vence_pronto"], p["vencido"]) for p in api.get("/api/inventario/productos").json()}
+    assert estados == {
+        "Leche": (True, False),
+        "Yogur": (True, True),
+        "Atún": (False, False),
+        "Queso": (False, False),  # sin stock no hay nada que vender antes
+    }
+    por_vencer = [p["nombre"] for p in api.get("/api/inventario/productos?por_vencer=true").json()]
+    assert por_vencer == ["Leche", "Yogur"]
+    assert api.get("/api/dashboard/resumen").json()["productos_por_vencer"] == 2
+
+
+def test_la_fecha_se_borra_solo_si_se_pide(api):
+    uuid = crear_producto(api, "Leche", "unidad", "6", tiene_vencimiento=True)
+    api.patch(f"/api/inventario/productos/{uuid}", json={"vence_el": "2099-01-01"})
+    api.patch(f"/api/inventario/productos/{uuid}", json={"precio_venta": "4.20"})
+    assert producto(api, uuid)["vence_el"] == "2099-01-01"
+    api.patch(f"/api/inventario/productos/{uuid}", json={"vence_el": None})
+    assert producto(api, uuid)["vence_el"] is None
+
+
+def test_se_busca_por_nombre_o_por_codigo_de_barras(api):
+    crear_producto(api, "Leche Gloria", "unidad", "6", codigo_barras="7751271001234")
+    crear_producto(api, "Arroz", "kg", "5")
+    assert [p["nombre"] for p in api.get("/api/inventario/productos?buscar=7751271001234").json()] == ["Leche Gloria"]
+    assert [p["nombre"] for p in api.get("/api/inventario/productos?buscar=gloria").json()] == ["Leche Gloria"]

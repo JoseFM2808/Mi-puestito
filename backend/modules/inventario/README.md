@@ -35,3 +35,10 @@ Reglas clave:
 Tiene pantalla (`frontend/src/modules/inventario/`) y el Asistente puede ofrecer el botón "Ir a Inventario", pero el
 stock aún no entra en su contexto: ante "¿cuánto arroz me queda?" dice que no lo sabe. Nunca hace un ajuste por su cuenta.
 Suscriptores: `venta.item_registrado`, `venta.item_anulado` y `compra.item_recibido` (este último solo con cantidad).
+
+## Costo, vencimiento y código (D-22)
+
+- `actualizar_costo_y_vencimiento`: al recibir una compra nueva con cantidad, `costo_ultimo = monto ÷ cantidad`; la fecha
+  del lote (`vence_el` del ítem recibido) reemplaza la guardada si es más temprana o si la guardada ya pasó.
+- `_con_estado` calcula `vence_pronto` (≤ `DIAS_AVISO_VENCE` = 7 días, con stock) y `vencido`.
+- `GET /productos?buscar=` también busca por código de barras exacto; `?por_vencer=true` filtra lo que vence pronto.

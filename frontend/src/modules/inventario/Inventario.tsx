@@ -34,6 +34,17 @@ const MOTIVOS: Record<MovimientoCable['motivo'], string> = {
   merma: 'Merma',
 }
 
+const NOMBRE_UNIDAD_SUELTA: Record<Unidad, string> = { unidad: 'unidad', kg: 'kilo', litro: 'litro' }
+
+/** "2026-11-24" → "24 nov.": el día peruano, sin hora (D-22) */
+function fechaCorta(dia: string): string {
+  return new Intl.DateTimeFormat('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'America/Lima',
+  }).format(new Date(`${dia}T12:00:00-05:00`))
+}
+
 function NuevoProducto({ alTerminar }: { alTerminar: () => void }) {
   const productos = useInventario((estado) => estado.productos)
   const crear = useInventario((estado) => estado.crear)
@@ -43,6 +54,7 @@ function NuevoProducto({ alTerminar }: { alTerminar: () => void }) {
   const [stock, setStock] = useState('')
   const [minimo, setMinimo] = useState('')
   const [vence, setVence] = useState(false)
+  const [codigo, setCodigo] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const guardar = (evento: FormEvent) => {
@@ -66,6 +78,7 @@ function NuevoProducto({ alTerminar }: { alTerminar: () => void }) {
       stockInicial: stockInicial ?? undefined,
       stockMinimo: stockMinimo ?? undefined,
       tieneVencimiento: vence,
+      codigoBarras: codigo.trim() || undefined,
     })
     alTerminar()
   }
@@ -123,6 +136,16 @@ function NuevoProducto({ alTerminar }: { alTerminar: () => void }) {
           alCambiar={setPrecio}
           inputMode="decimal"
         />
+        <Campo
+          id="prod-codigo"
+          aiId="inventario.codigo-barras"
+          etiqueta="Código de barras"
+          ayuda="Opcional: pasa el lector o escríbelo"
+          valor={codigo}
+          alCambiar={setCodigo}
+          maxLength={32}
+          inputMode="numeric"
+        />
       </div>
       <Boton
         aiId="inventario.vence"
@@ -160,6 +183,7 @@ function AccionProducto({
   const editar = useInventario((estado) => estado.editar)
   const [valor, setValor] = useState('')
   const [minimo, setMinimo] = useState(producto.stock_minimo ?? '')
+  const [venceEl, setVenceEl] = useState(producto.vence_el ?? '')
   const [nota, setNota] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [movimientos, setMovimientos] = useState<MovimientoCable[] | null>(null)
@@ -213,10 +237,13 @@ function AccionProducto({
       if (valor.trim() && !centimos) return setError('Escribe el precio en soles, por ejemplo 3.50')
       const nuevoMinimo = String(minimo).trim() ? leerCantidadEscrita(String(minimo)) : null
       if (String(minimo).trim() && nuevoMinimo === null) return setError('Escribe el mínimo con números.')
-      if (!centimos && nuevoMinimo === null) return setError('No hay nada que cambiar.')
+      const fechaCambio = venceEl !== (producto.vence_el ?? '')
+      if (!centimos && nuevoMinimo === null && !fechaCambio) return setError('No hay nada que cambiar.')
       void editar(producto.uuid, {
         precioVenta: centimos ? aSoles(centimos) : undefined,
         stockMinimo: nuevoMinimo ?? undefined,
+        // Vaciar la fecha la borra (ya no queda ese lote); no tocarla la deja igual
+        venceEl: fechaCambio ? venceEl || null : undefined,
       })
       return alTerminar()
     }
@@ -273,6 +300,17 @@ function AccionProducto({
             inputMode="decimal"
           />
         )}
+        {accion === 'precio' && producto.tiene_vencimiento && (
+          <Campo
+            id={`vence-${producto.uuid}`}
+            aiId="inventario.precio-vence"
+            etiqueta="Vence el"
+            ayuda="Lo más antiguo que queda. Vacíalo si ya no queda ese lote"
+            type="date"
+            valor={venceEl}
+            alCambiar={setVenceEl}
+          />
+        )}
       </div>
       <div className={estilos.acciones}>
         <Boton aiId={`inventario.${accion}-guardar`} tipo="submit">
@@ -300,6 +338,26 @@ function TarjetaProducto({ producto }: { producto: ProductoCable }) {
               {producto.unidad === 'unidad' ? '' : producto.unidad === 'kg' ? ' el kilo' : ' el litro'}
             </Nota>
           )}
+          {producto.costo_ultimo && (
+            <Nota>
+              {/* Lo que costó en la última compra y cuánto queda por cada unidad vendida (D-22) */}
+              Costó <Monto centimos={aCentimos(producto.costo_ultimo)} /> en la última compra
+              {producto.precio_venta && (
+                <>
+                  {' · ganas '}
+                  <Monto
+                    centimos={aCentimos(producto.precio_venta) - aCentimos(producto.costo_ultimo)}
+                    tono={
+                      aCentimos(producto.precio_venta) < aCentimos(producto.costo_ultimo)
+                        ? 'deuda'
+                        : 'ingreso'
+                    }
+                  />
+                  {` por ${NOMBRE_UNIDAD_SUELTA[producto.unidad]}`}
+                </>
+              )}
+            </Nota>
+          )}
         </div>
         <div
           className={
@@ -316,6 +374,16 @@ function TarjetaProducto({ producto }: { producto: ProductoCable }) {
       {/* El estado se dice con palabras: el color solo acompaña (Design-System §1) */}
       {producto.descuadre && (
         <Aviso tipo="error">El sistema dice que hay menos de cero. Cuenta cuánto hay de verdad.</Aviso>
+      )}
+      {producto.vencido && producto.vence_el && (
+        <Aviso tipo="error" aiId={`inventario.vencido-${producto.uuid}`}>
+          {`Venció el ${fechaCorta(producto.vence_el)}: retíralo y anótalo como merma, o corrige la fecha si ya no queda.`}
+        </Aviso>
+      )}
+      {!producto.vencido && producto.vence_pronto && producto.vence_el && (
+        <Aviso tipo="pendiente" aiId={`inventario.vence-pronto-${producto.uuid}`}>
+          {`Vence el ${fechaCorta(producto.vence_el)}: véndelo primero.`}
+        </Aviso>
       )}
       {!producto.descuadre && producto.bajo_minimo && (
         <Aviso tipo="pendiente">
@@ -346,7 +414,7 @@ function TarjetaProducto({ producto }: { producto: ProductoCable }) {
             variante="discreto"
             onClick={() => setAccion('precio')}
           >
-            Cambiar precio o mínimo
+            {producto.tiene_vencimiento ? 'Cambiar precio, mínimo o vencimiento' : 'Cambiar precio o mínimo'}
           </Boton>
           <Boton
             aiId={`inventario.historial-${producto.uuid}`}
@@ -369,6 +437,7 @@ export function Inventario() {
   const cargar = useInventario((estado) => estado.cargar)
   const [busqueda, setBusqueda] = useState('')
   const [soloPoco, setSoloPoco] = useState(false)
+  const [porVencer, setPorVencer] = useState(false)
   const [creando, setCreando] = useState(false)
 
   useEffect(() => {
@@ -376,10 +445,15 @@ export function Inventario() {
   }, [proyecto, iniciar])
 
   const texto = busqueda.trim().toLowerCase()
+  // Por nombre o por código de barras: un lector USB o Bluetooth "escribe" el código (D-22)
   const visibles = productos.filter(
-    (p) => p.nombre.toLowerCase().includes(texto) && (!soloPoco || p.bajo_minimo || p.descuadre),
+    (p) =>
+      (p.nombre.toLowerCase().includes(texto) || (texto !== '' && p.codigo_barras === texto)) &&
+      (!soloPoco || p.bajo_minimo || p.descuadre) &&
+      (!porVencer || p.vence_pronto),
   )
   const conAviso = productos.filter((p) => p.bajo_minimo || p.descuadre).length
+  const cuantosPorVencer = productos.filter((p) => p.vence_pronto).length
 
   return (
     <main className={estilos.pantalla} data-ai-id="inventario">
@@ -412,6 +486,7 @@ export function Inventario() {
               id="buscar-producto"
               aiId="inventario.buscar"
               etiqueta="Buscar producto"
+              ayuda="Por nombre o por código de barras"
               valor={busqueda}
               alCambiar={setBusqueda}
             />
@@ -423,6 +498,14 @@ export function Inventario() {
             onClick={() => setSoloPoco(!soloPoco)}
           >
             {`Solo lo que queda poco (${conAviso})`}
+          </Boton>
+          <Boton
+            aiId="inventario.por-vencer"
+            variante="secundario"
+            presionado={porVencer}
+            onClick={() => setPorVencer(!porVencer)}
+          >
+            {`Solo lo que vence pronto (${cuantosPorVencer})`}
           </Boton>
           {visibles.length === 0 && <Nota>Ningún producto coincide.</Nota>}
           {visibles.map((producto) => (

@@ -201,6 +201,18 @@ function ContenidoCaja({ resumen }: { resumen: ResumenCaja }) {
 
   return (
     <>
+      {resumen.productosPorVencer > 0 && (
+        <div className={estilos.filaAviso}>
+          <Aviso tipo="pendiente" aiId="dashboard.por-vencer">
+            {resumen.productosPorVencer === 1
+              ? 'Un producto vence esta semana o ya venció: véndelo primero o retíralo.'
+              : `${resumen.productosPorVencer} productos vencen esta semana o ya vencieron: véndelos primero o retíralos.`}
+          </Aviso>
+          <Boton aiId="dashboard.ver-por-vencer" variante="secundario" onClick={() => irA('inventario')}>
+            Ver en Inventario
+          </Boton>
+        </div>
+      )}
       <section className={estilos.resumen}>
         <Tarjeta aiId="dashboard.ventas-hoy">
           <div className={estilos.etiqueta}>Vendiste hoy</div>

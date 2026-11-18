@@ -35,5 +35,7 @@ class ResumenDashboard(BaseModel):
     clientes_con_fiado: int
     ventas_rapidas_pendientes: int
     pedidos_por_llegar: list[PedidoPorLlegar]
+    # Productos con stock que vencen en los próximos 7 días o ya vencieron (D-22)
+    productos_por_vencer: int = 0
     # Módulos que no pudieron leerse: su parte sale en cero y se avisa
     secciones_no_disponibles: list[str] = []
