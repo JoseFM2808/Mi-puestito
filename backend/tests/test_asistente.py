@@ -397,6 +397,46 @@ def test_lectura_de_las_lineas_venta(linea, esperado):
     assert [(i["nombre"], i["cantidad"], i["precio"]) for i in items] == ([esperado] if esperado else [])
 
 
+@pytest.mark.parametrize(
+    ("mensaje", "destino"),
+    [
+        ("Quiero ver quiénes me deben", "fiados"),
+        ("¿Dónde veo los pedidos a mis proveedores?", "compras"),
+        ("¿Cuánto stock tengo?", "inventario"),
+    ],
+)
+def test_la_caja_se_corrige_hacia_la_pantalla_del_tema(cliente, cabeceras_demo, modelo, mensaje, destino):
+    """Visto en ia.evaluar: "quiero ver quiénes me deben" → el modelo ofrecía la Caja."""
+    modelo["respuesta"] = "Míralo ahí.\nACCION: ir_a caja"
+    acciones = preguntar(cliente, cabeceras_demo, mensaje).json()["acciones"]
+    assert [a["pantalla"] for a in acciones] == [destino]
+
+
+def test_la_caja_se_queda_si_el_tema_es_la_caja_o_es_ambiguo(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Míralo ahí.\nACCION: ir_a caja"
+    for mensaje in ("¿Cuánto vendí hoy?", "¿Qué me deben y qué pedidos llegan?"):
+        assert [a["pantalla"] for a in preguntar(cliente, cabeceras_demo, mensaje).json()["acciones"]] == ["caja"]
+
+
+@pytest.mark.parametrize(
+    ("mensaje", "destino"),
+    [("Quiero registrar una compra", "compras"), ("Quiero registrar una venta", "ventas"), ("Anota una merma", "inventario")],
+)
+def test_si_pide_hacer_algo_sin_accion_se_abre_la_pantalla_del_tema(
+    cliente, cabeceras_demo, modelo, mensaje, destino
+):
+    """Visto en ia.evaluar: el modelo explicó los pasos de una compra sin la línea ACCION."""
+    modelo["respuesta"] = "Toca «Nuevo pedido» y llena los datos."
+    acciones = preguntar(cliente, cabeceras_demo, mensaje).json()["acciones"]
+    assert [(a["pantalla"], a["automatica"]) for a in acciones] == [(destino, True)]
+
+
+def test_sin_pedido_o_con_dos_temas_no_se_adivina(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Te explico."
+    for mensaje in ("¿Qué es una compra?", "Quiero registrar una venta y una compra"):
+        assert preguntar(cliente, cabeceras_demo, mensaje).json()["acciones"] == []
+
+
 def test_sin_acciones_no_hay_nada_que_abrir(cliente, cabeceras_demo, modelo):
     modelo["respuesta"] = "Hoy vendiste S/ 485.50."
     assert preguntar(cliente, cabeceras_demo, "Quiero saber cuánto vendí").json()["acciones"] == []

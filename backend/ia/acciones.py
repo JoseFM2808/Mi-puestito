@@ -95,6 +95,53 @@ def pide_ir_o_hacer(mensaje_del_operador: str) -> bool:
     return bool(_PIDE_IR_O_HACER.search(mensaje_del_operador))
 
 
+# El modelo a veces manda a la Caja de hoy lo que vive en otra pantalla ("quiero ver quiénes me
+# deben" → caja, visto en ia.evaluar). La Caja solo resume: si el mensaje habla claramente de un
+# tema con pantalla propia, el "Ir a la Caja" se corrige hacia esa pantalla.
+_TEMA_CON_PANTALLA = [
+    (re.compile(r"\b(?:me\s+deben|deud\w*|fiad\w*|abon\w*)\b", re.IGNORECASE), "fiados"),
+    (re.compile(r"\b(?:proveedor\w*|pedido\w*|compra\w*)\b", re.IGNORECASE), "compras"),
+    (re.compile(r"\b(?:stock|inventario|me\s+queda\w*|merma\w*)\b", re.IGNORECASE), "inventario"),
+]
+
+
+def corregir_destino(mensaje_del_operador: str, acciones: list[dict]) -> list[dict]:
+    """Cambia un "Ir a la Caja de hoy" por la pantalla del tema del mensaje, si es una sola."""
+    temas = {pantalla for patron, pantalla in _TEMA_CON_PANTALLA if patron.search(mensaje_del_operador)}
+    if len(temas) != 1:
+        return acciones
+    (destino,) = temas
+    if any(a["pantalla"] == destino for a in acciones):
+        return acciones
+    return [
+        {"tipo": "ir_a", "pantalla": destino, "etiqueta": PANTALLAS[destino]}
+        if a["tipo"] == "ir_a" and a["pantalla"] == "caja"
+        else a
+        for a in acciones
+    ]
+
+
+# Para cuando el operador pide HACER algo y el modelo no propuso pantalla ("quiero registrar una
+# compra" → explicó los pasos sin la línea ACCION). Aquí sí entra Ventas: en una corrección de la
+# Caja no, porque "mis ventas de hoy" sí se ven en la Caja.
+_TEMA_PARA_HACER = [
+    (re.compile(r"\b(?:venta\w*|vender|orden\w*)\b", re.IGNORECASE), "ventas"),
+    *_TEMA_CON_PANTALLA,
+]
+
+
+def accion_por_tema(mensaje_del_operador: str, acciones: list[dict]) -> list[dict]:
+    """Si el operador pidió hacer algo y no hay ninguna acción, ofrece la pantalla de su tema
+    (solo si el tema es uno solo: con dos, no se adivina)."""
+    if acciones or not pide_ir_o_hacer(mensaje_del_operador):
+        return acciones
+    temas = {pantalla for patron, pantalla in _TEMA_PARA_HACER if patron.search(mensaje_del_operador)}
+    if len(temas) != 1:
+        return acciones
+    (destino,) = temas
+    return [{"tipo": "ir_a", "pantalla": destino, "etiqueta": PANTALLAS[destino]}]
+
+
 def marcar_automatica(mensaje_del_operador: str, acciones: list[dict]) -> list[dict]:
     """Marca la primera acción como `automatica` (la app la hace sola) si el operador pidió ir
     o hacer algo, o si preguntó dónde está algo o qué tocar.

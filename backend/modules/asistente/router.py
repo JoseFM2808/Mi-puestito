@@ -22,7 +22,7 @@ import seguridad
 from database import obtener_sesion
 from fechas import dia_peruano
 from ia import borrador, configuracion, llave_local, registro
-from ia.acciones import marcar_automatica, pide_ir_o_hacer
+from ia.acciones import accion_por_tema, corregir_destino, marcar_automatica, pide_ir_o_hacer
 from ia.privacidad import seudonimizar_resumen
 from ia.servicio import AsistenteNoDisponible, armar_mensajes, preguntar
 from seguridad import proyecto_autenticado
@@ -141,7 +141,10 @@ async def preguntar_endpoint(
         texto = borrador.PEDIR_PRODUCTOS
     return RespuestaSalida(
         respuesta=texto,
-        acciones=marcar_automatica(datos.mensaje, respuesta.acciones),
+        acciones=marcar_automatica(
+            datos.mensaje,
+            accion_por_tema(datos.mensaje, corregir_destino(datos.mensaje, respuesta.acciones)),
+        ),
         borrador=(
             {"items": items, "para": alias.reidentificar(respuesta.para) if respuesta.para else None}
             if items
