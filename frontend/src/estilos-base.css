@@ -9,3 +9,26 @@ button,
 input {
   font-family: var(--fuente);
 }
+
+/*
+ * Lo que el Asistente señala (ADR-047, componentes/asistente/senalar.ts): un marco grueso
+ * con su color, que late tres veces.
+ */
+[data-resaltado] {
+  outline: 4px solid var(--ia);
+  outline-offset: var(--esp-1);
+  border-radius: var(--radio);
+  animation: latido-asistente 1s ease-in-out 3;
+}
+
+@keyframes latido-asistente {
+  50% {
+    outline-offset: var(--esp-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-resaltado] {
+    animation: none;
+  }
+}

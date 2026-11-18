@@ -5,6 +5,7 @@ import { useNavegacion } from '../../stores/navegacion'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Nota, TituloPagina } from '../../ui/componentes'
 import { useVentas } from './almacen'
+import { BorradorAsistente } from './BorradorAsistente'
 import { DetalleOrden, nombreVisible } from './DetalleOrden'
 import { FormularioNuevaOrden, FormularioVentaRapida, SelectorCliente } from './formularios'
 import estilos from './Ventas.module.css'
@@ -52,7 +53,9 @@ export function Ventas() {
   return (
     <main className={estilos.pantalla} data-ai-id="ventas">
       <div className={estilos.cabecera}>
-        <TituloPagina>Ventas</TituloPagina>
+        <TituloPagina ayuda="Cada mesa o cliente es una orden. Agrega lo que lleva y, al terminar, cobra o déjalo fiado.">
+          Ventas
+        </TituloPagina>
         <div className={estilos.accionesCabecera}>
           <Boton aiId="ventas.nueva" onClick={() => setFormulario('orden')}>
             Nueva orden
@@ -66,6 +69,8 @@ export function Ventas() {
         </div>
       </div>
 
+      {/* La orden que llenó el Asistente, arriba de todo hasta guardarla o descartarla (ADR-049) */}
+      <BorradorAsistente />
       <OperacionesRechazadas alDescartar={() => void cargar()} />
       {avisos.length > 0 && (
         <div className={estilos.avisos} data-ai-id="ventas.avisos">

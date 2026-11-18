@@ -32,5 +32,6 @@ Reglas clave:
 
 ## Cómo interactúa la IA
 
-Todavía no tiene pantalla ni entra en el resumen del Asistente. Cuando la tenga, el Asistente podrá responder "¿cuánto
-arroz me queda?" y sugerir contar lo que hay cuando haya descuadre; nunca hará el ajuste por su cuenta.
+Tiene pantalla (`frontend/src/modules/inventario/`) y el Asistente puede ofrecer el botón "Ir a Inventario", pero el
+stock aún no entra en su contexto: ante "¿cuánto arroz me queda?" dice que no lo sabe. Nunca hace un ajuste por su cuenta.
+Suscriptores: `venta.item_registrado`, `venta.item_anulado` y `compra.item_recibido` (este último solo con cantidad).

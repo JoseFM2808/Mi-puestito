@@ -30,7 +30,7 @@ Fechas en UTC (tipo `FechaHoraUTC`, siempre con zona); la zona horaria
 | Endpoint | Estado |
 |---|---|
 | `GET /api/compras/proveedores?busqueda=` | Lista proveedores; busca por nombre, empresa o RUC |
-| `POST /api/compras/proveedores` | Alta idempotente por `uuid`; un RUC repetido da `409` |
+| `POST /api/compras/proveedores` | Alta idempotente por `uuid`. Un RUC ya registrado devuelve ese proveedor (`200`) y el uuid nuevo queda como alias (`alias_proveedores`, D-25) |
 | `GET /api/compras/proveedores/{uuid}/frecuentes` | Lo que más se le pide, según sus últimas órdenes |
 | `GET /api/compras/ordenes?estado=` | Órdenes con items, paginada, sin N+1 |
 | `POST /api/compras/ordenes` | Nuevo pedido; el total lo calcula el servidor |

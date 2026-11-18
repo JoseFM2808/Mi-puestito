@@ -80,7 +80,9 @@ export function Compras() {
 
   return (
     <main className={estilos.pantalla} data-ai-id="compras">
-      <TituloPagina>Compras</TituloPagina>
+      <TituloPagina ayuda="Lo que pediste a tus proveedores. Cuando llegue un pedido, revisa producto por producto.">
+        Compras
+      </TituloPagina>
       <OperacionesRechazadas alDescartar={() => void cargar()} />
       {desdeDispositivo && (
         <Aviso tipo="info" aiId="compras.sin-conexion">

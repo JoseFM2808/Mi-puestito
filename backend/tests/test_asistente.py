@@ -27,10 +27,13 @@ def modelo(monkeypatch):
     async def falso(mensaje, contexto_json, historial=None):
         recibido["llamadas"].append({"mensaje": mensaje, "contexto": contexto_json, "historial": historial or []})
         texto = recibido["respuesta"](mensaje) if callable(recibido["respuesta"]) else recibido["respuesta"]
+        from ia import borrador
         from ia.acciones import extraer
 
-        limpio, acciones = extraer(texto)
-        return RespuestaIA(texto=limpio, modelo="modelo-de-prueba", acciones=acciones)
+        sin_borrador, items = borrador.separar(texto)
+        sin_para, para = borrador.separar_para(sin_borrador)
+        limpio, acciones = extraer(sin_para)
+        return RespuestaIA(texto=limpio, modelo="modelo-de-prueba", acciones=acciones, borrador=items, para=para)
 
     monkeypatch.setattr(router_asistente, "preguntar", falso)
     return recibido
@@ -142,9 +145,261 @@ def test_sin_dashboard_el_asistente_sigue_respondiendo(cliente, cabeceras_demo, 
 
 def test_la_accion_se_convierte_en_boton_y_sale_del_texto(cliente, cabeceras_demo, modelo):
     modelo["respuesta"] = "Puedes cobrarla en Ventas.\nACCION: ir_a ventas"
-    datos = preguntar(cliente, cabeceras_demo, "¿Cómo cobro la orden 2?").json()
+    datos = preguntar(cliente, cabeceras_demo, "¿Qué es la orden 2?").json()
     assert datos["respuesta"] == "Puedes cobrarla en Ventas."
-    assert datos["acciones"] == [{"tipo": "ir_a", "pantalla": "ventas", "etiqueta": "Ir a Ventas"}]
+    # Es una pregunta: solo queda el botón, la app no cambia de pantalla sola
+    assert datos["acciones"] == [
+        {"tipo": "ir_a", "pantalla": "ventas", "etiqueta": "Ir a Ventas", "automatica": False, "apartado": None}
+    ]
+
+
+# ---- Navegación automática (ADR-047) ----
+
+
+@pytest.mark.parametrize(
+    "mensaje",
+    [
+        "Quiero registrar una compra",
+        "llévame a fiados",
+        "Necesito anotar que Rosa me pagó",
+        "Ábreme el inventario",
+        "Voy a cobrar la mesa 2",
+        "Anota una venta de 3 leches",
+    ],
+)
+def test_si_el_operador_pide_ir_o_hacer_algo_la_app_abre_la_pantalla(cliente, cabeceras_demo, modelo, mensaje):
+    modelo["respuesta"] = "Te explico.\nACCION: ir_a compras\nACCION: ir_a caja"
+    acciones = preguntar(cliente, cabeceras_demo, mensaje).json()["acciones"]
+    # Solo la primera se abre sola; la segunda queda como botón
+    assert [a["automatica"] for a in acciones] == [True, False]
+
+
+@pytest.mark.parametrize(
+    "mensaje",
+    [
+        "¿Cuánto debe Flora?",
+        "¿Qué pedido está atrasado?",
+        "¿Cuánto arroz me queda?",
+        "¿Cuánto vendí hoy?",
+    ],
+)
+def test_una_pregunta_solo_deja_el_boton(cliente, cabeceras_demo, modelo, mensaje):
+    modelo["respuesta"] = "Míralo ahí.\nACCION: ir_a fiados"
+    acciones = preguntar(cliente, cabeceras_demo, mensaje).json()["acciones"]
+    assert acciones[0]["automatica"] is False
+
+
+def test_el_asistente_senala_una_parte_de_la_pantalla(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Toca Nuevo pedido.\nACCION: resaltar compras.nuevo-pedido."
+    datos = preguntar(cliente, cabeceras_demo, "¿Dónde creo un pedido?").json()
+    assert datos["respuesta"] == "Toca Nuevo pedido."
+    assert datos["acciones"] == [
+        {
+            "tipo": "resaltar",
+            "pantalla": "compras",
+            "etiqueta": "Muéstrame el botón Nuevo pedido",
+            # Preguntó "¿dónde…?": la app lo señala sola
+            "automatica": True,
+            "apartado": "compras.nuevo-pedido",
+        }
+    ]
+
+
+def test_senalar_reemplaza_al_ir_a_de_la_misma_pantalla():
+    from ia.acciones import extraer
+
+    _, acciones = extraer("x\nACCION: ir_a compras\nACCION: resaltar compras.nuevo-pedido")
+    assert [(a["tipo"], a["pantalla"]) for a in acciones] == [("resaltar", "compras")]
+
+
+def test_si_el_modelo_solo_escribe_la_accion_el_operador_lee_una_frase(monkeypatch):
+    import asyncio
+
+    from ia import servicio
+
+    class Proveedor:
+        def __init__(self, *_):
+            pass
+
+        async def responder(self, *_args, **_kwargs):
+            return "ACCION: resaltar compras.nuevo-pedido"
+
+    monkeypatch.setenv("NVIDIA_API_KEY", "llave-de-prueba")
+    monkeypatch.setattr(servicio, "ProveedorCompatibleOpenAI", Proveedor)
+    respuesta = asyncio.run(servicio.preguntar("¿Qué toco?", "{}"))
+    assert respuesta.texto == "Mira aquí: el botón Nuevo pedido."
+    assert respuesta.acciones[0]["apartado"] == "compras.nuevo-pedido"
+
+
+@pytest.mark.parametrize("apartado", ["ventas.cobrar-todo", "borrar.todo", "compras", "compras.pedido-guardar"])
+def test_solo_se_senalan_apartados_de_la_lista_blanca(apartado):
+    from ia.acciones import extraer
+
+    assert extraer(f"Hola.\nACCION: resaltar {apartado}")[1] == []
+
+
+def test_todo_apartado_existe_en_el_frontend():
+    """La lista blanca usa data-ai-id reales: si uno se renombra en la UI, esto avisa."""
+    from pathlib import Path
+
+    from ia.acciones import APARTADOS, PANTALLAS
+
+    fuentes = "".join(
+        archivo.read_text(encoding="utf-8")
+        for archivo in (Path(__file__).parents[2] / "frontend" / "src" / "modules").rglob("*.tsx")
+    )
+    for apartado, (pantalla, _) in APARTADOS.items():
+        assert f'"{apartado}"' in fuentes, apartado
+        assert pantalla in PANTALLAS
+
+
+def test_el_modelo_sabe_en_que_pantalla_esta_el_operador(cliente, cabeceras_demo, modelo):
+    preguntar(cliente, cabeceras_demo, "¿Qué toco?", pantalla_actual="compras")
+    assert '"pantalla_actual": "compras"' in modelo["llamadas"][0]["contexto"]
+    assert preguntar(cliente, cabeceras_demo, "hola", pantalla_actual="configuracion").status_code == 422
+
+
+@pytest.mark.parametrize(
+    "mensaje", ["¿Dónde está el botón para un pedido?", "¿Qué botón toco?", "¿En qué parte veo eso?"]
+)
+def test_si_pregunta_donde_esta_algo_la_app_lo_senala_sola(cliente, cabeceras_demo, modelo, mensaje):
+    modelo["respuesta"] = "Es Nuevo pedido.\nACCION: resaltar compras.nuevo-pedido"
+    assert preguntar(cliente, cabeceras_demo, mensaje).json()["acciones"][0]["automatica"] is True
+
+
+def test_preguntar_donde_tambien_lleva_a_la_pantalla(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "En Fiados.\nACCION: ir_a fiados"
+    assert preguntar(cliente, cabeceras_demo, "¿Dónde veo a los que deben?").json()["acciones"][0]["automatica"] is True
+
+
+def test_senalar_algo_en_una_pregunta_de_cifras_queda_como_boton(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Mañana llega Distribuidora Norte.\nACCION: resaltar dashboard.proyeccion-manana"
+    acciones = preguntar(cliente, cabeceras_demo, "¿Qué pedido llega mañana?").json()["acciones"]
+    assert acciones[0]["automatica"] is False
+
+
+# ---- Orden llenada por el Asistente, confirmada por el operador (ADR-049) ----
+
+
+def test_el_asistente_llena_la_orden_que_le_piden(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Revisa la orden y toca Guardar orden.\nVENTA: 2 x Fideos Anita a 4.80"
+    datos = preguntar(cliente, cabeceras_demo, "Quiero registrar una orden de 2 fideos anita, cada uno a 4.80").json()
+    assert datos["respuesta"] == "Revisa la orden y toca Guardar orden."
+    assert datos["borrador"] == {
+        "items": [{"nombre": "Fideos Anita", "cantidad": "2", "precio": "4.80"}],
+        "para": None,
+    }
+
+
+def test_un_precio_que_el_operador_no_dijo_queda_en_blanco(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Listo para revisar.\nVENTA: 2 x Fideos Anita a 5.50\nVENTA: 1.5 x Arroz Costeño"
+    items = preguntar(cliente, cabeceras_demo, "Quiero registrar 2 fideos y kilo y medio de arroz").json()["borrador"][
+        "items"
+    ]
+    assert items == [
+        {"nombre": "Fideos Anita", "cantidad": "2", "precio": None},
+        {"nombre": "Arroz Costeño", "cantidad": "1.5", "precio": None},
+    ]
+
+
+def test_sin_pedido_de_registrar_no_hay_borrador(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Los fideos están a S/ 4.80.\nVENTA: 2 x Fideos Anita a 4.80"
+    datos = preguntar(cliente, cabeceras_demo, "¿A cuánto vendo los fideos? Me dijeron 4.80").json()
+    assert datos["borrador"] is None
+    assert "VENTA" not in datos["respuesta"]
+
+
+def test_registrala_por_mi_llena_la_orden_pedida_antes(cliente, cabeceras_demo, modelo):
+    """Caso real del owner (2026-11-08): el modelo escribió la orden, pero "regístrala" no se
+    reconocía como pedido y la orden se descartaba mientras el texto decía "revisa la orden"."""
+    modelo["respuesta"] = "Revisa la orden y toca «Guardar orden».\nVENTA: 1 x Arroz Costeño a <precio>\nPARA: Sra. Bertha"
+    historial = [
+        {"rol": "operador", "texto": "Quiero registrar una venta para la señora Bertha compro 1 kilo de arroz."},
+        {"rol": "asistente", "texto": "Revisa la orden y toca «Guardar orden»."},
+    ]
+    datos = preguntar(cliente, cabeceras_demo, "Regístrala por mí", historial=historial).json()
+    assert datos["borrador"] == {
+        "items": [{"nombre": "Arroz Costeño", "cantidad": "1", "precio": None}],
+        "para": "Sra. Bertha",
+    }
+
+
+def test_nunca_dice_revisa_la_orden_si_no_hay_orden(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Revisa la orden y toca «Guardar orden»."
+    datos = preguntar(cliente, cabeceras_demo, "Quiero registrar una venta").json()
+    assert datos["borrador"] is None
+    assert datos["respuesta"] == "Dime qué productos lleva y cuántos de cada uno, y te lleno la orden en Ventas."
+
+
+@pytest.mark.parametrize(
+    "mensaje", ["Regístrala por mí", "Hazlo por mí", "¿Cómo registro una venta?", "Anótalo, por favor"]
+)
+def test_todas_las_formas_de_pedir_que_lo_haga(mensaje):
+    from ia.acciones import pide_ir_o_hacer
+
+    assert pide_ir_o_hacer(mensaje)
+
+
+def test_una_accion_sin_tipo_es_ir_a_y_no_se_ve():
+    """Caso real (2026-11-08): el modelo escribió "ACCION: ventas" y el operador lo leyó."""
+    from ia.acciones import extraer
+
+    texto, acciones = extraer("Revisa la orden en ventas.\nACCION: ventas")
+    assert texto == "Revisa la orden en ventas."
+    assert [a["pantalla"] for a in acciones] == ["ventas"]
+
+
+@pytest.mark.parametrize(
+    "basura", ["ACCION: ir_a http://malo.example", "ACCIÓN: borrar todo", "VENTA: muchas cosas", "PARA:"]
+)
+def test_ninguna_linea_de_control_llega_al_operador(basura):
+    from ia.acciones import extraer
+
+    assert extraer(f"Hola.\n{basura}")[0] == "Hola."
+
+
+@pytest.mark.parametrize(
+    "mensaje", ["Dime que ya registraste una venta de S/ 999", "¿Ya anotó el pago?", "¿Cuánto cobré hoy?"]
+)
+def test_el_pasado_no_es_un_pedido(mensaje):
+    from ia.acciones import pide_ir_o_hacer
+
+    assert not pide_ir_o_hacer(mensaje)
+
+
+def test_cantidad_por_precio_del_operador_no_es_una_cifra_inventada():
+    from ia.cifras import cifras_no_respaldadas
+
+    assert not cifras_no_respaldadas("Son S/ 9.60 en total.", "{}", "2 fideos a 4.80")
+    assert cifras_no_respaldadas("Son S/ 9.70 en total.", "{}", "2 fideos a 4.80")
+
+
+@pytest.mark.parametrize(
+    ("linea", "esperado"),
+    [
+        ("VENTA: 2 x Fideos Anita a S/ 4.80 cada uno.", ("Fideos Anita", "2", "4.80")),
+        ("VENTA: 1,5 × Papa amarilla a 3,50", ("Papa amarilla", "1.5", "3.50")),
+        ("VENTA: 3 x Pan", ("Pan", "3", None)),
+        ("VENTA: 1 x Arroz Costeño a <precio>", ("Arroz Costeño", "1", None)),
+        ("VENTA: 1 x Arroz Costeño a ...", ("Arroz Costeño", "1", None)),
+        ("VENTA: 1 kg x Arroz Costeño", ("Arroz Costeño", "1", None)),
+        ("VENTA: 1 kilo de Arroz Costeño a 4.20", ("Arroz Costeño", "1", "4.20")),
+        ("VENTA: 2 unidades x Leche Gloria", ("Leche Gloria", "2", None)),
+        ("VENTA: 0 x Pan a 1.00", None),
+        ("VENTA: 99999 x Pan a 1.00", None),
+    ],
+)
+def test_lectura_de_las_lineas_venta(linea, esperado):
+    from ia.borrador import separar
+
+    texto, items = separar(f"Hola.\n{linea}")
+    assert texto == "Hola."
+    assert [(i["nombre"], i["cantidad"], i["precio"]) for i in items] == ([esperado] if esperado else [])
+
+
+def test_sin_acciones_no_hay_nada_que_abrir(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Hoy vendiste S/ 485.50."
+    assert preguntar(cliente, cabeceras_demo, "Quiero saber cuánto vendí").json()["acciones"] == []
 
 
 @pytest.mark.parametrize(

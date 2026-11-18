@@ -10,6 +10,7 @@ import {
 } from '../../api/contrato'
 import { baseDe } from '../../sincronizacion/base-local'
 import { alAplicarOperacion, encolar, useSincronizacion } from '../../sincronizacion/cola'
+import { aCantidad, aMilesimas, useInventario } from '../inventario/almacen'
 
 /**
  * Estado del módulo Ventas, offline-first (ADR-032).
@@ -48,7 +49,16 @@ interface EstadoVentas {
   cargar: () => Promise<void>
   seleccionar: (uuid: string) => void
   abrirOrden: (datos: { nombreOrden?: string; cliente?: ClienteCable }) => Promise<string>
-  agregarItem: (venta: string, item: { nombre: string; cantidad?: string; centimos: number }) => Promise<void>
+  agregarItem: (
+    venta: string,
+    item: {
+      nombre: string
+      cantidad?: string
+      centimos: number
+      /** Producto del inventario: el servidor descuenta `milesimas` de su stock */
+      producto?: { uuid: string; milesimas: number }
+    },
+  ) => Promise<void>
   quitarItem: (venta: string, item: string) => Promise<void>
   cobrar: (venta: string, metodo: MetodoPago) => Promise<void>
   fiar: (venta: string, cliente?: ClienteCable) => Promise<void>
@@ -220,9 +230,10 @@ export const useVentas = create<EstadoVentas>()((set, get) => {
       return uuid
     },
 
-    agregarItem: async (ventaUuid, { nombre, cantidad, centimos }) => {
+    agregarItem: async (ventaUuid, { nombre, cantidad, centimos, producto }) => {
       const uuid = nuevoUuid()
       const monto = aSoles(centimos)
+      const cantidadNum = producto ? aCantidad(producto.milesimas) : null
       cambiarLocal(ventaUuid, (venta) =>
         sumarItems({
           ...venta,
@@ -233,8 +244,8 @@ export const useVentas = create<EstadoVentas>()((set, get) => {
               nombre_producto: nombre,
               cantidad: cantidad || null,
               monto,
-              producto_uuid: null,
-              cantidad_num: null,
+              producto_uuid: producto?.uuid ?? null,
+              cantidad_num: cantidadNum,
             },
           ],
         }),
@@ -244,12 +255,19 @@ export const useVentas = create<EstadoVentas>()((set, get) => {
         nombre_producto: nombre,
         cantidad: cantidad || undefined,
         monto,
+        producto_uuid: producto?.uuid,
+        cantidad_num: cantidadNum ?? undefined,
       })
+      if (producto) useInventario.getState().ajustarLocal(producto.uuid, -producto.milesimas)
     },
 
     quitarItem: async (ventaUuid, itemUuid) => {
       const venta = get().abiertas.find((v) => v.uuid === ventaUuid)
       const item = venta?.items.find((i) => i.uuid === itemUuid)
+      // Lo que se descontó vuelve al stock (el servidor lo hace por evento al quitarlo)
+      if (item?.producto_uuid && item.cantidad_num) {
+        useInventario.getState().ajustarLocal(item.producto_uuid, aMilesimas(item.cantidad_num))
+      }
       cambiarLocal(ventaUuid, (v) => sumarItems({ ...v, items: v.items.filter((i) => i.uuid !== itemUuid) }))
       await enviar(
         'DELETE',

@@ -1,0 +1,36 @@
+/* (gen) Generado por `py run.py ds-generar` (Estudio-Contenido) desde tokens/tokens.json. No lo edites: cambia la fuente y vuelve a generar. */
+:root {
+  --color-fondo: #FAF7F2;  /* Blanco hueso cálido: no brilla bajo luz natural */
+  --color-superficie: #FFFFFF;  /* Tarjetas, barra superior, campos */
+  --color-tinta: #2B2620;  /* Marrón casi negro: contraste alto sin dureza */
+  --color-texto: #2B2620;
+  --color-texto-suave: #6E6357;  /* Notas y rótulos secundarios */
+  --color-linea: #E8E0D4;  /* Bordes suaves de tarjetas */
+  --color-accion: #1E6E42;  /* Verde billete: acciones principales e ingresos */
+  --color-sobre-accion: #FFFFFF;
+  --color-acento: #1E6E42;  /* Lo que hay que recordar va en el mismo verde */
+  --color-sobre-acento: #FFFFFF;
+  --color-exito: #1E6E42;  /* Entra dinero */
+  --color-aviso: #B45F06;  /* Ámbar tierra: por cobrar, órdenes abiertas */
+  --color-peligro: #A33A2E;  /* Rojo ladrillo: fiado, vencidos, errores */
+  --color-info: #1A5A8A;  /* Azul del Asistente: el único color fuera de la lógica del dinero */
+  --tipo-cuerpo: "Lexend", sans-serif;  /* Familia única: mejora la lectura con baja fluidez lectora */
+  --tipo-display: "Lexend", sans-serif;
+  --tipo-datos: "Lexend", sans-serif;  /* Montos en Lexend con números tabulares */
+  --radio-s: 11px;
+  --radio-m: 14px;
+  --radio-l: 14px;
+  /* Alias con los nombres que ya usa el producto */
+  --fondo: var(--color-fondo);
+  --superficie: var(--color-superficie);
+  --texto: var(--color-tinta);
+  --texto-suave: var(--color-texto-suave);
+  --borde: var(--color-linea);
+  --primario: var(--color-accion);
+  --pendiente: var(--color-aviso);
+  --deuda: var(--color-peligro);
+  --ia: var(--color-info);
+  --fuente: var(--tipo-cuerpo);
+  --radio-chico: var(--radio-s);
+  --radio: var(--radio-m);
+}

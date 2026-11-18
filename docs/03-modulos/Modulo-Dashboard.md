@@ -20,6 +20,9 @@ El [[AI-Companion]] puede leer cualquier cifra del dashboard, explicarla en leng
 ## Estado
 - Fase: **MVP**
 - Dependencias: lee datos de Ventas y Compras, pero no bloquea su funcionamiento.
-- **Avance (Demo 1):** pantalla construida con datos ficticios en
-  `frontend/src/modules/dashboard/` y endpoint `GET /api/dashboard/resumen` en
-  `backend/modules/dashboard/`. Pendiente: conectar datos reales.
+- **Avance:** la caja se calcula con los datos reales de cada negocio desde Ventas y
+  Compras (`GET /api/dashboard/resumen`, `backend/modules/dashboard/servicio.py`), en la
+  hora de Lima. Sin red muestra la última caja guardada en el dispositivo. "Mañana necesitas
+  en caja" proyecta solo lo que falta llegar de cada pedido, y "Llegó un pedido" abre
+  [[Modulo-Compras]].
+- **Pendiente:** descontar de la caja lo pagado a proveedores (requiere definir el flujo de caja).

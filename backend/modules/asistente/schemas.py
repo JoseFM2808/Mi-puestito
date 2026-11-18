@@ -21,6 +21,8 @@ class PreguntaEntrada(BaseModel):
     # enviar textos enormes (y su costo) al proveedor de IA
     mensaje: Texto
     historial: list[TurnoPrevio] = Field(default_factory=list, max_length=12)
+    # Qué pantalla tiene abierta el operador: para decirle "toca este botón" donde está (ADR-047)
+    pantalla_actual: Literal["caja", "ventas", "fiados", "compras", "inventario", "asistente"] | None = None
 
 
 class LlaveEntrada(BaseModel):
@@ -38,16 +40,37 @@ class EstadoAsistente(BaseModel):
 
 
 class AccionSugerida(BaseModel):
-    """Un botón que el Asistente propone; el operador decide si lo toca."""
+    """Un botón que el Asistente propone. Si `automatica`, el operador pidió ir o hacer algo
+    y la app abre esa pantalla sola, con el Asistente a la vista (ADR-047)."""
 
-    tipo: Literal["ir_a"]
+    tipo: Literal["ir_a", "resaltar"]
     pantalla: str
     etiqueta: str
+    automatica: bool = False
+    # Solo en "resaltar": el data-ai-id de la parte de la pantalla que se señala
+    apartado: str | None = None
+
+
+class ItemBorrador(BaseModel):
+    nombre: str
+    # Texto decimal ("2", "1.5"): la app lo lee en la unidad del producto
+    cantidad: str
+    # Precio de UNA unidad, solo si el operador lo dijo; si no, la app propone el del inventario
+    precio: str | None = None
+
+
+class BorradorVenta(BaseModel):
+    """Una orden que el Asistente llenó y el operador revisa y guarda (ADR-049)."""
+
+    items: list[ItemBorrador]
+    # Para quién es ("Sra. Bertha"), si el operador lo dijo: será el nombre de la orden
+    para: str | None = None
 
 
 class RespuestaSalida(BaseModel):
     respuesta: str
     acciones: list[AccionSugerida] = []
+    borrador: BorradorVenta | None = None
     # Para valorar la respuesta ("Me sirvió" / "No me sirvió")
     id_respuesta: str
     modelo: str

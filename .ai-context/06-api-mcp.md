@@ -107,7 +107,7 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 | Método | Ruta | Entrada | Respuesta | Notas |
 |---|---|---|---|---|
 | GET | `/api/compras/proveedores` | `busqueda?`, `limite`, `desde` | `ProveedorSalida[]` | Por nombre, empresa o RUC |
-| POST | `/api/compras/proveedores` | `ProveedorEntrada {uuid, nombre, empresa?, ruc? (11 dígitos), telefono?, categoria?}` | `ProveedorSalida` | `201`/`200`; RUC repetido → `409` |
+| POST | `/api/compras/proveedores` | `ProveedorEntrada {uuid, nombre, empresa?, ruc? (11 dígitos), telefono?, categoria?}` | `ProveedorSalida` | `201`/`200`; un RUC ya registrado devuelve ese proveedor (`200`) y guarda el uuid como alias |
 | GET | `/api/compras/proveedores/{uuid}/frecuentes` | — | `ProductoFrecuente[] {nombre_producto, cantidad, monto, veces}` | Máx. 10 |
 | GET | `/api/compras/ordenes` | `estado?` repetible, `limite`, `desde` | `OrdenCompraSalida[]` con items | |
 | POST | `/api/compras/ordenes` | `OrdenEntrada {uuid, proveedor_uuid, estado? (borrador\|pendiente), fecha_estimada_llegada?, notas?, items (1–100) [{uuid, nombre_producto, cantidad?, monto}]}` | `ResultadoOrden {orden, avisos}` | `201`/`200`; el total lo calcula el servidor |
@@ -126,7 +126,7 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 
 | Método | Ruta | Entrada | Respuesta | Notas |
 |---|---|---|---|---|
-| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a, pantalla, etiqueta}], id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta e historial antes de salir al proveedor y restituye los nombres en la respuesta (ADR-034). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
+| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12), pantalla_actual? (caja\|ventas\|fiados\|compras\|inventario\|asistente)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a\|resaltar, pantalla, etiqueta, automatica, apartado}], borrador? {items [{nombre, cantidad, precio?}], para?}, id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta e historial antes de salir al proveedor y restituye los nombres en la respuesta (ADR-034). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
 | POST | `/api/asistente/valoracion` | `ValoracionEntrada {id_respuesta, util}` | `204` | "Me sirvió" / "No me sirvió". Se guarda solo si el registro está activo (ADR-038) |
 | GET | `/api/asistente/estado` | — | `EstadoAsistente {listo, puede_guardar_llave, llave_guardada}` | Nunca incluye la llave |
 | POST | `/api/asistente/llave` | `LlaveEntrada {llave}` | `EstadoAsistente` | Solo modo local, Windows y desde el mismo equipo (`403`); mal copiada o rechazada → `400`, sin repetirla (ADR-043) |
@@ -143,7 +143,7 @@ No es un endpoint de Mi Puestito, sino lo que el backend consume (ADR-036):
 | Local (futuro) | `MI_PUESTITO_IA_PROVEEDOR=local` → `http://127.0.0.1:11434/v1` (Ollama) o la URL de llama.cpp |
 | Orden de modelos | `MI_PUESTITO_IA_MODELOS` > `ia_modelos.json` (de `python -m ia.verificar`) > lista por defecto |
 | Ajustes por familia | Nemotron: `chat_template_kwargs: {enable_thinking: false}` · gpt-oss: `reasoning_effort: low` (`ia/configuracion.py`) |
-| Respuesta | Se quita `<think>…</think>` y el markdown en negrita; si el contenido es un borrador de razonamiento se descarta y se prueba el siguiente modelo; las líneas `ACCION: ir_a <pantalla>` (o la mención "pantalla fiados") se convierten en `acciones` |
+| Respuesta | Se quita `<think>…</think>` y el markdown en negrita; si el contenido es un borrador de razonamiento se descarta y se prueba el siguiente modelo; las líneas `ACCION: ir_a <pantalla>` (o la mención "pantalla fiados") y `ACCION: resaltar <apartado>` (lista blanca `APARTADOS`) se convierten en `acciones`; la primera es `automatica` si el operador pidió ir o hacer algo o preguntó dónde está algo (ADR-047). Si el modelo solo escribió la línea, el operador lee una frase ("Mira aquí: …"). Las líneas `VENTA: <cantidad> x <producto> a <precio>` y `PARA: <nombre>` forman `borrador` (ADR-049): solo si el operador pidió registrar, y solo con precios que él dijo. Ninguna línea de control llega al operador. El contexto lleva `productos_del_inventario` (solo nombres) |
 
 ## 5. MCP
 

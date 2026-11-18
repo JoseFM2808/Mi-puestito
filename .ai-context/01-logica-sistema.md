@@ -84,7 +84,7 @@ El stock **no es un número que se sobreescribe**: es Σ de `movimientos_inventa
 | Producto creado con stock inicial | `+stock_inicial` | `stock_inicial` + uuid del producto |
 | Conteo físico | `contado − stock actual` | `ajuste` + uuid del ajuste |
 | Merma / vencido | `−cantidad` | `merma` + uuid |
-| Pedido recibido **[Pendiente: Fase 4 Compras]** | `+cantidad` | `recepcion` + uuid |
+| Pedido recibido con cantidad (evento `compra.item_recibido`) | `+cantidad_stock` | `item_compra` + uuid del ítem |
 
 ```mermaid
 flowchart TD
@@ -140,7 +140,8 @@ Reglas (ADR-045):
 - **Sugerencias:** lo más pedido a ese proveedor en sus últimas 30 órdenes (sin borradores), con la cantidad y el monto de
   la última vez.
 - **Offline:** proveedor, pedido, avance, recepción y cierre pasan por la misma cola FIFO que Ventas. Un RUC repetido se
-  avisa en el dispositivo si ya se conoce; si no, el servidor lo rechaza con `409` y el operador lo ve en "rechazadas".
+  avisa en el dispositivo si ya se conoce. Si dos tablets sin red lo registran, el segundo uuid queda como **alias** del
+  primero (`alias_proveedores`): el alta responde `200` con el proveedor existente y sus pedidos se aceptan (D-25).
 
 ## 5. Asistente (AI Companion)
 
@@ -160,14 +161,66 @@ sequenceDiagram
         S->>M: chat/completions (≤ 12 s por modelo)
         M-->>S: texto o error → siguiente modelo
     end
-    S-->>R: texto + líneas "ACCION: ir_a <pantalla>"
-    R->>R: acciones de la lista blanca → botones · registro opt-in (seudonimizado)
+    S-->>R: texto + "ACCION: ir_a <pantalla>" o "ACCION: resaltar <apartado>"
+    R->>R: acciones de la lista blanca · la 1.ª automatica si pidió ir/hacer o preguntó dónde (ADR-047)
     R-->>UI: {respuesta con nombres reales, acciones, id_respuesta, modelo}
-    UI-->>UI: botón "Ir a Ventas" (el operador decide) · "Me sirvió" / "No me sirvió"
+    UI-->>UI: automatica → abre la pantalla y marca la parte · si no, botón · "Me sirvió"
 ```
 
-Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y una acción sugerida
-nunca se ejecuta sola (ADR-037). Sin Dashboard disponible responde igual, avisando que no tiene cifras.
+Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y solo navega y señala:
+abre una pantalla o marca una parte de ella, nunca llena ni guarda datos (ADR-037, ADR-047). Sin Dashboard disponible responde igual, avisando que no tiene cifras.
+
+El Asistente tiene dos formas (ADR-046): **apartado propio** (pantalla `asistente` en el menú, `#asistente`) y **ventana
+flotante** (botón de la barra), que queda sobre la pantalla actual y sigue abierta al navegar: si sugiere "Ir a Fiados" y
+el operador lo toca, Fiados aparece detrás de la ventana. Ambas comparten la conversación de `stores/conversacion.ts`,
+separada por negocio y solo en memoria: nunca se guarda en el dispositivo. Al empezar ofrece preguntas sugeridas.
+
+**Trabajar con el Asistente a la vista (ADR-047).** La ventana va junto a la pantalla, no encima: en pantalla ancha (o
+teléfono acostado) es una columna a la derecha; en teléfono y tablet de pie, una hoja abajo que se **achica** a su barra,
+y el contenido gana espacio al final para que todo campo quede por encima. Llevar a otra pantalla desde el apartado pasa
+la conversación a la ventana (`llevarConAsistente`): nunca se pierde de vista. La app actúa sola solo en dos casos, que
+decide una regla fija sobre lo que escribió el operador (`ia/acciones.py`, nunca el modelo):
+
+| El operador… | Ejemplo | La app |
+|---|---|---|
+| pide ir o hacer algo | "Quiero registrar una compra" | abre Compras con el Asistente al lado: "Abrí Compras. Sigo aquí…" |
+| pregunta dónde está algo o qué tocar | "¿Qué botón toco para hacer un pedido?" | abre la pantalla y **marca** `compras.nuevo-pedido` 4 s |
+| pregunta una cifra o cómo se hace algo | "¿Qué pedido llega mañana?" | solo deja el botón ("Ir a…", "Muéstrame…") |
+
+El modelo señala con `ACCION: resaltar <apartado>`: el apartado es un `data-ai-id` real de la lista blanca `APARTADOS`
+(16 partes, solo lo visible al abrir cada pantalla; un test verifica que existan en el frontend). La app lo trae a la
+vista debajo de la barra y lo marca con el color del Asistente (`componentes/asistente/senalar.ts`). En la pantalla abierta
+solo se marca si esa parte está dibujada en ese momento, y el aviso dice solo lo que pasó. El backend recibe además
+`pantalla_actual` para decir "toca este botón" donde el operador está.
+
+La regla que decide qué hace sola la app reconoce **toda forma del verbo** ("registrar", "anota", "regístrala por mí",
+"¿cómo registro…?"), excepto el pasado ("dime que ya registraste…"). Una pregunta de cifras ("¿cuánto vendí hoy?") no
+mueve nada. Ante "¿cómo…?" el Asistente da los pasos con los nombres de los botones y ofrece hacerlo.
+
+**El Asistente llena la orden; el operador la guarda (ADR-049).** Si el operador pide registrar una venta y dice qué
+lleva, el modelo escribe una línea por producto y, si dijo para quién, una línea `PARA`:
+
+```
+VENTA: 1 x Arroz Costeño
+PARA: Sra. Bertha
+```
+
+`ia/borrador.py` la lee (tolera "1 kg x", "1 kilo de" y precios de relleno como `a <precio>`) y la app abre Ventas con la
+tarjeta **"El Asistente llenó esta orden"**: nombre de la orden, producto, cantidad y precio, todo editable, y nada
+guardado hasta tocar **«Guardar orden»**. Invariantes, ninguna depende del modelo:
+
+- Solo hay orden llenada si el operador pidió registrar, en este mensaje o en el anterior ("regístrala por mí").
+- **Un precio que el operador no dijo se descarta**: la línea queda con el precio del inventario, o en blanco.
+- Cada línea se enlaza con su producto si el nombre calza, sin importar mayúsculas, tildes ni plurales
+  (`inventario/nombres.ts`): así descuenta stock al guardarse.
+- Si el texto del modelo habla de "revisa la orden" y no hay orden llenada, se reemplaza por un pedido de los productos:
+  el operador nunca busca una orden que no existe. Ninguna línea de control (`ACCION`, `VENTA`, `PARA`) llega a la pantalla.
+- El verificador de cifras acepta también el **producto** de dos cifras del operador (2 × 4.80 = 9.60).
+
+Para escribir bien los nombres, el modelo recibe `productos_del_inventario`: solo los nombres, sin stock ni precios.
+En la conversación, cada producto del inventario que se nombra (lo diga el Asistente o el operador) es un **enlace** a su
+tarjeta en Inventario, que se abre y se marca. Se le puede **hablar** al Asistente (botón «Hablar»): el dictado del
+navegador escribe lo entendido mientras se habla y lo envía al terminar.
 
 **Verificador de cifras (ADR-042):** cada monto de la respuesta debe estar en el contexto o en lo que dijo el operador. Si
 un modelo inventa uno, se prueba el siguiente; si todos fallan, se responde con un mensaje de respaldo y el botón a la Caja.
@@ -175,6 +228,9 @@ un modelo inventa uno, se prueba el siguiente; si todos fallan, se responde con 
 **Calidad medida:** `python -m ia.evaluar` corre 19 casos fijos sobre una demo temporal. Con NVIDIA el 2026-11-01:
 `nemotron-3.5-bolt-e4b` 19/19 en una corrida, mediana 1,4 s, sin nombres reales hacia el proveedor en 30 llamadas (Bolt tuvo
 404 intermitentes, cubiertos por los reintentos). Entre corridas hay variación: hubo 17/18 antes de añadir el caso de Compras.
+El 2026-11-07, con la pantalla de Inventario en la guía: 18/19 y 19/19, mediana 1,2 s. El fallo intermitente es "cómo
+cobrar" sin nombrar el botón. Nombrar "reportes" en la guía hacía que el modelo los mencionara; ahora la guía dice
+que solo hay cifras de hoy. El Asistente no ve el stock: ante "¿cuánto arroz me queda?" ofrece ir a Inventario.
 
 **Dataset:** `python -m ia.dataset salida.jsonl` exporta solo lo valorado "Me sirvió", sin borradores, sin respuestas de
 respaldo y sin cifras ausentes de su contexto. Una valoración posterior negativa saca el ejemplo.
@@ -197,7 +253,21 @@ flowchart TB
 - Recuperar no se ofrece con cambios sin enviar en la cola: se perderían.
 - La copia no lleva los PIN, la llave de IA ni el secreto de sesión; va **sin cifrar** y la custodia el vendedor (D-23).
 
-## 7. Datos de práctica
+## 7. Inventario en pantalla
+
+Código: `frontend/src/modules/inventario/`. El stock no se escribe a mano: **Contar lo que hay** envía cuánto hay y el
+servidor calcula la diferencia (ADR-031); **Registrar merma** resta; las ventas con `producto_uuid` y las compras
+recibidas con cantidad lo mueven solas. Las cantidades viajan con 3 decimales y en el frontend se llevan en milésimas
+enteras, igual que el dinero en céntimos. Todo pasa por la cola offline; "Queda poco" y "Descuadre" se dicen con
+palabras, calculados igual que `_con_estado` del backend.
+
+**Vender un producto del inventario:** al escribir el producto en una venta aparecen los que coinciden. Al elegir uno,
+la cantidad se pide en su unidad y el monto se sugiere con `montoPorCantidad` (precio × cantidad, redondeado al céntimo;
+el operador puede cambiarlo). El ítem viaja con `producto_uuid` y `cantidad_num`, y el servidor descuenta por el evento
+`venta.item_registrado`; quitar el ítem lo devuelve. La pantalla refleja el stock al instante con `ajustarLocal`, que no
+encola nada. Sin elegir, se vende con texto libre y el stock no cambia.
+
+## 8. Datos de práctica
 
 `POST /api/dashboard/demo/reiniciar` borra lo practicado y vuelve a sembrar con las fechas de hoy; con un negocio real da
 `403`. El botón pide confirmación en dos pasos y limpia también lo guardado en el dispositivo, para que la cola no reenvíe

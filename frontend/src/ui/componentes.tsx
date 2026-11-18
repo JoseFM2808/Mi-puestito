@@ -173,8 +173,18 @@ export function Monto({
   )
 }
 
-export function TituloPagina({ children }: { children: ReactNode }) {
-  return <h1 className={estilos.tituloPagina}>{children}</h1>
+/**
+ * Título de la pantalla. `ayuda` dice en una frase para qué sirve: quien entra por
+ * primera vez sabe dónde está y qué puede hacer sin tener que explorar.
+ */
+export function TituloPagina({ children, ayuda }: { children: ReactNode; ayuda?: string }) {
+  if (!ayuda) return <h1 className={estilos.tituloPagina}>{children}</h1>
+  return (
+    <div className={estilos.encabezado}>
+      <h1 className={estilos.tituloPagina}>{children}</h1>
+      <p className={estilos.ayudaPagina}>{ayuda}</p>
+    </div>
+  )
 }
 
 export function TituloSeccion({ children }: { children: ReactNode }) {

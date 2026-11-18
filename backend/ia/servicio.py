@@ -13,8 +13,8 @@ cualquier API compatible con OpenAI a través de `compatible_openai.py`.
 import logging
 from dataclasses import dataclass, field
 
-from . import configuracion
-from .acciones import PANTALLAS, extraer
+from . import borrador, configuracion
+from .acciones import APARTADOS, PANTALLAS, extraer, texto_si_solo_hubo_accion
 from .cifras import cifras_no_respaldadas
 from .compatible_openai import ProveedorCompatibleOpenAI, es_transitorio, motivo_error
 
@@ -31,12 +31,17 @@ pagar por pedidos que llegan mañana.
 productos con su monto y se cierra con "Cobrar en efectivo", "Cobrar con Yape o Plin" o "Fiar a \
 un cliente". "Venta rápida" registra solo el monto cobrado; el detalle se completa después en \
 "Ventas rápidas por completar". Todo funciona aunque no haya internet.
-- Fiados: quién debe y cuánto. "Registrar un pago" anota lo que el cliente abona.
+- Fiados: la lista completa de quién debe y cuánto, cliente por cliente. Si preguntan dónde ver \
+a los que deben o anotar lo que un cliente pagó, es aquí: la Caja de hoy solo muestra el total. \
+"Registrar un pago" anota lo que el cliente abona.
 - Compras: pedidos a proveedores. "Nuevo pedido" arma un pedido y registra al proveedor si es \
 nuevo. Cuando llega, "Llegó este pedido" abre la lista para marcar cada producto como "Llegó", \
 "No llegó" o "Cambió", y calcula lo que hay que pagar. "Ya le pagué: cerrar pedido" lo termina.
-La app NO tiene todavía reportes por mes ni pantalla de inventario. No menciones pantallas ni \
-reportes que no estén en esta lista."""
+- Inventario: cuánto hay de cada producto. "Contar lo que hay" corrige el stock y "Registrar merma" \
+anota lo que se perdió o venció. Tú NO ves el stock: si preguntan cuánto queda, di que no lo \
+sabes y ofrece ir a Inventario.
+Solo hay cifras de HOY: si preguntan por la semana o el mes, di que solo tienes las de hoy y \
+ofrece la Caja de hoy. No menciones pantallas que no estén en esta lista."""
 
 PROMPT_SISTEMA = """Eres el Asistente de Mi Puestito, una app para vendedores \
 informales en Perú. Responde SIEMPRE en español peruano sencillo, en 1 a 4 frases \
@@ -53,7 +58,9 @@ Qué significa cada dato: hoy = la fecha de hoy. ventas_hoy = lo cobrado hoy. ve
 cuántas ventas se cobraron hoy. proyeccion_manana = lo que hay que pagar mañana. fiados_por_cobrar \
 = lo que deben TODOS los clientes, ya sumado. clientes_que_deben = quienes más deben. \
 ordenes_activas = órdenes abiertas ahora (deuda_cliente = lo que ese cliente ya debía antes). \
-pedidos_por_llegar = pedidos a proveedores (atrasado true = debió llegar y no llegó).
+pedidos_por_llegar = pedidos a proveedores (atrasado true = debió llegar y no llegó). \
+pantalla_actual = la pantalla que el operador tiene abierta ahora. productos_del_inventario = \
+nombres de los productos registrados (sin stock ni precios).
 
 Reglas:
 - Copia las cifras tal como están en los datos: no las sumes, no las redondees ni calcules \
@@ -62,10 +69,39 @@ totales. Solo si el operador te da sus propias cifras puedes hacer esa cuenta.
 di que no lo tienes y sugiere dónde revisarlo.
 - Los clientes y proveedores aparecen con códigos ("Cliente 1", "Proveedor A"). Escríbelos sin \
 artículo: di "Cliente 1 debe", no "el Cliente 1 debe".
-- Tú no registras ventas ni cobras: solo explicas y guías. Nunca digas que hiciste algo en la app.
+- Tú no guardas ventas ni cobras: explicas, guías y LLENAS órdenes para que el operador las \
+confirme. Nunca digas que registraste, cobraste o guardaste algo.
+- Si el operador pide registrar una venta u orden y dice qué productos lleva (ahora o antes en la \
+conversación, como "regístrala por mí"), llénala: escribe al final UNA línea por producto:
+VENTA: <cantidad> x <producto> a <precio>
+El precio es el de UNA unidad y va SOLO si el operador lo dijo; si no lo dijo, termina la línea en \
+el producto, sin "a": la app pone el precio del inventario. Si dijo para quién es, agrega:
+PARA: <nombre del cliente>
+Si el producto está en productos_del_inventario, escribe ese nombre exacto (en singular). \
+También en tus frases: nombra los productos por ese nombre exacto, no "esos productos".
+Ejemplos: "quiero registrar 2 fideos anita a 4.80 cada uno" → VENTA: 2 x Fideos Anita a 4.80
+"una venta para la señora Lucía, 1 kilo de arroz" → estas dos líneas:
+VENTA: 1 x Arroz Costeño
+PARA: Sra. Lucía
+La app abre Ventas con la orden llenada. Dile en una frase que la revise y toque «Guardar orden». \
+En ese caso no agregues ACCION.
+- Si preguntan CÓMO hacer algo, explica los pasos con los nombres exactos de los botones, en 2 o \
+3 frases, y ofrece hacerlo por él. Ejemplo para una venta: toca «Nueva orden», agrega lo que \
+lleva y toca «Cobrar en efectivo», «Cobrar con Yape o Plin» o «Fiar a un cliente»; o dime qué \
+lleva y te lleno la orden.
+- Responde SIEMPRE con al menos una frase. La línea ACCION va al final, nunca sola.
 - Si conviene que el operador vaya a una pantalla, agrega al final UNA línea exacta:
 ACCION: ir_a <pantalla>
-donde <pantalla> es una de: {pantallas}. Si no hace falta, no agregues esa línea."""
+donde <pantalla> es una de: {pantallas}. Si no hace falta, no agregues esa línea.
+- Para HACER algo, lleva a la pantalla donde se hace: vender o cobrar en ventas, ver a los que \
+deben o anotar un pago en fiados, pedidos a proveedores y lo que llegó en compras, productos en \
+inventario. La caja es solo para ver las cifras de hoy.
+- Si preguntan qué botón tocar o dónde está algo que aparece en esta lista, usa resaltar y no \
+ir_a: la app lleva a la pantalla y marca esa parte. Si solo preguntan una cifra, no señales nada. \
+Escribe UNA línea:
+ACCION: resaltar <apartado>
+donde <apartado> es uno de estos (la app lleva a su pantalla y lo marca):
+{apartados}"""
 
 MAX_TURNOS_PREVIOS = 6
 SIN_CIFRA_SEGURA = "No tengo esa cifra y prefiero no darte un monto dudoso. Revísala en la Caja de hoy."
@@ -82,12 +118,24 @@ class RespuestaIA:
     texto: str
     modelo: str
     acciones: list[dict[str, str]] = field(default_factory=list)
+    # Productos de una orden que el Asistente llenó y el operador confirma (ADR-049)
+    borrador: list[dict[str, str | None]] = field(default_factory=list)
+    # Para quién es esa orden ("Sra. Bertha"), si el operador lo dijo
+    para: str | None = None
+
+
+TEXTO_SI_SOLO_HUBO_BORRADOR = "Te dejé la orden llenada en Ventas. Revísala y toca «Guardar orden»."
 
 
 def armar_mensajes(
     mensaje: str, contexto_json: str, historial: list[tuple[str, str]]
 ) -> list[dict[str, str]]:
-    sistema = PROMPT_SISTEMA.format(guia=GUIA_APP, contexto=contexto_json, pantallas=", ".join(PANTALLAS))
+    sistema = PROMPT_SISTEMA.format(
+        guia=GUIA_APP,
+        contexto=contexto_json,
+        pantallas=", ".join(PANTALLAS),
+        apartados="\n".join(f"{clave} = {nombre} ({donde})" for clave, (donde, nombre) in APARTADOS.items()),
+    )
     mensajes = [{"role": "system", "content": sistema}]
     for rol, texto in historial[-MAX_TURNOS_PREVIOS:]:
         mensajes.append({"role": "assistant" if rol == "asistente" else "user", "content": texto})
@@ -128,13 +176,26 @@ async def preguntar(
                     break
         if texto is None:
             continue
-        limpio, acciones = extraer(texto)
+        # Primero las líneas VENTA (borrador, ADR-049) y luego las ACCION
+        sin_borrador, items = borrador.separar(texto)
+        sin_para, para = borrador.separar_para(sin_borrador)
+        limpio, acciones = extraer(sin_para)
         # Un monto inventado nunca llega al operador (ADR-042)
         if cifras_no_respaldadas(limpio, contexto_json, dicho_por_el_operador):
             alguna_cifra_rechazada = True
             registro.warning("Respuesta de %s descartada: monto sin respaldo en los datos", modelo)
             continue
-        return RespuestaIA(texto=limpio or texto, modelo=modelo, acciones=acciones)
+        if not limpio and items:
+            limpio = TEXTO_SI_SOLO_HUBO_BORRADOR
+        elif not limpio and acciones:
+            limpio = texto_si_solo_hubo_accion(acciones)
+        return RespuestaIA(
+            texto=limpio or texto,
+            modelo=modelo,
+            acciones=acciones,
+            borrador=items,
+            para=para if items else None,
+        )
 
     if alguna_cifra_rechazada:
         # Mejor admitirlo que dar un monto dudoso: la pantalla sí tiene la cifra exacta

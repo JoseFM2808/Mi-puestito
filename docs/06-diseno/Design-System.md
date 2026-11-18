@@ -4,6 +4,8 @@
 
 Documento de diseño centralizado y **fuente de verdad visual** del proyecto: si un token cambia aquí, cambia en toda la interfaz. Los componentes React importan estos valores desde un punto central (variables CSS, ver `tokens.css`); ningún componente usa colores, tamaños ni espaciados "a mano".
 
+> **Núcleo del estándar (ADR-048):** la marca también vive en [docs/design-system/](../design-system/README.md) (`tokens/tokens.json` y `marca/`), con el formato común a todos los proyectos. Este documento y su `tokens.css` siguen siendo lo que usa el frontend; si cambias un color aquí, cámbialo también en `tokens.json` (el sync avisa si se separan).
+
 > Paleta elegida: **A — "Mercado"** (cálida, familiar). Validada en preview (`assets/preview-caja-diaria.html`) sobre la pantalla de [[Modulo-Dashboard]].
 
 ## 1. Colores (tokens)
@@ -61,12 +63,53 @@ Documento de diseño centralizado y **fuente de verdad visual** del proyecto: si
 - Cambia el `font-size` de la raíz → **toda la interfaz re-escala** proporcionalmente.
 - **Persistencia:** se conserva durante toda la sesión del operador. Por defecto, Normal.
 
-## 6. Barra superior fija
+## 6. Menú lateral y barra superior
 
-- Franja propia (`sticky top`), fondo `--superficie`, separada del contenido por borde y sombra sutil (token `--sombra-barra`). No invade contenido.
-- **Izquierda:** botones de texto **Menú** (navegación) y **Asistente** ([[AI-Companion]], en color `--ia`), siempre visibles.
-- **Derecha:** rótulo "Tamaño de letra" + los tres tamaños.
-- En pantalla angosta, el selector de letra baja a una segunda fila sin pisar los botones.
+- **Menú siempre a la izquierda**, en el mismo lugar en todas las pantallas:
+  - Pantalla ancha (desde 1000 px: computadora, tablet echada): fijo y siempre visible.
+  - Pantalla angosta (teléfono, tablet parada): el mismo panel entra desde la izquierda con el botón **Menú**, sobre la
+    pantalla y con el fondo oscurecido. Se cierra con "Cerrar menú", tocando fuera, con Escape o al elegir una pantalla.
+- Cada opción lleva **ícono + nombre + para qué sirve** ("Fiados · Quién te debe"). La pantalla actual se marca con
+  color fuerte **y** con las palabras "Aquí estás".
+- Al final del menú, separadas, las acciones del negocio: copia de los datos, reiniciar la práctica y **Salir**.
+- **Barra superior** (`sticky top`, fondo `--superficie`, borde y `--sombra-barra`): a la izquierda **Menú** (solo en
+  pantalla angosta) y **Asistente**; a la derecha "Tamaño de letra" con los tres tamaños. En pantalla angosta el selector
+  baja a una segunda fila.
+
+## 6 bis. Pensado para personas mayores
+
+Criterios tomados de apps diseñadas para personas mayores (teléfonos y launchers simplificados, banca y salud para
+adultos mayores) y de las pautas WCAG 2.2:
+
+- **Siempre se sabe dónde se está:** cada pantalla abre con su título y una frase de para qué sirve
+  (`TituloPagina ayuda=…`), y el menú dice "Aquí estás".
+- **Lo frecuente, primero y grande:** la Caja de hoy empieza con "¿Qué quieres hacer?": accesos grandes con dibujo,
+  nombre y explicación. El más usado (Registrar venta) va relleno; en teléfono ocupa la fila entera.
+- **Nada escondido:** sin gestos, sin menús de tres puntos, sin íconos sin texto. Lo destructivo pide confirmar en dos
+  pasos con palabras ("Sí, reiniciar" / "No, dejarlo así").
+- **Controles grandes y separados:** mínimo `--tactil-min` (56 px en Normal); las opciones del menú y los accesos, más.
+- **Lenguaje de la persona, no del sistema:** "Anotar un pago", "Llegó un pedido", "Cuánto te queda".
+- **Volver al inicio siempre a mano:** el menú lateral está a la vista en pantalla ancha y a un toque en la angosta.
+
+## 6 ter. Asistente: apartado propio y ventana flotante
+
+El [[AI-Companion]] tiene dos formas, con **la misma conversación**:
+
+- **Apartado** (opción "Asistente" del menú): chat a pantalla completa, con quién habla dicho con palabras ("Tú",
+  "Asistente"), preguntas sugeridas para empezar, la caja para escribir fija abajo y "Empezar una conversación nueva".
+- **Ventana** (botón "Asistente" de la barra): **junto a** la pantalla de trabajo, para llenar un formulario mientras se
+  conversa. En pantalla ancha (o teléfono acostado) es una columna a la derecha que no tapa nada; en teléfono y tablet de
+  pie, una hoja abajo con **"Achicar"** / **"Agrandar"**, y la pantalla gana espacio al final para que todo campo quede por
+  encima. **Sigue abierta al cambiar de pantalla.** Botones "Pantalla completa" (no en el teléfono: la hoja ya ocupa casi
+  todo) y "Cerrar"; desde el apartado, "Usar en ventana mientras trabajo".
+- **El Asistente lleva y señala** (ADR-047): si el operador pide ir o hacer algo, la pantalla se abre sola y el Asistente
+  lo cuenta ("Abrí Compras. Sigo aquí…"); si pregunta dónde está algo, además **marca** esa parte con un marco grueso del
+  color del Asistente, que late tres veces (sin animación si el sistema pide menos movimiento).
+- **Orden llenada** (ADR-049): tarjeta arriba de Ventas con borde del color del Asistente, título "El Asistente llenó
+  esta orden" y la frase "Aún no se guardó nada". Todo editable; **«Guardar orden»** y **«Descartar»**. Los productos
+  que se nombran en la conversación se subrayan en el color del Asistente y llevan a su tarjeta del inventario.
+- **Hablar**: botón con texto junto a «Enviar pregunta»; mientras escucha dice «Listo, enviar». Solo aparece si el
+  navegador tiene dictado, y en un negocio real avisa que la voz va a Google o Microsoft.
 
 ## 7. Teclado
 
@@ -76,7 +119,8 @@ Documento de diseño centralizado y **fuente de verdad visual** del proyecto: si
 ## 8. Identidad del Asistente
 
 - Color `--ia` (`#1A5A8A`) reservado para el [[AI-Companion]].
-- Siempre el mismo color y lugar (botón "Asistente" en la barra). Única excepción a la regla del color del dinero.
+- Siempre el mismo color y lugar (botón "Asistente" en la barra y su opción en el menú). Única excepción a la regla
+  del color del dinero.
 
 ## Implementación
 

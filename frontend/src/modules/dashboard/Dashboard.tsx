@@ -8,6 +8,58 @@ import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
 import estilos from './Dashboard.module.css'
 import { estaAtrasado, formatearFechaLarga, formatearFechaRelativa } from './formato'
+import { Icono, type NombreIcono } from '../../ui/iconos'
+import type { Pantalla } from '../../stores/navegacion'
+
+/**
+ * Lo que más se hace en el puesto, en botones grandes con dibujo y explicación.
+ * Están arriba de las cifras: abrir la app y vender no debe exigir bajar ni buscar.
+ */
+const ACCESOS: {
+  aiId: string
+  icono: NombreIcono
+  texto: string
+  ayuda: string
+  destino: Pantalla
+  ventaRapida?: boolean
+}[] = [
+  {
+    aiId: 'dashboard.registrar-venta',
+    icono: 'ventas',
+    texto: 'Registrar venta',
+    ayuda: 'Anotar lo que lleva',
+    destino: 'ventas',
+  },
+  {
+    aiId: 'dashboard.venta-rapida',
+    icono: 'rapida',
+    texto: 'Venta rápida',
+    ayuda: 'Solo el monto',
+    destino: 'ventas',
+    ventaRapida: true,
+  },
+  {
+    aiId: 'dashboard.anotar-pago',
+    icono: 'pago',
+    texto: 'Anotar un pago',
+    ayuda: 'Alguien pagó lo que debía',
+    destino: 'fiados',
+  },
+  {
+    aiId: 'dashboard.llego-pedido',
+    icono: 'pedido',
+    texto: 'Llegó un pedido',
+    ayuda: 'Revisar lo que trajeron',
+    destino: 'compras',
+  },
+  {
+    aiId: 'dashboard.preguntar',
+    icono: 'asistente',
+    texto: 'Preguntar al Asistente',
+    ayuda: 'Te responde y te guía',
+    destino: 'asistente',
+  },
+]
 
 /**
  * Dashboard / Caja Diaria — pantalla principal (docs/03-modulos/Modulo-Dashboard.md).
@@ -75,6 +127,29 @@ export function Dashboard() {
         </span>
       </div>
 
+      <section aria-labelledby="que-hacer" className={estilos.accesos} data-ai-id="dashboard.accesos">
+        <h2 id="que-hacer" className={estilos.preguntaAccesos}>
+          ¿Qué quieres hacer?
+        </h2>
+        <div className={estilos.cuadriculaAccesos}>
+          {ACCESOS.map(({ aiId, icono, texto, ayuda, destino, ventaRapida }) => (
+            <button
+              key={aiId}
+              type="button"
+              className={`${estilos.acceso} ${destino === 'asistente' ? estilos.accesoIa : ''}`}
+              data-ai-id={aiId}
+              onClick={() => irA(destino, { ventaRapida })}
+            >
+              <span className={estilos.iconoAcceso}>
+                <Icono nombre={icono} tamano="2.1rem" />
+              </span>
+              <span className={estilos.textoAcceso}>{texto}</span>
+              <span className={estilos.ayudaAcceso}>{ayuda}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       {error && (
         <div className={estilos.filaAviso}>
           <Aviso tipo="error" aiId="dashboard.error">
@@ -106,22 +181,6 @@ export function Dashboard() {
 
       {!datos && !error && <Nota>Leyendo la caja…</Nota>}
       {datos && <ContenidoCaja resumen={datos.resumen} />}
-
-      <div className={estilos.acciones}>
-        <Boton aiId="dashboard.registrar-venta" onClick={() => irA('ventas')}>
-          Registrar venta
-        </Boton>
-        <Boton
-          aiId="dashboard.venta-rapida"
-          variante="secundario"
-          onClick={() => irA('ventas', { ventaRapida: true })}
-        >
-          Venta rápida
-        </Boton>
-        <Boton aiId="dashboard.llego-pedido" variante="secundario" onClick={() => irA('compras')}>
-          Llegó un pedido
-        </Boton>
-      </div>
     </main>
   )
 }

@@ -1,0 +1,214 @@
+/* Menú lateral (Design-System §6). CSS Module. Solo tokens. */
+
+/* ---- Teléfono y tablet parada: panel que entra desde la izquierda ---- */
+.menu {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 201;
+  width: min(21rem, 88vw);
+  background: var(--superficie);
+  border-right: 1.5px solid var(--borde-fuerte);
+  padding: var(--esp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  /* Con letra grande no cabe todo: se desplaza en vez de quedar cortado */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform: translateX(-105%);
+  visibility: hidden;
+}
+
+.abierto {
+  transform: none;
+  visibility: visible;
+  box-shadow: var(--sombra-barra);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .menu {
+    transition:
+      transform 160ms ease-out,
+      visibility 160ms;
+  }
+}
+
+.menu:focus {
+  outline: none;
+}
+
+.fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: color-mix(in srgb, var(--texto) 45%, transparent);
+}
+
+/* ---- Computadora y tablet echada: fijo, siempre visible ---- */
+@media (min-width: 1000px) {
+  .menu {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: 18rem;
+    flex-shrink: 0;
+    z-index: auto;
+    transform: none;
+    visibility: visible;
+    box-shadow: none;
+    transition: none;
+  }
+  .fondo,
+  .cerrar {
+    display: none;
+  }
+}
+
+.cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  padding-bottom: var(--esp-2);
+  border-bottom: 1px solid var(--borde);
+}
+
+.marca {
+  font-size: var(--tam-seccion);
+  font-weight: 700;
+  color: var(--primario);
+}
+
+.negocio {
+  font-size: var(--tam-nota);
+  font-weight: 600;
+  color: var(--texto-suave);
+  overflow-wrap: anywhere;
+}
+
+/* ---- Opciones: grandes, con ícono, nombre y para qué sirven ---- */
+.opciones {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.opcion {
+  width: 100%;
+  min-height: calc(var(--tactil-min) * 1.2);
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: var(--esp-2);
+  text-align: left;
+  font-family: var(--fuente);
+  color: var(--texto);
+  background: var(--fondo);
+  border: 2px solid var(--borde);
+  border-radius: var(--radio);
+  cursor: pointer;
+}
+
+.opcion:hover {
+  border-color: var(--primario);
+}
+
+.opcion:focus-visible,
+.cerrar:focus-visible,
+.salir:focus-visible {
+  outline: 3px solid var(--ia);
+  outline-offset: 2px;
+}
+
+.icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: var(--radio-chico);
+  background: var(--tinte-primario);
+  color: var(--primario);
+}
+
+.textos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nombre {
+  font-size: var(--tam-nombre);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ayuda {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+  line-height: 1.3;
+}
+
+/* Dónde estoy: color fuerte Y la palabra "Aquí estás" */
+.actual {
+  background: var(--primario);
+  border-color: var(--primario);
+  color: var(--superficie);
+}
+
+.actual .icono {
+  background: var(--superficie);
+}
+
+.actual .ayuda {
+  color: var(--superficie);
+  font-weight: 600;
+}
+
+/* El Asistente conserva su color propio (Design-System §8) */
+.opcionIa .icono {
+  background: var(--tinte-ia);
+  color: var(--ia);
+}
+
+.opcionIa.actual {
+  background: var(--ia);
+  border-color: var(--ia);
+}
+
+/* ---- Acciones del negocio, al final y separadas ---- */
+.extras {
+  margin-top: auto;
+  padding-top: var(--esp-3);
+  border-top: 1px solid var(--borde);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.extras button {
+  width: 100%;
+}
+
+.cerrar,
+.salir {
+  font-family: var(--fuente);
+  font-size: var(--tam-boton);
+  font-weight: 600;
+  min-height: var(--tactil-min);
+  padding: var(--esp-1) var(--esp-3);
+  border-radius: var(--radio-chico);
+  border: 2px solid var(--borde-fuerte);
+  background: var(--fondo);
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.salir {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-1);
+}

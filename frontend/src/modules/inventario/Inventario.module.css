@@ -1,0 +1,78 @@
+/* Estilos del módulo Inventario. Solo tokens. */
+
+.pantalla {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--esp-4) var(--esp-3) var(--esp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.tarjeta,
+.formulario,
+.bloque {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--esp-2);
+  flex-wrap: wrap;
+}
+
+.fila > * {
+  min-width: 0;
+}
+
+.acciones,
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.filaCampos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--esp-2);
+}
+
+.nombre {
+  font-size: var(--tam-nombre);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.stock,
+.stockBajo,
+.stockDescuadre {
+  font-size: var(--tam-nombre);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stockBajo {
+  color: var(--pendiente);
+}
+
+.stockDescuadre,
+.negativo {
+  color: var(--deuda);
+}
+
+.positivo {
+  color: var(--primario);
+}
+
+.lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+}

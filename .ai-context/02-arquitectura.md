@@ -20,18 +20,22 @@ verificado. Las dependencias pesadas (venv, `node_modules`) nunca van en la carp
 flowchart TB
     subgraph FE["frontend/ · React 18 + TS + Vite + Zustand + Dexie (PWA)"]
         App[App.tsx<br/>login · pantallas · LimiteErrores por módulo] --> Barra[BarraSuperior<br/>Menú · Asistente · letra · conexión]
-        App --> Caja[modules/dashboard]
+        App --> Menu[componentes/menu-lateral<br/>fijo en pantalla ancha · panel en la angosta]
+        App --> Caja[modules/dashboard<br/>accesos grandes + cifras]
         App --> Ven[modules/ventas<br/>almacen.ts optimista]
         App --> Fia[modules/fiados]
         App --> Com[modules/compras<br/>almacen.ts optimista]
-        App --> Asis[componentes/asistente]
-        Barra --> Res[Respaldo · AccionesBarra]
+        App --> Inv[modules/inventario<br/>almacen.ts optimista]
+        App --> Asis[componentes/asistente<br/>apartado + ventana al lado<br/>senalar.ts · dictado.ts]
+        Asis --> Conv[stores/conversacion.ts<br/>sobrevive al cambiar de pantalla]
+        Menu --> Res[Respaldo · ReiniciarPractica]
         Pwa[pwa.ts + stores/actualizacion<br/>aviso de versión nueva] -.-> Barra
-        Ven & Fia & Com --> Cola[sincronizacion/cola.ts<br/>FIFO idempotente]
+        Ven & Fia & Com & Inv --> Cola[sincronizacion/cola.ts<br/>FIFO idempotente]
         Cola --> IDB[(IndexedDB por proyecto)]
-        Caja & Ven & Fia & Com & Asis --> Api[api/cliente.ts + api/contrato.ts<br/>céntimos · snake→camel]
-        UI[ui/componentes.tsx<br/>Boton · Campo · Monto · Aviso] -.usa.- Caja & Ven & Fia & Com & Asis
+        Caja & Ven & Fia & Com & Inv & Asis --> Api[api/cliente.ts + api/contrato.ts<br/>céntimos · snake→camel]
+        UI[ui/componentes.tsx<br/>Boton · Campo · Monto · Aviso] -.usa.- Caja & Ven & Fia & Com & Inv & Asis
         Tokens[(docs/06-diseno/tokens.css)] -.alias Vite.-> UI
+        Nucleo[(docs/design-system/tokens/tokens.json<br/>núcleo de marca, ADR-048)] -.ds-validar vigila que coincidan.- Tokens
     end
 
     subgraph BE["backend/ · FastAPI + SQLAlchemy 2 + Alembic"]
@@ -93,10 +97,20 @@ flowchart LR
   y escribe `ia_modelos.json` (solo nombres y latencias): primero los que responden bien, luego por velocidad. Los modelos
   de razonamiento llevan su ajuste para responder directo; una respuesta que sea un borrador se descarta. Gemma 4 es la
   familia objetivo del modelo local y queda de respaldo hasta que responda a tiempo en NVIDIA.
-- **Acciones:** el modelo propone `ACCION: ir_a <pantalla>`; solo pasan `caja`, `ventas`, `fiados`, `compras`, y se muestran como
-  botones que el operador decide tocar. El Asistente nunca registra, cobra ni navega solo.
-- **Evaluación:** `python -m ia.evaluar` mide cifras, navegación, memoria y honestidad con 19 casos fijos; decide el orden
+- **Acciones:** el modelo propone `ACCION: ir_a <pantalla>` (solo `caja`, `ventas`, `fiados`, `compras`, `inventario`) o
+  `ACCION: resaltar <apartado>` (lista blanca `APARTADOS` de `data-ai-id` reales). La primera es `automatica` si el operador
+  pidió ir o hacer algo o preguntó dónde está algo: la app abre la pantalla y marca la parte; si no, queda como botón
+  (ADR-047). El Asistente nunca guarda ni cobra.
+- **Orden llenada (ADR-049):** líneas `VENTA:` / `PARA:` → `ia/borrador.py` (precios solo del operador) →
+  `RespuestaSalida.borrador` → `stores/borradorAsistente.ts` (en memoria, por negocio) → tarjeta
+  `modules/ventas/BorradorAsistente.tsx`, que guarda con las acciones de siempre de `ventas/almacen.ts` (`abrirOrden`,
+  `agregarItem`). `modules/inventario/nombres.ts` reconoce productos por nombre (plurales, tildes) para enlazar la orden
+  y los enlaces de la conversación. Voz: `componentes/asistente/dictado.ts` (Web Speech API del navegador, `es-PE`).
+- **Evaluación:** `python -m ia.evaluar` mide cifras, navegación, memoria y honestidad con 29 casos fijos (también qué abre solo, qué señala y qué orden llena); decide el orden
   de modelos junto con `ia.verificar`. Vigila además que ningún nombre real salga hacia el proveedor.
+- **Design System:** el frontend importa `docs/06-diseno/tokens.css` (alias `@tokens`). Desde ADR-048 el núcleo de marca del
+  estándar del workspace vive en `docs/design-system/` (`tokens/tokens.json` en W3C DTCG, `marca/01–07`, y los generados
+  `tokens/tokens.css` y `DESIGN.md`); `ds-validar` (Estudio-Contenido) comprueba en cada sync que los colores coincidan.
 - **Contexto de desarrollo:** `AGENTS.md` (fuente de verdad) + `.ai-context/` + `docs/` + subagente revisor en
   `.claude/agents/revisor.md` (solo lectura, bajo demanda).
 

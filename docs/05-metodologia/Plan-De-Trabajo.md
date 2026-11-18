@@ -17,7 +17,7 @@
 | [[#Fase 4 — Módulo Compras]] | Comprar de verdad | Hecha | 6/6 |
 | [[#Fase 5 — Offline real y sincronización]] | Que funcione sin internet | Hecha | 5/5 |
 | [[#Fase 6 — AI Companion]] | El asistente que guía | En curso | 2/6 |
-| [[#Fase 7 — Módulos de Fase 2 del producto]] | Inventario, Análisis, Gastos | Pendiente | 0/3 |
+| [[#Fase 7 — Módulos de Fase 2 del producto]] | Inventario, Análisis, Gastos | En curso | 0/3 |
 
 **Regla de orden:** la Fase 1 va antes que cualquier módulo nuevo. Sus tareas
 son baratas hoy y caras después: tocar el esquema cuando ya hay ventas reales
@@ -205,7 +205,8 @@ Meta: el asistente integrado. Ver [[AI-Companion]] y [[Orquestacion-IA]].
 
 ## Fase 7 — Módulos de Fase 2 del producto
 
-- [ ] [[Modulo-Inventario]] — stock, vencimientos, precios
+- [ ] [[Modulo-Inventario]] — stock, vencimientos, precios *(pantalla de stock, conteo, merma y precio hecha, y Ventas
+  ya elige productos; faltan vencimientos y costo)*
 - [ ] [[Modulo-Analisis]] — rentabilidad y reportes
 - [ ] [[Modulo-Gastos]] — gastos del puesto y del hogar
 

@@ -29,6 +29,18 @@ VENTAS_COBRADAS = [
 ]
 VENTAS_RAPIDAS = [D("22.00"), D("29.50"), D("32.50")]
 
+# Inventario para practicar (nombre, unidad, precio de venta, stock, mínimo). Papa y leche
+# quedan bajo su mínimo: así "lo que se está acabando" tiene qué mostrar.
+INVENTARIO = [
+    ("Arroz Costeño", "kg", D("4.20"), D("50"), D("10")),
+    ("Fideos Anita", "unidad", D("4.80"), D("30"), D("6")),
+    ("Azúcar rubia", "kg", D("3.80"), D("40"), D("10")),
+    ("Aceite Primor", "litro", D("9.50"), D("12"), D("4")),
+    ("Leche Gloria", "unidad", D("4.20"), D("5"), D("6")),
+    ("Papa amarilla", "kg", D("3.50"), D("3"), D("5")),
+    ("Pollo", "kg", D("9.90"), D("8"), D("3")),
+]
+
 # Clientes con fiado: deuda = fiado − abonos. Total S/ 132.50 entre 4.
 FIADOS = [
     ("Sra. Flora", "987654321", D("80.00"), [D("60.00")], [D("15.00")]),
@@ -58,6 +70,8 @@ def cargar_si_vacio() -> bool:
         OrdenCompra,
         Proveedor,
     )
+    from modules.inventario.models import MotivoMovimiento, Producto, Unidad
+    from modules.inventario.servicio import registrar_movimiento
     from modules.ventas.models import (
         Cliente,
         EstadoVenta,
@@ -161,6 +175,18 @@ def cargar_si_vacio() -> bool:
                     for n, c, m in items
                 ],
             ))
+
+        # Productos del inventario, con su stock inicial como movimiento (igual que al crearlos)
+        for nombre, unidad, precio, stock, minimo in INVENTARIO:
+            producto = Producto(
+                nombre=nombre, unidad=Unidad(unidad), precio_venta=precio, stock_minimo=minimo
+            )
+            sesion.add(producto)
+            sesion.flush()
+            registrar_movimiento(
+                sesion, producto, stock, MotivoMovimiento.AJUSTE,
+                "stock_inicial", producto.uuid, "Stock de la demo",
+            )
 
         sesion.commit()
         return True

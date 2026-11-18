@@ -120,3 +120,19 @@ class ItemOrdenCompra(Base):
     monto_sustituto: Mapped[Decimal | None] = mapped_column(Dinero)
 
     orden: Mapped[OrdenCompra] = relationship(back_populates="items")
+
+
+class AliasProveedor(Base):
+    """Otro uuid del mismo proveedor (D-25).
+
+    Dos tablets sin red pueden registrar al mismo proveedor (mismo RUC) con uuid
+    distintos. El segundo no se rechaza: queda como alias del primero, y los pedidos
+    que ya lo usaban se aceptan igual al sincronizar.
+    """
+
+    __tablename__ = "alias_proveedores"
+
+    uuid: Mapped[str] = mapped_column(String(36), primary_key=True)
+    proveedor_id: Mapped[int] = mapped_column(ForeignKey("proveedores.id", ondelete="CASCADE"), index=True)
+    creado_en: Mapped[datetime] = mapped_column(FechaHoraUTC, default=ahora_utc)
+

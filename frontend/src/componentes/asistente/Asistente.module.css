@@ -1,28 +1,34 @@
-/* Panel del Asistente. CSS Module. Solo tokens. */
+/* Apartado del Asistente: un chat de pantalla completa. CSS Module. Solo tokens. */
 
-.asistente {
+.pantalla {
   max-width: 920px;
+  width: 100%;
   margin: 0 auto;
-  padding: var(--esp-3);
+  padding: var(--esp-4) var(--esp-3) 0;
   display: flex;
   flex-direction: column;
   gap: var(--esp-3);
-  border-bottom: 1px solid var(--borde);
+  min-height: calc(100vh - var(--tactil-barra) * 2);
 }
 
-.mensajes {
+.configurar {
   display: flex;
   flex-direction: column;
   gap: var(--esp-2);
-  max-height: 50vh;
-  overflow-y: auto;
+}
+
+.mensajes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
 }
 
 .turno {
   display: flex;
   flex-direction: column;
   gap: var(--esp-1);
-  max-width: 80%;
+  max-width: min(36rem, 88%);
 }
 
 .turnoIa {
@@ -35,10 +41,37 @@
   align-items: flex-end;
 }
 
+/* Quién habla, con palabras: no hay que deducirlo por el color o el lado */
+.quien {
+  font-size: var(--tam-rotulo);
+  font-weight: 700;
+  color: var(--texto-suave);
+}
+
+.burbuja {
+  font-size: var(--tam-subtitulo);
+  line-height: 1.55;
+  padding: var(--esp-2) var(--esp-3);
+  border-radius: var(--radio);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.burbujaIa {
+  background: var(--superficie);
+  border: 1.5px solid var(--borde-fuerte);
+}
+
+.burbujaOperador {
+  background: var(--ia);
+  color: var(--superficie);
+}
+
 .valoracion {
   display: flex;
   gap: var(--esp-1);
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .gracias {
@@ -46,33 +79,254 @@
   color: var(--texto-suave);
 }
 
-.burbuja {
-  font-size: var(--tam-subtitulo);
-  line-height: 1.5;
-  padding: var(--esp-2) var(--esp-3);
-  border-radius: var(--radio-chico);
+.sugerencias {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
 }
 
-.burbujaIa {
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  align-self: flex-start;
+.listaSugerencias {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: var(--esp-2);
 }
 
-.burbujaOperador {
-  background: var(--ia);
-  color: var(--superficie);
-  align-self: flex-end;
-}
-
+/* La caja para escribir queda abajo y siempre a la vista, como en cualquier chat */
 .formulario {
+  position: sticky;
+  bottom: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--esp-2);
+  padding: var(--esp-2) 0 var(--esp-3);
+  background: var(--fondo);
+  border-top: 1px solid var(--borde);
 }
 
 .formulario > div {
   flex: 1;
   min-width: min(14rem, 100%);
+}
+
+/* "Hablar" y "Enviar pregunta" van juntos; si no caben al lado de la caja, bajan a su fila */
+.formulario > .botonesPregunta {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+/* Un producto del inventario dentro del texto del Asistente: se ve y se toca como enlace */
+.enlaceProducto {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ia);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+/* En lo que escribió el operador (fondo del Asistente), el enlace va del color del texto */
+.burbujaOperador .enlaceProducto {
+  color: inherit;
+}
+
+.enlaceProducto:focus-visible {
+  outline: 3px solid var(--ia);
+  outline-offset: 2px;
+  border-radius: var(--radio-chico);
+}
+
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+  padding-bottom: var(--esp-4);
+}
+
+/* ---- Ventana: el mismo Asistente junto a la pantalla de trabajo (ADR-046, ADR-047) ----
+   Teléfono y tablet: hoja abajo, a todo lo ancho, que se achica a su barra para llenar los
+   datos de atrás. Pantalla ancha (o tablet/teléfono acostado): columna a la derecha que no
+   tapa nada, para hablar con el Asistente mientras se llena el formulario. */
+.ventana {
+  position: fixed;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 150;
+  height: 55vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fondo);
+  border-top: 2px solid var(--ia);
+  border-radius: var(--radio) var(--radio) 0 0;
+  box-shadow: 0 -6px 24px color-mix(in srgb, var(--texto) 25%, transparent);
+  overflow: hidden;
+}
+
+.ventana:focus {
+  outline: none;
+}
+
+/* Achicada: solo su barra de título, con "Agrandar" y "Cerrar" */
+.ventana.achicada {
+  height: auto;
+}
+
+.cabeceraVentana {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-1);
+  padding: var(--esp-1) var(--esp-2);
+  background: var(--ia);
+  color: var(--superficie);
+  flex-shrink: 0;
+}
+
+.tituloVentana {
+  font-size: var(--tam-nombre);
+  font-weight: 700;
+}
+
+.accionesVentana {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-1);
+}
+
+.accionesVentana button {
+  min-height: var(--tactil-barra);
+  padding-inline: var(--esp-2);
+  font-size: var(--tam-nota);
+}
+
+.soloHoja,
+.noEnTelefono {
+  display: contents;
+}
+
+/* Dentro de la ventana los mensajes se desplazan y la caja de escribir queda abajo */
+.cuerpoVentana {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  padding: var(--esp-2) var(--esp-2) 0;
+}
+
+.cuerpoVentana .mensajes {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: var(--esp-1);
+}
+
+.cuerpoVentana .turno {
+  max-width: 92%;
+}
+
+.cuerpoVentana .listaSugerencias {
+  grid-template-columns: 1fr;
+}
+
+.cuerpoVentana .formulario {
+  position: static;
+  flex-shrink: 0;
+}
+
+/* Teléfono: la hoja es más alta, porque la pantalla es angosta y la caja de escribir ocupa más */
+@media (max-width: 600px) {
+  .ventana {
+    height: 72vh;
+  }
+
+  /* Título, "Achicar" y "Cerrar" en una sola fila: la conversación gana alto. Con letra muy
+     grande el título baja a su propia fila, y los botones siguen juntos en la suya */
+  .noEnTelefono {
+    display: none;
+  }
+
+  .accionesVentana {
+    flex-wrap: nowrap;
+  }
+
+  .accionesVentana button {
+    padding-inline: var(--esp-1);
+  }
+
+  /* Con letra muy grande todo ocupa más: la hoja sube para que la conversación siga legible */
+  :global(html[data-letra='muygrande']) .ventana:not(.achicada) {
+    height: 85vh;
+  }
+}
+
+/* Pantalla ancha, o tablet/teléfono acostado: columna a la derecha, junto a la pantalla */
+@media (min-width: 1000px), (min-width: 601px) and (max-height: 640px) {
+  .ventana {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    flex-shrink: 0;
+    width: min(26rem, 42vw);
+    height: 100vh;
+    border-top: 0;
+    border-left: 2px solid var(--ia);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .ventana.achicada {
+    height: 100vh;
+  }
+
+  /* En la columna no hace falta achicar; solo se muestra para volver a agrandarla */
+  .soloHoja {
+    display: none;
+  }
+
+  .achicada .soloHoja {
+    display: contents;
+  }
+}
+
+/* Pantalla baja (teléfono acostado): la columna es más ancha, la barra va en una fila y la caja de
+   escribir también, para que la conversación quepa. El título y la etiqueta siguen ahí para los
+   lectores de pantalla; a la vista quedan el color del Asistente y el ejemplo dentro de la caja. */
+@media (min-width: 601px) and (max-height: 640px) {
+  .ventana {
+    width: min(26rem, 50vw);
+  }
+
+  .tituloVentana,
+  .cuerpoVentana .formulario label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .accionesVentana {
+    flex-wrap: nowrap;
+  }
+
+  .cuerpoVentana .formulario button {
+    padding-inline: var(--esp-2);
+  }
+
+  .cuerpoVentana .formulario {
+    gap: var(--esp-1);
+    padding: var(--esp-1) 0 var(--esp-2);
+  }
 }
