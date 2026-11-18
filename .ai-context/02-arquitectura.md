@@ -27,6 +27,7 @@ flowchart TB
         App --> Com[modules/compras<br/>almacen.ts optimista]
         App --> Inv[modules/inventario<br/>almacen.ts optimista]
         App --> Gas[modules/gastos<br/>almacen.ts optimista]
+        App --> Ana[modules/analisis<br/>¿Cómo me va?]
         App --> Asis[componentes/asistente<br/>apartado + ventana al lado<br/>senalar.ts · dictado.ts]
         Asis --> Conv[stores/conversacion.ts<br/>sobrevive al cambiar de pantalla]
         Menu --> Res[Respaldo · ReiniciarPractica]
@@ -49,6 +50,8 @@ flowchart TB
         Main --> MGas[gastos<br/>servicio.py]
         MCom -- compra.pagada --> MGas
         MCaja -. lee, no exige .-> MVen & MGas
+        Main --> MAna[analisis<br/>solo lectura]
+        MAna -. lee, no exige .-> MVen & MGas & MInv
         Main --> MAsi[asistente]
         Main --> MRes[respaldo<br/>archivo completo]
         MVen & MCom -- eventos.py<br/>SAVEPOINT --> MInv

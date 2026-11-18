@@ -226,3 +226,6 @@ En IndexedDB (versión 4): `cajas` (por día) y `gastos` (con su día), para ver
 |---|---|---|---|
 | `productos.costo_ultimo` | INTEGER | sí | Céntimos que costó UNA unidad (kg, litro) en la última compra recibida con cantidad |
 | `productos.vence_el` | DATE | sí | Día peruano en que vence el lote más antiguo que queda |
+
+En IndexedDB (versión 5): `analisis` (el último análisis de cada período, para verlo sin red). Análisis no tiene tablas
+en el servidor: solo lee `ventas`, `items_venta`, `gastos` y `productos`.

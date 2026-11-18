@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type {
+  AnalisisCable,
   CajaDelDiaCable,
   ClienteCable,
   GastoCable,
@@ -45,6 +46,8 @@ export class BaseLocal extends Dexie {
   cajas!: Table<CajaDelDiaCable, string>
   /** Gastos anotados, con el día peruano en que se hicieron, para verlos sin red */
   gastos!: Table<GastoCable & { dia: string }, string>
+  /** El último análisis de cada período, para verlo sin red (Fase 7) */
+  analisis!: Table<{ periodo: string; datos: AnalisisCable; guardadoEn: string }, string>
 
   constructor(proyecto: string) {
     super(`mi-puestito-${proyecto}`)
@@ -60,6 +63,7 @@ export class BaseLocal extends Dexie {
     })
     this.version(3).stores({ productos: 'uuid, nombre' })
     this.version(4).stores({ cajas: 'dia', gastos: 'uuid, dia' })
+    this.version(5).stores({ analisis: 'periodo' })
   }
 }
 

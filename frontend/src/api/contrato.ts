@@ -472,7 +472,58 @@ export interface GastosDelDiaCable {
   del_hogar: string
 }
 
+// ------------------------------------------------------------------ análisis (Fase 7)
+
+export type PeriodoAnalisis = 'semana' | 'mes' | 'mes_pasado'
+
+export interface DiaDelPeriodoCable {
+  dia: string
+  vendido: string
+  gastado: string
+}
+
+export interface GananciaPorProductoCable {
+  nombre: string
+  vendido: string
+  ganancia_estimada: string
+}
+
+export interface AnalisisCable {
+  periodo: PeriodoAnalisis
+  desde: string
+  hasta: string
+  vendido: string
+  ventas: number
+  pagado_a_proveedores: string
+  gastos_del_puesto: string
+  gastos_de_la_casa: string
+  resultado_del_negocio: string
+  libre: string
+  fiados_por_cobrar: string
+  por_dia: DiaDelPeriodoCable[]
+  mejores_productos: GananciaPorProductoCable[]
+  no_disponibles: string[]
+}
+
 export const CAMPOS_DEL_CONTRATO = {
+  AnalisisDelPeriodo: camposDe<AnalisisCable>()([
+    'periodo',
+    'desde',
+    'hasta',
+    'vendido',
+    'ventas',
+    'pagado_a_proveedores',
+    'gastos_del_puesto',
+    'gastos_de_la_casa',
+    'resultado_del_negocio',
+    'libre',
+    'fiados_por_cobrar',
+    'por_dia',
+    'mejores_productos',
+    'no_disponibles',
+  ]),
+  DiaDelPeriodo: camposDe<DiaDelPeriodoCable>()(['dia', 'vendido', 'gastado']),
+  GananciaPorProducto: camposDe<GananciaPorProductoCable>()(['nombre', 'vendido', 'ganancia_estimada']),
   SaldoPorMedio: camposDe<SaldoPorMedioCable>()(['efectivo', 'yape_plin']),
   TotalesPorMedio: camposDe<SaldoPorMedioCable>()(['efectivo', 'yape_plin']),
   CajaDelDia: camposDe<CajaDelDiaCable>()([

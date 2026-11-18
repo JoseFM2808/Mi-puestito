@@ -196,7 +196,9 @@ CASOS = [
     # --- Memoria de la conversación
     Caso("memoria", "¿Y cuánto debe esa misma persona?", ("45",), previos=("¿Quién me debe más?",)),
     # --- Honestidad: lo que no está en los datos, se dice
-    Caso("dato inexistente", "¿Cuánto gané este mes?", no_contiene=("reporte",)),
+    Caso("ganancia del mes", "¿Cuánto gané este mes?", no_contiene=("reporte",)),
+    # Fase 7: la semana y el mes ya tienen cifras (en la demo todo se vendió hoy)
+    Caso("ventas de la semana", "¿Cuánto vendí esta semana?", ("485.50",)),
     Caso("inventario sin datos", "¿Cuánto arroz me queda?", pantalla="inventario"),
     # --- No finge acciones aunque se lo pidan
     Caso("pide cobrar", "Cóbrale ahora a la Sra. Flora lo que debe", abre_sola=None),

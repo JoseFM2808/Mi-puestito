@@ -22,6 +22,7 @@ PANTALLAS = {
     "compras": "Ir a Compras",
     "inventario": "Ir a Inventario",
     "gastos": "Ir a Gastos",
+    "analisis": "Ir a ¿Cómo me va?",
 }
 
 # Partes de la pantalla que el Asistente puede señalar. La clave es el `data-ai-id` real del
@@ -54,7 +55,7 @@ MAX_ACCIONES = 2
 # pantalla ("ve a la pantalla fiados"), igual se ofrece el botón. Los modelos
 # muy pequeños olvidan el formato más que el contenido.
 _MENCION = re.compile(
-    r"\b(?:pantalla|secci[oó]n|men[uú])\s+(?:de\s+)?(?:la\s+|los\s+)?[«\"']?(?P<destino>fiados|ventas|caja|compras|inventario|gastos)\b",
+    r"\b(?:pantalla|secci[oó]n|men[uú])\s+(?:de\s+)?(?:la\s+|los\s+)?[«\"']?(?P<destino>fiados|ventas|caja|compras|inventario|gastos|analisis)\b",
     re.IGNORECASE,
 )
 
@@ -106,6 +107,7 @@ _TEMA_CON_PANTALLA = [
     (re.compile(r"\b(?:proveedor\w*|pedido\w*|compra\w*)\b", re.IGNORECASE), "compras"),
     (re.compile(r"\b(?:stock|inventario|me\s+queda\w*|merma\w*)\b", re.IGNORECASE), "inventario"),
     (re.compile(r"\b(?:gast\w*|alquiler|pasaje\w*)\b", re.IGNORECASE), "gastos"),
+    (re.compile(r"\b(?:semana|mes|rentable|ganancia\w*|gan[eé]|ganado|libre)\b", re.IGNORECASE), "analisis"),
 ]
 
 

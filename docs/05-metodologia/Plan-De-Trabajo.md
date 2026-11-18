@@ -207,8 +207,8 @@ Meta: el asistente integrado. Ver [[AI-Companion]] y [[Orquestacion-IA]].
 
 - [ ] [[Modulo-Inventario]] — stock, vencimientos, precios *(pantalla de stock, conteo, merma y precio hecha, y Ventas
   ya elige productos; faltan vencimientos y costo)*
-- [ ] [[Modulo-Analisis]] — rentabilidad y reportes
-- [ ] [[Modulo-Gastos]] — gastos del puesto y del hogar
+- [x] [[Modulo-Analisis]] — rentabilidad y reportes *(2026-11-17: semana, mes, libre, ganancia por producto)*
+- [x] [[Modulo-Gastos]] — gastos del puesto y del hogar *(2026-11-17, ADR-051)*
 
 ---
 

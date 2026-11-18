@@ -336,3 +336,17 @@ importar plurales ni tildes; si no aparece, se dice.
 
 **Abono por medio de pago**: el formulario de Fiados pregunta "Pagó en efectivo / Pagó por Yape o Plin"; antes todo
 abono entraba como efectivo y la caja lo sumaba en la gaveta aunque llegara por Yape.
+
+## 12. ¿Cómo me va? — Análisis (Fase 7)
+
+Código: `backend/modules/analisis/`, `frontend/src/modules/analisis/`. Solo lectura, sin tablas propias.
+
+- **Vendido** (como "Vendiste hoy", sumado por día peruano) − **pagado a proveedores** − **gastos del puesto** =
+  **resultado del negocio**; menos **gastos de la casa** = **libre**. Los fiados se muestran aparte: no son dinero hasta
+  que se abonan.
+- Períodos: esta semana (desde el lunes), este mes (hasta hoy) y el mes pasado completo.
+- **Ganancia por producto**: lo vendido de cada producto del inventario menos cantidad × costo de la última compra;
+  es un estimado y solo cuenta productos con costo.
+- La frase de arriba dice el resultado en palabras: "te quedó S/ X libre", "el negocio dejó S/ X pero la casa gastó
+  más" o "gastaste más de lo que vendiste".
+- El Asistente recibe la semana y el mes: deja de responder "solo tengo las cifras de hoy".

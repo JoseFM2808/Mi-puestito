@@ -70,6 +70,39 @@
       "producto"
     ]
   },
+  "AnalisisDelPeriodo": {
+    "required": [
+      "desde",
+      "fiados_por_cobrar",
+      "gastos_de_la_casa",
+      "gastos_del_puesto",
+      "hasta",
+      "libre",
+      "mejores_productos",
+      "pagado_a_proveedores",
+      "periodo",
+      "por_dia",
+      "resultado_del_negocio",
+      "vendido",
+      "ventas"
+    ],
+    "properties": [
+      "desde",
+      "fiados_por_cobrar",
+      "gastos_de_la_casa",
+      "gastos_del_puesto",
+      "hasta",
+      "libre",
+      "mejores_productos",
+      "no_disponibles",
+      "pagado_a_proveedores",
+      "periodo",
+      "por_dia",
+      "resultado_del_negocio",
+      "vendido",
+      "ventas"
+    ]
+  },
   "AperturaEntrada": {
     "required": [
       "efectivo_inicial",
@@ -212,6 +245,18 @@
       "stock_segun_movimientos"
     ]
   },
+  "DiaDelPeriodo": {
+    "required": [
+      "dia",
+      "gastado",
+      "vendido"
+    ],
+    "properties": [
+      "dia",
+      "gastado",
+      "vendido"
+    ]
+  },
   "EstadoAsistente": {
     "required": [
       "listo",
@@ -245,6 +290,18 @@
       "nota",
       "producto",
       "tipo"
+    ]
+  },
+  "GananciaPorProducto": {
+    "required": [
+      "ganancia_estimada",
+      "nombre",
+      "vendido"
+    ],
+    "properties": [
+      "ganancia_estimada",
+      "nombre",
+      "vendido"
     ]
   },
   "GastoEntrada": {

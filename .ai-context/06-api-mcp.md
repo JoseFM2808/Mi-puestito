@@ -187,3 +187,11 @@ esquema de cada herramienta.
 cantidad?, medio?: efectivo|yape_plin, ambito?: puesto|hogar, categoria?, nota?}`. Viene de una línea `ABONO:`,
 `GASTO:` o `MERMA:` del modelo; solo si el operador pidió anotar y con el monto solo si él lo dijo. La app lo abre en
 Fiados, Gastos o Inventario sin guardarlo.
+
+### Análisis (token, Fase 7)
+
+| Método | Ruta | Respuesta | Notas |
+|---|---|---|---|
+| GET | `/api/analisis?periodo=semana\|mes\|mes_pasado` | `AnalisisDelPeriodo {periodo, desde, hasta, vendido, ventas, pagado_a_proveedores, gastos_del_puesto, gastos_de_la_casa, resultado_del_negocio, libre, fiados_por_cobrar, por_dia [{dia, vendido, gastado}], mejores_productos [{nombre, vendido, ganancia_estimada}], no_disponibles}` | Solo lectura; un período desconocido da `422` |
+
+El contexto del Asistente suma `semana` y `mes` con esas cifras; `pantalla_actual` acepta `analisis`.

@@ -82,6 +82,26 @@ def _resumen_del_proyecto(sesion: Session) -> dict:
     except Exception:  # noqa: BLE001 — sin Caja, se responde con lo demás
         sesion.rollback()
     try:
+        # La semana y el mes (Fase 7): "¿cuánto vendí esta semana?" ya tiene respuesta
+        from modules.analisis.servicio import del_periodo
+
+        for periodo in ("semana", "mes"):
+            datos = del_periodo(sesion, periodo).model_dump(mode="json")
+            resumen[periodo] = {
+                campo: datos[campo]
+                for campo in (
+                    "desde",
+                    "vendido",
+                    "pagado_a_proveedores",
+                    "gastos_del_puesto",
+                    "gastos_de_la_casa",
+                    "resultado_del_negocio",
+                    "libre",
+                )
+            }
+    except Exception:  # noqa: BLE001 — sin Análisis, solo las cifras de hoy
+        sesion.rollback()
+    try:
         resumen["productos_del_inventario"] = _nombres_de_productos(sesion)
     except Exception:  # noqa: BLE001 — sin Inventario, la orden se llena con el nombre que dijo el operador
         sesion.rollback()
