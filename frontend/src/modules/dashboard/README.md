@@ -23,11 +23,16 @@ las cifras reales del proyecto que vienen de `GET /api/dashboard/resumen`.
 | Tocar **Fiados por cobrar**                  | Va a Fiados                                           |
 | **Llegó un pedido**                          | Abre Compras, donde se revisa lo que llegó            |
 | **Volver a intentar**                        | Relee la caja tras un error                           |
+| **Abrir caja** (efectivo y Yape iniciales)   | Empieza la caja del día (D-24); se encola sin red     |
+| **Anotar un gasto**                          | Va a Gastos                                           |
+| **Corregir con cuánto empecé**               | Vuelve a abrir la caja del día con otros saldos       |
 
 ## Cómo interactúa la IA
 
 `data-ai-id` disponibles: `dashboard`, `dashboard.fecha`, `dashboard.ventas-hoy`, `dashboard.proyeccion-manana`,
 `dashboard.ordenes-activas`, `dashboard.orden-activa-<uuid>`, `dashboard.fiados`, `dashboard.ventas-rapidas`,
 `dashboard.pedidos-por-llegar`, `dashboard.pedido-<id>`, `dashboard.registrar-venta`, `dashboard.venta-rapida`,
-`dashboard.llego-pedido`, `dashboard.sin-conexion`, `dashboard.error`. El Asistente explica estas cifras con el mismo
+`dashboard.llego-pedido`, `dashboard.gasto`, `dashboard.sin-conexion`, `dashboard.error`; **En caja ahora** (`EnCaja.tsx`,
+D-24): `dashboard.en-caja`, `dashboard.apertura`, `dashboard.apertura-efectivo`, `dashboard.apertura-yape`,
+`dashboard.abrir-caja`, `dashboard.anotar-gasto`, `dashboard.corregir-apertura`. El Asistente explica estas cifras con el mismo
 resumen y puede sugerir "Ir a la Caja de hoy".

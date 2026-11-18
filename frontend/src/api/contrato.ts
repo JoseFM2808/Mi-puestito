@@ -403,7 +403,72 @@ export interface EstadoAsistenteCable {
 }
 
 /** Esquema del backend (nombre en openapi.json) → campos que el frontend espera. */
+// ------------------------------------------------------------------ caja y gastos (D-24, ADR-051)
+
+/** De dónde entra o sale el dinero: la gaveta o el Yape */
+export type MedioPago = 'efectivo' | 'yape_plin'
+
+export interface SaldoPorMedioCable {
+  efectivo: string
+  yape_plin: string
+}
+
+export interface CajaDelDiaCable {
+  dia: string
+  abierta: boolean
+  inicial: SaldoPorMedioCable
+  ingresos: SaldoPorMedioCable
+  egresos: SaldoPorMedioCable
+  en_caja: SaldoPorMedioCable
+  no_disponibles: string[]
+}
+
+export type AmbitoGasto = 'puesto' | 'hogar'
+export type CategoriaGasto =
+  'proveedor' | 'alquiler' | 'servicios' | 'transporte' | 'alimentacion' | 'educacion' | 'otros'
+
+export interface GastoCable {
+  uuid: string
+  monto: string
+  medio: MedioPago
+  ambito: AmbitoGasto
+  categoria: CategoriaGasto
+  descripcion: string | null
+  orden_compra_uuid: string | null
+  creado_en: string
+}
+
+export interface GastosDelDiaCable {
+  dia: string
+  gastos: GastoCable[]
+  total: SaldoPorMedioCable
+  del_puesto: string
+  del_hogar: string
+}
+
 export const CAMPOS_DEL_CONTRATO = {
+  SaldoPorMedio: camposDe<SaldoPorMedioCable>()(['efectivo', 'yape_plin']),
+  TotalesPorMedio: camposDe<SaldoPorMedioCable>()(['efectivo', 'yape_plin']),
+  CajaDelDia: camposDe<CajaDelDiaCable>()([
+    'dia',
+    'abierta',
+    'inicial',
+    'ingresos',
+    'egresos',
+    'en_caja',
+    'no_disponibles',
+  ]),
+  GastoSalida: camposDe<GastoCable>()([
+    'uuid',
+    'monto',
+    'medio',
+    'ambito',
+    'categoria',
+    'descripcion',
+    'orden_compra_uuid',
+    'creado_en',
+  ]),
+  GastosDelDia: camposDe<GastosDelDiaCable>()(['dia', 'gastos', 'total', 'del_puesto', 'del_hogar']),
   IngresoSalida: camposDe<IngresoCable>()(['token', 'proyecto', 'nombre_proyecto', 'es_real']),
   CuentaVisible: camposDe<CuentaVisibleCable>()(['nombre_usuario', 'nombre_proyecto', 'es_real']),
   ResumenDashboard: camposDe<ResumenDashboardCable>()([

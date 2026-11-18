@@ -36,7 +36,7 @@ Fechas en UTC (tipo `FechaHoraUTC`, siempre con zona); la zona horaria
 | `POST /api/compras/ordenes` | Nuevo pedido; el total lo calcula el servidor |
 | `PATCH /api/compras/ordenes/{uuid}/estado` | Borrador → Pendiente → En camino, solo hacia adelante |
 | `POST /api/compras/ordenes/{uuid}/recepcion` | Checklist: recalcula `monto_real` y publica `compra.item_recibido` |
-| `POST /api/compras/ordenes/{uuid}/cerrar` | De Recibida a Cerrada |
+| `POST /api/compras/ordenes/{uuid}/cerrar` | De Recibida a Cerrada. Con `{medio}` publica `compra.pagada` y Gastos lo anota (D-24) |
 
 Toda escritura admite reenvío de la cola offline (ADR-032). Una recepción ya confirmada
 no se reescribe: reenviarla igual no hace nada y cambiarla da `409`, porque ya movió stock.

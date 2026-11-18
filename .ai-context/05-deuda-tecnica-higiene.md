@@ -9,16 +9,13 @@
 |---|---|---|---|---|---|
 | D-07 | P3 | El PIN generado se imprime una vez en consola | Si stdout se redirige a un log, el PIN queda en disco | Mostrarlo en la UI de primer arranque; `*.log` ya ignorado | ADR-030 |
 | D-08 | P2 | El registro de proyectos (`backend/proyectos.py`) tiene el nombre de un negocio real en código público | Exposición de identidad del cliente; dar de alta un negocio exige una versión nueva | Pantalla de alta de negocio + `proyectos.json` en la carpeta de datos (ignorado). El owner pidió opciones (2026-11-17). Los datos del vendedor incluirán su número de Yape/Plin para el QR | ADR-030 |
-| D-10 | P3 | `starlette.testclient` depreca su uso con `httpx` (aviso filtrado en `backend/pytest.ini`) | Tests rotos en una versión futura de Starlette | Migrar de cliente de pruebas cuando se estabilice | — |
 | D-12 | P2 | Falta activar en GitHub *Secret scanning + Push protection* | gitleaks en CI lo detecta, pero después de publicado; push protection lo impide antes | Lo activa el owner en Settings → Code security | ADR-030 |
 | D-15 | P2 | El Asistente necesita internet | Sin red no hay ayuda | **Decidido (owner, 2026-11-17):** modelo local ultraligero (una versión mínima de Gemma o un modelo tipo "colibrí") que corra en una computadora de pocos recursos, servido con Ollama/llama.cpp; luego fine-tuning | ADR-039 |
-| D-17 | P2 | El `.exe` publicado aún tiene el frontend anterior | El vendedor no ve Ventas, Fiados ni Compras hasta publicar uno nuevo | Construido y probado localmente el 2026-11-01. Falta que el owner publique una etiqueta `v*` → flujo `Ejecutable Windows` | ADR-029 |
 | D-21 | P3 | El RUC se escribe a mano | Un RUC válido en forma pero inexistente pasa | Búsqueda en SUNAT: requiere elegir un servicio externo. **Pospuesto por el owner (2026-11-17)** | `Modulo-Compras.md` |
 | D-22 | P3 | Inventario sin costo, vencimientos ni código de barras | Las compras no alimentan el costo; nada avisa antes de que algo venza | Costo desde la última compra; alertas de vencimiento; búsqueda por código | ADR-045 |
 | D-23 | P2 | La copia de respaldo va sin cifrar | Quien tenga el archivo ve clientes, fiados y ventas | Cifrar con una contraseña que elija el vendedor. **Decidido (owner, 2026-11-17):** si la olvida, se le envía un enlace a su Gmail mediante una conexión con Google Cloud. Falta que el owner cree el proyecto de Google Cloud (credenciales OAuth / API de Gmail) | ADR-044 |
 | D-26 | P3 | La conversación con el Asistente se borra al recargar o al actualizar la app | Se pierde el hilo si la app se recarga a mitad de una tarea | **Decidido (owner, 2026-11-17):** la conversación se guarda y, como en los asistentes grandes, hay una memoria que se alimenta de los datos del usuario, con un límite que obliga a repensar qué conservar para mejorar con el tiempo. En desarrollo | ADR-046 |
 | D-28 | P3 | El Asistente solo llena órdenes de venta | Compras, pagos de fiado o mermas aún se escriben a mano | Ampliar el borrador (ADR-049) por tipo: misma regla de confirmar antes de guardar | ADR-049 |
-| D-24 | P3 | "Ya le pagué" cierra el pedido pero no descuenta de la caja | La caja no refleja lo pagado a proveedores | **Decidido (owner, 2026-11-17):** la caja empieza siempre con un saldo inicial en efectivo y otro en Yape; los pagos a proveedores son egresos de una de las dos. En desarrollo | `Modulo-Dashboard.md` |
 
 ## 2. Hechos
 
@@ -61,6 +58,11 @@
 | D-27 | 2026-11-17 | Una sola fuente de color: `docs/06-diseno/` pasa a `docs/design-system/producto/` y los colores salen solo de `tokens.json` (ADR-050) | `estilos-aislados.test.ts` (tokens que existen); `ds-validar` 0 errores; build con los mismos colores de la PWA |
 | D-29 | 2026-11-17 | Decisión del owner: el dictado sigue siendo el del navegador (Google o Microsoft) o el del teléfono; no se instala uno local | ADR-049; aviso de privacidad en un negocio real |
 | — | 2026-11-17 | PR #2 fusionado en `main`; etiqueta `v0.1.0` publicada para construir el `.exe` (D-17); `.venv/` en Drive borrada con permiso del owner | `931e977`; flujo `Ejecutable Windows` |
+| D-17 | 2026-11-17 | El `.exe` nuevo está publicado: release `v0.1.0` con `MiPuestito.exe` adjunto | Flujo `Ejecutable Windows` en verde; https://github.com/JoseFM2808/Mi-puestito/releases/tag/v0.1.0 |
+| D-24 | 2026-11-17 | La caja empieza con efectivo y Yape, suma lo cobrado y resta los gastos; "Ya le pagué" pide el medio y lo descuenta (ADR-051) | `tests/test_caja.py` (13 casos); navegador: abrir con S/ 50 y S/ 20 → S/ 451.50 y S/ 104.00; gasto de S/ 5 → S/ 446.50; el Asistente lo dice |
+| — | 2026-11-17 | Módulo Gastos (Fase 7): del puesto o de la casa, por medio de pago, offline | `almacen.test.ts`; navegador |
+| D-10 | 2026-11-17 | El TestClient usa `httpx2`; el aviso de Starlette ahora es error | Control negativo: sin `httpx2` los tests no arrancan |
+| — | 2026-11-17 | Asistente: "Ir a la Caja" se corrige hacia la pantalla del tema y un pedido de hacer algo sin acción abre la suya | `tests/test_asistente.py`; `ia.evaluar` 30/30 |
 
 ## 3. Resueltos en la auditoría inicial (2026-09-27, verificados en Staging)
 

@@ -74,6 +74,14 @@ def _resumen_del_proyecto(sesion: Session) -> dict:
     except Exception:  # noqa: BLE001 — sin Ventas, se responde con lo que hay
         sesion.rollback()
     try:
+        from modules.caja.servicio import del_dia
+
+        caja = del_dia(sesion, dia_peruano())
+        resumen["caja_abierta"] = caja.abierta
+        resumen["en_caja"] = caja.en_caja.model_dump(mode="json")
+    except Exception:  # noqa: BLE001 — sin Caja, se responde con lo demás
+        sesion.rollback()
+    try:
         resumen["productos_del_inventario"] = _nombres_de_productos(sesion)
     except Exception:  # noqa: BLE001 — sin Inventario, la orden se llena con el nombre que dijo el operador
         sesion.rollback()

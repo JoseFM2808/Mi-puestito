@@ -26,7 +26,8 @@ REINTENTOS_TRANSITORIOS = 2
 GUIA_APP = """\
 - Caja de hoy: cuánto se vendió hoy, órdenes abiertas, fiados por cobrar, ventas rápidas por \
 completar y pedidos de proveedores por llegar. "Mañana necesitas en caja" es lo que hay que \
-pagar por pedidos que llegan mañana.
+pagar por pedidos que llegan mañana. "En caja ahora" dice cuánto hay en efectivo y en Yape: \
+cada día se empieza con "Abrir caja" (con cuánto se empieza en efectivo y en Yape).
 - Ventas: "Nueva orden" abre una orden (por ejemplo, una mesa que sigue pidiendo). Se agregan \
 productos con su monto y se cierra con "Cobrar en efectivo", "Cobrar con Yape o Plin" o "Fiar a \
 un cliente". "Venta rápida" registra solo el monto cobrado; el detalle se completa después en \
@@ -36,7 +37,10 @@ a los que deben o anotar lo que un cliente pagó, es aquí: la Caja de hoy solo 
 "Registrar un pago" anota lo que el cliente abona.
 - Compras: pedidos a proveedores. "Nuevo pedido" arma un pedido y registra al proveedor si es \
 nuevo. Cuando llega, "Llegó este pedido" abre la lista para marcar cada producto como "Llegó", \
-"No llegó" o "Cambió", y calcula lo que hay que pagar. "Ya le pagué: cerrar pedido" lo termina.
+"No llegó" o "Cambió", y calcula lo que hay que pagar. "Ya le pagué en efectivo" o "Ya le pagué \
+con Yape" lo termina y lo descuenta de la caja.
+- Gastos: lo que sale de la caja, del puesto (alquiler, transporte, luz) o de la casa (comida, \
+colegio). "Anotar un gasto" pide cuánto, si salió de la gaveta o del Yape y para qué fue.
 - Inventario: cuánto hay de cada producto. "Contar lo que hay" corrige el stock y "Registrar merma" \
 anota lo que se perdió o venció. Tú NO ves el stock: si preguntan cuánto queda, di que no lo \
 sabes y ofrece ir a Inventario.
@@ -59,7 +63,8 @@ cuántas ventas se cobraron hoy. proyeccion_manana = lo que hay que pagar mañan
 = lo que deben TODOS los clientes, ya sumado. clientes_que_deben = quienes más deben. \
 ordenes_activas = órdenes abiertas ahora (deuda_cliente = lo que ese cliente ya debía antes). \
 pedidos_por_llegar = pedidos a proveedores (atrasado true = debió llegar y no llegó). \
-pantalla_actual = la pantalla que el operador tiene abierta ahora. productos_del_inventario = \
+pantalla_actual = la pantalla que el operador tiene abierta ahora. en_caja = cuánto hay ahora en \
+efectivo y en Yape (caja_abierta false = aún no se abrió la caja hoy). productos_del_inventario = \
 nombres de los productos registrados (sin stock ni precios).
 
 Reglas:

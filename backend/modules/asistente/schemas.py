@@ -22,7 +22,9 @@ class PreguntaEntrada(BaseModel):
     mensaje: Texto
     historial: list[TurnoPrevio] = Field(default_factory=list, max_length=12)
     # Qué pantalla tiene abierta el operador: para decirle "toca este botón" donde está (ADR-047)
-    pantalla_actual: Literal["caja", "ventas", "fiados", "compras", "inventario", "asistente"] | None = None
+    pantalla_actual: (
+        Literal["caja", "ventas", "fiados", "compras", "gastos", "inventario", "asistente"] | None
+    ) = None
 
 
 class LlaveEntrada(BaseModel):

@@ -272,3 +272,31 @@ encola nada. Sin elegir, se vende con texto libre y el stock no cambia.
 `POST /api/dashboard/demo/reiniciar` borra lo practicado y vuelve a sembrar con las fechas de hoy; con un negocio real da
 `403`. El botón pide confirmación en dos pasos y limpia también lo guardado en el dispositivo, para que la cola no reenvíe
 operaciones de la práctica anterior.
+
+## 9. Caja con saldo inicial y Gastos (ADR-051)
+
+Código: `backend/modules/caja/`, `backend/modules/gastos/`, `frontend/src/modules/dashboard/EnCaja.tsx`,
+`frontend/src/modules/gastos/`. Decisión del owner (2026-11-17): la caja empieza siempre con un saldo en efectivo y
+otro en Yape.
+
+```mermaid
+flowchart LR
+    A[Abrir caja<br/>efectivo + Yape iniciales] --> C{En caja ahora<br/>por medio}
+    V[Ventas cobradas y abonos<br/>tabla pagos, por metodo_pago] -->|+| C
+    G[Gastos del puesto y de la casa] -->|−| C
+    P[Compras: Ya le pagué en efectivo / con Yape] -->|evento compra.pagada| G
+```
+
+- **En caja = inicial + ingresos − egresos**, por separado en efectivo y en Yape. Un fiado no es dinero: no entra hasta
+  que se abona. El día es el peruano (`rango_utc_del_dia`); la hora de cada operación la pone el dispositivo.
+- **Una apertura por día**: repetirla corrige los saldos (dato maestro, gana la última). Si la caja no se abrió, se
+  muestra el formulario "¿Con cuánto empiezas hoy?" y todo cuenta desde cero.
+- **Gastos**: monto, de dónde salió (gaveta o Yape), si es del puesto o de la casa, y su categoría. Separar el puesto de
+  la casa es lo que deja ver si el negocio gana (Modulo-Gastos.md). Idempotentes por `uuid`; borrar uno mal anotado lo
+  elimina.
+- **Pagar un pedido**: "Ya le pagué en efectivo / con Yape" cierra el pedido y publica `compra.pagada` con `monto_real`.
+  Gastos lo anota una sola vez por pedido (`orden_compra_uuid` único). Sin Gastos, el pedido se cierra igual.
+- **Aislamiento**: la Caja lee Ventas y Gastos dentro de un `try`; si uno falla, esa parte queda en cero y se dice en
+  `no_disponibles`.
+- **El Asistente** recibe `caja_abierta` y `en_caja` en su contexto: "¿cuánto tengo en efectivo?" se responde con la cifra
+  real. Lleva a Gastos ("quiero anotar un gasto") y corrige hacia Gastos un "Ir a la Caja" cuando se habla de gastos.

@@ -25,6 +25,13 @@ class _Operacion(BaseModel):
     ocurrido_en: datetime | None = None
 
 
+class CierreEntrada(_Operacion):
+    """"Ya le pagué": con qué se pagó. Sin medio (versiones anteriores de la app) el pedido se
+    cierra igual, pero la caja no lo descuenta (D-24, ADR-051)."""
+
+    medio: Literal["efectivo", "yape_plin"] | None = None
+
+
 # ---- Proveedores ----
 
 class ProveedorEntrada(_Operacion):

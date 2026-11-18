@@ -25,4 +25,5 @@ El [[AI-Companion]] puede leer cualquier cifra del dashboard, explicarla en leng
   hora de Lima. Sin red muestra la última caja guardada en el dispositivo. "Mañana necesitas
   en caja" proyecta solo lo que falta llegar de cada pedido, y "Llegó un pedido" abre
   [[Modulo-Compras]].
-- **Pendiente:** descontar de la caja lo pagado a proveedores (requiere definir el flujo de caja).
+- **Hecho (2026-11-17, ADR-051):** la caja se abre cada día con un saldo en efectivo y otro en Yape; "En caja ahora"
+  suma lo cobrado por cada medio y resta los [[Modulo-Gastos]], incluido lo pagado a proveedores.

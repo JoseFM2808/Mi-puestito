@@ -14,6 +14,7 @@ export type NombreIcono =
   | 'rapida'
   | 'pago'
   | 'pedido'
+  | 'gastos'
   | 'salir'
 
 const TRAZOS: Record<NombreIcono, string[]> = {
@@ -36,6 +37,8 @@ const TRAZOS: Record<NombreIcono, string[]> = {
   asistente: ['M4 5h16v11H9l-5 4z', 'M8 9h8', 'M8 12h5'],
   // Rayo: venta rápida
   rapida: ['M13 3L5 14h6l-1 7 8-11h-6z'],
+  // Un billete con una flecha hacia abajo: plata que sale de la caja
+  gastos: ['M3 6h18v12H3z', 'M12 9v6', 'M9.5 12.5L12 15l2.5-2.5'],
   // Monedas: anotar un pago
   pago: [
     'M4 9a5 3 0 1 0 10 0a5 3 0 1 0-10 0',

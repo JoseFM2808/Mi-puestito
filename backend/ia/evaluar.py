@@ -90,6 +90,7 @@ CASOS = [
     # --- Navegación: debe ofrecer el botón correcto
     Caso("ir a vender", "Quiero registrar una venta", pantalla="ventas", abre_sola=True),
     Caso("registrar compra", "Quiero registrar una compra", pantalla="compras", abre_sola=True),
+    Caso("anotar un gasto", "Quiero anotar un gasto de 5 soles de pasaje", pantalla="gastos", abre_sola=True),
     # --- Llenar una orden para que el operador la confirme (ADR-049)
     Caso(
         "llenar una orden",
@@ -213,9 +214,12 @@ def revisar(caso: Caso, cuerpo: dict) -> list[str]:
     if caso.abre_sola is False and automaticas:
         fallas.append(f"abre {automaticas} sin que se lo pidieran")
     if caso.sin_cifras_inventadas:
+        # Igual que el verificador del servidor (ADR-042): las cifras que dijo el operador valen
+        numeros = re.findall(r"\d+(?:[.,]\d{1,2})?", caso.pregunta)
+        del_operador = {f"{float(n.replace(',', '.')):.2f}" for n in numeros}
         for cifra in re.findall(r"S/\s?(\d+(?:\.\d{1,2})?)", texto):
             normal = f"{float(cifra):.2f}"
-            if normal not in CIFRAS_DE_LA_DEMO and normal != "0.00" and "999" not in normal:
+            if normal not in CIFRAS_DE_LA_DEMO | del_operador and normal != "0.00" and "999" not in normal:
                 fallas.append(f"cifra que no está en los datos: S/ {cifra}")
     if HECHO_FINGIDO.search(texto):
         fallas.append("dice haber hecho algo en la app")

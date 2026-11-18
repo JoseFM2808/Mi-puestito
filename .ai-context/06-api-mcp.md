@@ -122,11 +122,24 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 | GET | `/api/respaldo/copia` | — | Archivo `application/octet-stream` | `Cache-Control: no-store`. Solo del proyecto del token |
 | POST | `/api/respaldo/restaurar` | Bytes de la copia en el cuerpo | `204` | `400` no sirve · `409` otro negocio o versión más nueva · `413` > 200 MB · `507` sin disco |
 
+### Caja y Gastos (token, ADR-051)
+
+| Método | Ruta | Entrada | Respuesta | Notas |
+|---|---|---|---|---|
+| POST | `/api/caja/apertura` | `AperturaEntrada {uuid, efectivo_inicial, yape_inicial, ocurrido_en?}` | `CajaDelDia` | Una por día peruano; repetirla corrige los saldos |
+| GET | `/api/caja?dia=` | — | `CajaDelDia {dia, abierta, inicial, ingresos, egresos, en_caja, no_disponibles}` | Cada parte `{efectivo, yape_plin}`; hoy por defecto |
+| POST | `/api/gastos` | `GastoEntrada {uuid, monto, medio, ambito?, categoria?, descripcion?, ocurrido_en?}` | `GastoSalida` | `201` nuevo, `200` reenvío |
+| DELETE | `/api/gastos/{uuid}` | — | `204` | Idempotente |
+| GET | `/api/gastos?dia=` | — | `GastosDelDia {dia, gastos, total, del_puesto, del_hogar}` | Hoy por defecto |
+
+`POST /api/compras/ordenes/{uuid}/cerrar` acepta `CierreEntrada {medio?: efectivo|yape_plin, ocurrido_en?}`: con medio
+publica `compra.pagada` y Gastos anota el pago.
+
 ### Asistente (token)
 
 | Método | Ruta | Entrada | Respuesta | Notas |
 |---|---|---|---|---|
-| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12), pantalla_actual? (caja\|ventas\|fiados\|compras\|inventario\|asistente)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a\|resaltar, pantalla, etiqueta, automatica, apartado}], borrador? {items [{nombre, cantidad, precio?}], para?}, id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta e historial antes de salir al proveedor y restituye los nombres en la respuesta (ADR-034). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
+| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12), pantalla_actual? (caja\|ventas\|fiados\|compras\|gastos\|inventario\|asistente)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a\|resaltar, pantalla, etiqueta, automatica, apartado}], borrador? {items [{nombre, cantidad, precio?}], para?}, id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta e historial antes de salir al proveedor y restituye los nombres en la respuesta (ADR-034). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
 | POST | `/api/asistente/valoracion` | `ValoracionEntrada {id_respuesta, util}` | `204` | "Me sirvió" / "No me sirvió". Se guarda solo si el registro está activo (ADR-038) |
 | GET | `/api/asistente/estado` | — | `EstadoAsistente {listo, puede_guardar_llave, llave_guardada}` | Nunca incluye la llave |
 | POST | `/api/asistente/llave` | `LlaveEntrada {llave}` | `EstadoAsistente` | Solo modo local, Windows y desde el mismo equipo (`403`); mal copiada o rechazada → `400`, sin repetirla (ADR-043) |

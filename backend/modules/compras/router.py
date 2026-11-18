@@ -15,6 +15,7 @@ from . import servicio
 from .models import EstadoOrdenCompra, OrdenCompra
 from .schemas import (
     CambioEstadoEntrada,
+    CierreEntrada,
     OrdenCompraSalida,
     OrdenEntrada,
     ProductoFrecuente,
@@ -138,9 +139,11 @@ def registrar_recepcion(
 
 
 @router.post("/ordenes/{uuid}/cerrar", response_model=ResultadoOrden)
-def cerrar_orden(uuid: str, sesion: Session = Depends(obtener_sesion_escritura)):
-    """El pedido ya llegó y se saldó con el proveedor."""
+def cerrar_orden(
+    uuid: str, datos: CierreEntrada | None = None, sesion: Session = Depends(obtener_sesion_escritura)
+):
+    """El pedido ya llegó y se saldó con el proveedor. Con `medio`, la caja lo descuenta (D-24)."""
     try:
-        return ResultadoOrden(orden=servicio.a_salida(servicio.cerrar_orden(sesion, uuid)))
+        return ResultadoOrden(orden=servicio.a_salida(servicio.cerrar_orden(sesion, uuid, datos)))
     except servicio.ErrorDeCompra as error:
         raise _http(error) from error

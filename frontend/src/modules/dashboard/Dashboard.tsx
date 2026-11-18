@@ -7,6 +7,7 @@ import { useNavegacion } from '../../stores/navegacion'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
 import estilos from './Dashboard.module.css'
+import { EnCaja } from './EnCaja'
 import { estaAtrasado, formatearFechaLarga, formatearFechaRelativa } from './formato'
 import { Icono, type NombreIcono } from '../../ui/iconos'
 import type { Pantalla } from '../../stores/navegacion'
@@ -51,6 +52,13 @@ const ACCESOS: {
     texto: 'Llegó un pedido',
     ayuda: 'Revisar lo que trajeron',
     destino: 'compras',
+  },
+  {
+    aiId: 'dashboard.gasto',
+    icono: 'gastos',
+    texto: 'Anotar un gasto',
+    ayuda: 'Lo que sale de la caja',
+    destino: 'gastos',
   },
   {
     aiId: 'dashboard.preguntar',
@@ -149,6 +157,9 @@ export function Dashboard() {
           ))}
         </div>
       </section>
+
+      {/* Lo primero del día: con cuánto se empieza, y luego cuánto hay (D-24) */}
+      <EnCaja />
 
       {error && (
         <div className={estilos.filaAviso}>

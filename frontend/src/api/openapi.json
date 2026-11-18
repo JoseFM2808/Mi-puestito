@@ -70,6 +70,19 @@
       "producto"
     ]
   },
+  "AperturaEntrada": {
+    "required": [
+      "efectivo_inicial",
+      "uuid",
+      "yape_inicial"
+    ],
+    "properties": [
+      "efectivo_inicial",
+      "ocurrido_en",
+      "uuid",
+      "yape_inicial"
+    ]
+  },
   "BorradorVenta": {
     "required": [
       "items"
@@ -79,12 +92,38 @@
       "para"
     ]
   },
+  "CajaDelDia": {
+    "required": [
+      "abierta",
+      "dia",
+      "egresos",
+      "en_caja",
+      "ingresos",
+      "inicial"
+    ],
+    "properties": [
+      "abierta",
+      "dia",
+      "egresos",
+      "en_caja",
+      "ingresos",
+      "inicial",
+      "no_disponibles"
+    ]
+  },
   "CambioEstadoEntrada": {
     "required": [
       "estado"
     ],
     "properties": [
       "estado",
+      "ocurrido_en"
+    ]
+  },
+  "CierreEntrada": {
+    "required": [],
+    "properties": [
+      "medio",
       "ocurrido_en"
     ]
   },
@@ -190,6 +229,60 @@
     "properties": [
       "cliente_uuid",
       "ocurrido_en"
+    ]
+  },
+  "GastoEntrada": {
+    "required": [
+      "medio",
+      "monto",
+      "uuid"
+    ],
+    "properties": [
+      "ambito",
+      "categoria",
+      "descripcion",
+      "medio",
+      "monto",
+      "ocurrido_en",
+      "uuid"
+    ]
+  },
+  "GastoSalida": {
+    "required": [
+      "ambito",
+      "categoria",
+      "creado_en",
+      "descripcion",
+      "medio",
+      "monto",
+      "orden_compra_uuid",
+      "uuid"
+    ],
+    "properties": [
+      "ambito",
+      "categoria",
+      "creado_en",
+      "descripcion",
+      "medio",
+      "monto",
+      "orden_compra_uuid",
+      "uuid"
+    ]
+  },
+  "GastosDelDia": {
+    "required": [
+      "del_hogar",
+      "del_puesto",
+      "dia",
+      "gastos",
+      "total"
+    ],
+    "properties": [
+      "del_hogar",
+      "del_puesto",
+      "dia",
+      "gastos",
+      "total"
     ]
   },
   "HTTPValidationError": {
@@ -620,6 +713,26 @@
       "ventas_cerradas",
       "ventas_hoy",
       "ventas_rapidas_pendientes"
+    ]
+  },
+  "SaldoPorMedio": {
+    "required": [
+      "efectivo",
+      "yape_plin"
+    ],
+    "properties": [
+      "efectivo",
+      "yape_plin"
+    ]
+  },
+  "TotalesPorMedio": {
+    "required": [
+      "efectivo",
+      "yape_plin"
+    ],
+    "properties": [
+      "efectivo",
+      "yape_plin"
     ]
   },
   "TurnoPrevio": {

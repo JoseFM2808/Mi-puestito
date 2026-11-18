@@ -29,6 +29,7 @@
 | 048 | 2026-11-08 | Aceptada | Núcleo de marca en `docs/design-system/` con el estándar de Design System del workspace |
 | 049 | 2026-11-08 | Aceptada | El Asistente llena órdenes de venta que el operador revisa y guarda; voz por dictado del navegador |
 | 050 | 2026-11-17 | Aceptada | `docs/06-diseno/` pasa a `docs/design-system/producto/`; los colores salen solo de `tokens.json` |
+| 051 | 2026-11-17 | Aceptada | Caja con saldo inicial en efectivo y en Yape; Gastos como módulo propio que recibe los pagos a proveedores |
 
 ---
 
@@ -327,3 +328,22 @@
   sigue con los mismos colores (`#1E6E42`, `#FAF7F2`). `AGENTS.md`, `CLAUDE.md`, el README, los README de `ui` y de la
   barra, el subagente revisor y estas pestañas apuntan a la ruta nueva. Las menciones a `06-diseno/` que quedan son
   historia (ADR-048, el changelog).
+
+## ADR-051 · Caja con saldo inicial y Gastos como módulo propio — Aceptada
+
+- **Fecha**: 2026-11-17.
+- **Contexto**: "Ya le pagué" cerraba el pedido sin descontar de la caja (D-24), y la caja solo sabía cuánto se vendió,
+  no cuánto había. El owner decidió que la caja empieza siempre con un saldo en efectivo y otro en Yape. La Fase 7 pedía
+  además un módulo de Gastos que separe el puesto de la casa (`Modulo-Gastos.md`).
+- **Decisión**:
+  1. Módulo **caja**: una apertura por día peruano (`aperturas_caja`) con efectivo y Yape iniciales; repetirla corrige.
+     `GET /api/caja` calcula `en_caja = inicial + ingresos − egresos` por medio, leyendo `pagos` de Ventas y los totales
+     de Gastos dentro de un `try` (si uno falla, se dice en `no_disponibles`).
+  2. Módulo **gastos**: monto, medio, ámbito (puesto o casa) y categoría; idempotente por `uuid`; borrar corrige.
+  3. **Pagar un pedido** pide el medio ("Ya le pagué en efectivo / con Yape"); Compras publica `compra.pagada` y Gastos lo
+     anota una vez por pedido (`orden_compra_uuid` único). Sin medio (versión anterior) el pedido se cierra sin gasto.
+  4. Todo offline-first por la misma cola; el dispositivo guarda la caja y los gastos del día (IndexedDB v4).
+  5. El Asistente recibe `caja_abierta` y `en_caja`, y conoce la pantalla Gastos.
+- **Consecuencias**: la caja dice cuánto hay de verdad en la gaveta y en el Yape; un egreso a proveedor ya no queda
+  fuera. Análisis (Fase 7) podrá separar la rentabilidad del negocio de los gastos de la casa con estos datos. Ventas,
+  Compras y Gastos siguen sin claves foráneas entre sí. Migración 0006. `ia.evaluar` 30/30 con el caso de gastos.
