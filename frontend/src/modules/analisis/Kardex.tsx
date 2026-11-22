@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { SinConexion, pedir } from '../../api/cliente'
 import type { KardexCable, KardexProductoCable, ProductoCable } from '../../api/contrato'
+import { baseDe } from '../../sincronizacion/base-local'
+import { useSincronizacion } from '../../sincronizacion/cola'
+import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Nota, TituloSeccion } from '../../ui/componentes'
 import { aMilesimas, formatearCantidad } from '../inventario/almacen'
 import estilos from './Analisis.module.css'
@@ -9,7 +12,7 @@ import estilos from './Analisis.module.css'
  * Kardex mensual del inventario (Modulo-Analisis): por cada producto, lo que había al empezar el
  * mes, lo que entró (compras), lo que salió (ventas, mermas), los conteos y lo que quedó. Sale del
  * mismo libro de movimientos que el stock (ADR-031): cuadra con Inventario. Se calcula en el
- * servidor; sin red lo dice.
+ * servidor; el último de cada mes queda en el dispositivo y sin red se muestra ese, diciendo de cuándo es.
  */
 
 /** "2026-11" del mes peruano actual (desplazamiento −1 = el mes pasado) */
@@ -46,28 +49,47 @@ export function lineaKardex(p: KardexProductoCable): string {
 }
 
 export function Kardex() {
+  const proyecto = useSesion((estado) => estado.proyecto)
+  // Al terminar de enviar lo hecho sin red, se vuelve a calcular
+  const alDia = useSincronizacion((estado) => estado.pendientes === 0)
   const [desplazamiento, setDesplazamiento] = useState(0)
   const [datos, setDatos] = useState<KardexCable | null>(null)
+  const [guardadoEn, setGuardadoEn] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!proyecto) return
     let vigente = true
+    const mes = mesPeruano(desplazamiento)
+    const base = baseDe(proyecto)
     setDatos(null)
     setError(null)
-    pedir<KardexCable>('GET', `/api/analisis/kardex?mes=${mesPeruano(desplazamiento)}`)
-      .then((respuesta) => vigente && setDatos(respuesta))
-      .catch((fallo: unknown) => {
-        if (vigente)
-          setError(
-            fallo instanceof SinConexion
-              ? 'El movimiento del inventario se ve cuando vuelva la conexión.'
-              : 'No se pudo calcular el movimiento del inventario.',
-          )
+    setGuardadoEn(null)
+    pedir<KardexCable>('GET', `/api/analisis/kardex?mes=${mes}`)
+      .then((respuesta) => {
+        if (!vigente) return
+        setDatos(respuesta)
+        void base.kardex.put({ mes, datos: respuesta, guardadoEn: new Date().toISOString() }).catch(() => {})
+      })
+      .catch(async (fallo: unknown) => {
+        const guardado =
+          fallo instanceof SinConexion ? await base.kardex.get(mes).catch(() => undefined) : undefined
+        if (!vigente) return
+        if (guardado) {
+          setDatos(guardado.datos)
+          setGuardadoEn(guardado.guardadoEn)
+          return
+        }
+        setError(
+          fallo instanceof SinConexion
+            ? 'El movimiento del inventario se ve cuando vuelva la conexión.'
+            : 'No se pudo calcular el movimiento del inventario.',
+        )
       })
     return () => {
       vigente = false
     }
-  }, [desplazamiento])
+  }, [proyecto, alDia, desplazamiento])
 
   return (
     <section className={estilos.kardex} data-ai-id="analisis.kardex">
@@ -86,6 +108,17 @@ export function Kardex() {
         ))}
       </div>
       {error && <Aviso tipo="info">{error}</Aviso>}
+      {guardadoEn && (
+        <Aviso tipo="info" aiId="analisis.kardex-sin-conexion">
+          {`Sin conexión: es el cálculo guardado el ${new Intl.DateTimeFormat('es-PE', {
+            day: 'numeric',
+            month: 'short',
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZone: 'America/Lima',
+          }).format(new Date(guardadoEn))}.`}
+        </Aviso>
+      )}
       {!datos && !error && <Nota>Calculando…</Nota>}
       {datos?.no_disponibles.length ? (
         <Aviso tipo="pendiente">Ahora no se pudo leer el inventario.</Aviso>

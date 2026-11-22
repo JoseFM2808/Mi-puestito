@@ -21,8 +21,8 @@ los gastos del puesto y de la casa, los fiados, el día por día (barras con la 
 no reemplaza), lo que más ganancia deja y lo mismo **por tipo de producto** (la categoría de Inventario).
 
 Abajo, **Cómo se movió tu inventario** (`Kardex.tsx`): el kardex del mes (`GET /api/analisis/kardex?mes=`) con **Este
-mes** / **El mes pasado**, una línea en palabras por producto ("Había 45 kg · entró 20 kg · vendiste 7 kg…"). Necesita
-conexión; sin ella lo dice.
+mes** / **El mes pasado**, una línea en palabras por producto ("Había 45 kg · entró 20 kg · vendiste 7 kg…"). El último de cada mes queda en
+IndexedDB (`kardex`, versión 7): sin red se muestra ese y se dice de cuándo es (`analisis.kardex-sin-conexion`).
 
 ## Cómo interactúa la IA
 
