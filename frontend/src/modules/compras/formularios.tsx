@@ -5,7 +5,9 @@ import {
   formatearCentimos,
   leerMontoEscrito,
   type EstadoRecepcion,
+  type ItemPedidoCable,
   type OrdenCompraCable,
+  type PedidoLlenadoCable,
   type ProductoFrecuenteCable,
   type ProveedorCable,
 } from '../../api/contrato'
@@ -118,9 +120,15 @@ function RegistroProveedor({
   )
 }
 
-function ElegirProveedor({ alElegir }: { alElegir: (proveedor: ProveedorCable) => void }) {
+function ElegirProveedor({
+  alElegir,
+  busquedaInicial = '',
+}: {
+  alElegir: (proveedor: ProveedorCable) => void
+  busquedaInicial?: string
+}) {
   const proveedores = useCompras((estado) => estado.proveedores)
-  const [busqueda, setBusqueda] = useState('')
+  const [busqueda, setBusqueda] = useState(busquedaInicial)
   const [registrando, setRegistrando] = useState(false)
 
   const texto = busqueda.trim().toLowerCase()
@@ -178,16 +186,73 @@ const OPCIONES_LLEGADA = [
   { dias: 2, nombre: 'Pasado mañana' },
 ]
 
-export function NuevoPedido({ alTerminar }: { alTerminar: () => void }) {
+/** El proveedor guardado que el operador nombró, por nombre o empresa, sin importar mayúsculas */
+export function buscarProveedor(proveedores: ProveedorCable[], nombre: string | null): ProveedorCable | null {
+  const buscado = (nombre ?? '').trim().toLowerCase()
+  if (!buscado) return null
+  return (
+    proveedores.find(
+      (p) => p.nombre.toLowerCase() === buscado || (p.empresa ?? '').toLowerCase() === buscado,
+    ) ?? null
+  )
+}
+
+/** Los productos que llenó el Asistente: con monto van al pedido; sin monto esperan al operador */
+export function repartirLlenado(llenado?: PedidoLlenadoCable): {
+  listos: ItemNuevo[]
+  sinMonto: ItemPedidoCable[]
+} {
+  const listos: ItemNuevo[] = []
+  const sinMonto: ItemPedidoCable[] = []
+  for (const item of llenado?.items ?? []) {
+    const centimos = item.monto ? aCentimos(item.monto) : 0
+    if (centimos > 0) listos.push({ nombre: item.producto, cantidad: item.cantidad ?? '', centimos })
+    else sinMonto.push(item)
+  }
+  return { listos, sinMonto }
+}
+
+export function NuevoPedido({
+  alTerminar,
+  llenado,
+}: {
+  alTerminar: () => void
+  /** Lo que llenó el Asistente; el operador lo revisa y lo guarda */
+  llenado?: PedidoLlenadoCable
+}) {
   const crearPedido = useCompras((estado) => estado.crearPedido)
-  const [proveedor, setProveedor] = useState<ProveedorCable | null>(null)
+  const proveedores = useCompras((estado) => estado.proveedores)
+  const [inicial] = useState(() => repartirLlenado(llenado))
+  const [proveedor, setProveedor] = useState<ProveedorCable | null>(() =>
+    buscarProveedor(proveedores, llenado?.proveedor ?? null),
+  )
   const [frecuentes, setFrecuentes] = useState<ProductoFrecuenteCable[]>([])
-  const [items, setItems] = useState<ItemNuevo[]>([])
+  const [items, setItems] = useState<ItemNuevo[]>(inicial.listos)
+  const [sinMonto, setSinMonto] = useState<ItemPedidoCable[]>(inicial.sinMonto)
   const [nombre, setNombre] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [monto, setMonto] = useState('')
   const [fecha, setFecha] = useState(diaPeruano(1))
   const [error, setError] = useState<string | null>(null)
+
+  // Los proveedores pueden terminar de leerse después de abrir el pedido
+  useEffect(() => {
+    if (!proveedor && llenado?.proveedor) {
+      const encontrado = buscarProveedor(proveedores, llenado.proveedor)
+      if (encontrado) setProveedor(encontrado)
+    }
+    // Solo cuando cambia la lista: si el operador elige otro, no se vuelve a imponer
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proveedores])
+
+  const completar = (indice: number) => {
+    const item = sinMonto[indice]
+    setNombre(item.producto)
+    setCantidad(item.cantidad ?? '')
+    setMonto('')
+    setSinMonto(sinMonto.filter((_, i) => i !== indice))
+    document.getElementById('item-monto')?.focus()
+  }
 
   useEffect(() => {
     if (!proveedor) return
@@ -231,9 +296,14 @@ export function NuevoPedido({ alTerminar }: { alTerminar: () => void }) {
   return (
     <main className={estilos.pantalla} data-ai-id="compras.nuevo">
       <TituloPagina>Nuevo pedido</TituloPagina>
+      {llenado && (
+        <Aviso tipo="info" aiId="compras.llenado-asistente">
+          Lo llenó el Asistente: revísalo y toca «Guardar pedido». Aún no se guardó nada.
+        </Aviso>
+      )}
       {!proveedor ? (
         <>
-          <ElegirProveedor alElegir={setProveedor} />
+          <ElegirProveedor alElegir={setProveedor} busquedaInicial={llenado?.proveedor ?? ''} />
           <Boton aiId="compras.nuevo-cancelar" variante="discreto" onClick={alTerminar}>
             Volver a Compras
           </Boton>
@@ -267,6 +337,25 @@ export function NuevoPedido({ alTerminar }: { alTerminar: () => void }) {
                 ))}
               </div>
             </>
+          )}
+
+          {sinMonto.length > 0 && (
+            <section data-ai-id="compras.falta-monto">
+              <TituloSeccion>Falta cuánto cuesta</TituloSeccion>
+              <Nota>Toca cada uno, escribe el monto y agrégalo al pedido.</Nota>
+              <div className={estilos.opciones}>
+                {sinMonto.map((item, indice) => (
+                  <Boton
+                    key={`${indice}-${item.producto}`}
+                    aiId={`compras.completar-${indice}`}
+                    variante="secundario"
+                    onClick={() => completar(indice)}
+                  >
+                    {`${item.producto}${item.cantidad ? ` · ${item.cantidad}` : ''}: escribir el monto`}
+                  </Boton>
+                ))}
+              </div>
+            </section>
           )}
 
           <form className={estilos.formulario} onSubmit={agregar}>

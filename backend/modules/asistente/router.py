@@ -7,7 +7,8 @@
   "Cliente 1", el operador lee "Sra. Flora". También el historial.
 - Las acciones que propone son botones que el operador decide tocar (ADR-037); si el
   operador pidió ir o hacer algo, la primera se abre sola (ADR-047). Solo navegar.
-- Puede LLENAR una orden (`borrador`) que el operador revisa y guarda (ADR-049); nunca la guarda.
+- Puede LLENAR una orden (`borrador`, ADR-049), un pago, gasto o merma (`formulario`, D-28) o un pedido a un
+  proveedor (`pedido`) que el operador revisa y guarda; nunca guarda.
 - No depende del router del Dashboard (D-06): usa su servicio de cálculo y,
   si no está disponible, responde igual pero sin cifras.
 - Recuerda lo que el operador le pide recordar (D-26, ADR-052): hechos cortos en la base del
@@ -26,6 +27,7 @@ import seguridad
 from database import obtener_sesion, obtener_sesion_escritura, sesion_escritura_para
 from fechas import dia_peruano
 from ia import borrador, configuracion, formularios, llave_local, memoria, registro
+from ia import pedido as pedido_ia
 from ia.acciones import accion_por_tema, corregir_destino, marcar_automatica, pide_ir_o_hacer
 from ia.privacidad import ALIAS_SUELTO, Seudonimos, seudonimizar_resumen
 from ia.servicio import AsistenteNoDisponible, armar_mensajes, consolidar_recuerdos, preguntar
@@ -265,9 +267,17 @@ async def preguntar_endpoint(
         formulario = formularios.validar(respuesta.formulario, dicho)
         if formulario.get("cliente"):
             formulario = {**formulario, "cliente": alias.reidentificar(formulario["cliente"])}
+    # Pedido a un proveedor (Compras): mismas reglas; el proveedor vuelve con su nombre real
+    pedido_llenado = None
+    if respuesta.pedido and lo_pidio and not items and not formulario:
+        dicho = " ".join([datos.mensaje, *del_operador])
+        pedido_llenado = pedido_ia.validar(respuesta.pedido, dicho)
+        if pedido_llenado.get("proveedor"):
+            pedido_llenado["proveedor"] = alias.reidentificar(pedido_llenado["proveedor"])
     texto = alias.reidentificar(respuesta.texto)
     # Nunca "revisa la orden" si no hay orden llenada: el operador la buscaría y no estaría
-    if not items and not formulario and borrador.HABLA_DE_UNA_ORDEN_LLENADA.search(texto):
+    llenado = items or formulario or pedido_llenado
+    if not llenado and borrador.HABLA_DE_UNA_ORDEN_LLENADA.search(texto):
         texto = borrador.PEDIR_PRODUCTOS
     return RespuestaSalida(
         respuesta=texto,
@@ -281,6 +291,7 @@ async def preguntar_endpoint(
             else None
         ),
         formulario=formulario,
+        pedido=pedido_llenado,
         recordado=recordado,
         id_respuesta=id_respuesta,
         modelo=respuesta.modelo,

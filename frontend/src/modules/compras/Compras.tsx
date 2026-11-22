@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
-import { aCentimos, formatearCentimos, type OrdenCompraCable } from '../../api/contrato'
+import {
+  aCentimos,
+  formatearCentimos,
+  type OrdenCompraCable,
+  type PedidoLlenadoCable,
+} from '../../api/contrato'
 import { OperacionesRechazadas } from '../../componentes/sincronizacion/EstadoSincronizacion'
+import { useBorradorAsistente } from '../../stores/borradorAsistente'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
 import { estaAtrasado, formatearFechaRelativa } from '../dashboard/formato'
@@ -11,10 +17,14 @@ import { ChecklistRecepcion, NuevoPedido } from './formularios'
 /**
  * Compras: pedidos a proveedores, de la orden a la recepción (docs/03-modulos/
  * Modulo-Compras.md). Funciona sin internet, igual que Ventas: todo se guarda en
- * el dispositivo y se envía al volver la red.
+ * el dispositivo y se envía al volver la red. El Asistente puede dejar un pedido
+ * llenado: se abre en «Nuevo pedido» y solo se guarda si el operador lo confirma.
  */
 
-type Vista = { tipo: 'lista' } | { tipo: 'nuevo' } | { tipo: 'recepcion'; orden: string }
+type Vista =
+  | { tipo: 'lista' }
+  | { tipo: 'nuevo'; llenado?: PedidoLlenadoCable; clave?: number }
+  | { tipo: 'recepcion'; orden: string }
 
 function fechaDe(texto: string): Date {
   return new Date(`${texto}T12:00:00-05:00`)
@@ -59,14 +69,23 @@ export function Compras() {
   const cerrar = useCompras((estado) => estado.cerrar)
   const descartarAviso = useCompras((estado) => estado.descartarAviso)
   const [vista, setVista] = useState<Vista>({ tipo: 'lista' })
+  const pedidoAsistente = useBorradorAsistente((estado) => estado.pedido)
 
   useEffect(() => {
     if (proyecto) void iniciar(proyecto)
   }, [proyecto, iniciar])
 
+  // El Asistente dejó un pedido llenado: se abre «Nuevo pedido» con sus datos, sin guardar nada
+  useEffect(() => {
+    if (!proyecto || !pedidoAsistente) return
+    const llenado = useBorradorAsistente.getState().tomarPedido(proyecto)
+    if (llenado) setVista({ tipo: 'nuevo', llenado, clave: Date.now() })
+  }, [proyecto, pedidoAsistente])
+
   const alVolver = () => setVista({ tipo: 'lista' })
 
-  if (vista.tipo === 'nuevo') return <NuevoPedido alTerminar={alVolver} />
+  if (vista.tipo === 'nuevo')
+    return <NuevoPedido key={vista.clave} alTerminar={alVolver} llenado={vista.llenado} />
   if (vista.tipo === 'recepcion') {
     const orden = ordenes.find((o) => o.uuid === vista.orden)
     if (orden) return <ChecklistRecepcion orden={orden} alTerminar={alVolver} />

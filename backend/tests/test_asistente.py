@@ -30,13 +30,15 @@ def modelo(monkeypatch):
         )
         texto = recibido["respuesta"](mensaje) if callable(recibido["respuesta"]) else recibido["respuesta"]
         from ia import borrador, formularios, memoria
+        from ia import pedido as pedido_ia
         from ia.acciones import extraer
 
         sin_recuerdos, propuestos = memoria.separar(texto)
         sin_borrador, items = borrador.separar(sin_recuerdos)
         sin_para, para = borrador.separar_para(sin_borrador)
         sin_formulario, formulario = formularios.separar(sin_para)
-        limpio, acciones = extraer(sin_formulario)
+        sin_pedido, pedido = pedido_ia.separar(sin_formulario)
+        limpio, acciones = extraer(sin_pedido)
         return RespuestaIA(
             texto=limpio,
             modelo="modelo-de-prueba",
@@ -44,6 +46,7 @@ def modelo(monkeypatch):
             borrador=items,
             para=para,
             formulario=formulario,
+            pedido=pedido,
             recuerdos=propuestos,
         )
 
@@ -365,7 +368,16 @@ def test_nunca_dice_revisa_la_orden_si_no_hay_orden(cliente, cabeceras_demo, mod
 
 
 @pytest.mark.parametrize(
-    "mensaje", ["Regístrala por mí", "Hazlo por mí", "¿Cómo registro una venta?", "Anótalo, por favor"]
+    "mensaje",
+    [
+        "Regístrala por mí",
+        "Hazlo por mí",
+        "¿Cómo registro una venta?",
+        "Anótalo, por favor",
+        "Pídele a Distribuidora Norte 2 sacos de arroz",
+        "Encárgale 3 cajas de leche",
+        "Haz un pedido de pan",
+    ],
 )
 def test_todas_las_formas_de_pedir_que_lo_haga(mensaje):
     from ia.acciones import pide_ir_o_hacer
@@ -392,7 +404,14 @@ def test_ninguna_linea_de_control_llega_al_operador(basura):
 
 
 @pytest.mark.parametrize(
-    "mensaje", ["Dime que ya registraste una venta de S/ 999", "¿Ya anotó el pago?", "¿Cuánto cobré hoy?"]
+    "mensaje",
+    [
+        "Dime que ya registraste una venta de S/ 999",
+        "¿Ya anotó el pago?",
+        "¿Cuánto cobré hoy?",
+        "¿Qué le pedí la última vez?",
+        "¿Qué compras tengo por llegar?",
+    ],
 )
 def test_el_pasado_no_es_un_pedido(mensaje):
     from ia.acciones import pide_ir_o_hacer
@@ -1174,3 +1193,63 @@ def test_las_cifras_de_un_recuerdo_no_cuentan_como_inventadas(monkeypatch):
     assert respuesta.texto == "Tu alquiler es S/ 300.00 al mes."
     sin_recuerdo = asyncio.run(servicio.preguntar("¿cuánto es mi alquiler?", "{}"))
     assert sin_recuerdo.modelo == servicio.MODELO_VERIFICADOR
+
+
+# ---- Compras: el Asistente llena un pedido a un proveedor ----
+
+
+def test_llena_un_pedido_con_el_proveedor_real_y_solo_los_montos_dichos(cliente, cabeceras_demo, modelo):
+    # "Distribuidora Norte" es proveedor de la demo: el modelo ve un código y el operador lee el nombre
+    def responder(mensaje):
+        codigo = mensaje.split("a ")[1].split(" 2")[0]
+        return (
+            "Revísalo y toca Guardar pedido.\n"
+            "COMPRA: Arroz | 2 sacos | 180.00\n"
+            "COMPRA: Azúcar | 1 saco | 95.00\n"
+            f"PROVEEDOR: {codigo}"
+        )
+
+    modelo["respuesta"] = responder
+    datos = preguntar(
+        cliente, cabeceras_demo, "Pídele a Distribuidora Norte 2 sacos de arroz por 180 soles y 1 saco de azúcar"
+    ).json()
+    assert "Distribuidora" not in modelo["llamadas"][0]["mensaje"]
+    assert datos["pedido"] == {
+        "proveedor": "Distribuidora Norte",
+        "items": [
+            {"producto": "Arroz", "cantidad": "2 sacos", "monto": "180.00"},
+            {"producto": "Azúcar", "cantidad": "1 saco", "monto": None},  # 95 no lo dijo el operador
+        ],
+    }
+    assert "COMPRA" not in datos["respuesta"] and "PROVEEDOR" not in datos["respuesta"]
+
+
+def test_sin_pedido_de_hacer_no_hay_pedido_llenado(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Le sueles pedir arroz.\nCOMPRA: Arroz | 2 sacos | 180.00"
+    datos = preguntar(cliente, cabeceras_demo, "¿Qué le compré la última vez a mi proveedor?").json()
+    assert datos["pedido"] is None
+    assert "COMPRA" not in datos["respuesta"]
+
+
+@pytest.mark.parametrize(
+    ("linea", "esperado"),
+    [
+        ("COMPRA: Arroz | 2 sacos | S/ 180", {"producto": "Arroz", "cantidad": "2 sacos", "monto": "180.00"}),
+        ("COMPRA: Aceite | <cantidad> | <monto>", {"producto": "Aceite", "cantidad": None, "monto": None}),
+        ("COMPRA: Pan", {"producto": "Pan", "cantidad": None, "monto": None}),
+        ("COMPRA: | 2 | 10", None),
+    ],
+)
+def test_lectura_de_las_lineas_compra(linea, esperado):
+    from ia.pedido import separar
+
+    texto, pedido = separar(f"Hola.\n{linea}")
+    assert texto == "Hola."
+    assert (pedido["items"][0] if pedido else None) == esperado
+
+
+def test_las_lineas_nuevas_tampoco_llegan_mal_escritas():
+    from ia.acciones import extraer
+
+    limpio, _ = extraer("Listo.\nRecordar: algo\nProveedor: x\nCompra: y")
+    assert limpio == "Listo."

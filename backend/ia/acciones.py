@@ -67,7 +67,10 @@ _LINEA = re.compile(
 )
 
 # Red final: ninguna línea de control llega al operador, aunque venga mal escrita
-_LINEA_DE_CONTROL = re.compile(r"^[ \t]*(?:ACCI[OÓ]N|VENTA|PARA)[ \t]*:.*$", re.IGNORECASE | re.MULTILINE)
+_LINEA_DE_CONTROL = re.compile(
+    r"^[ \t]*(?:ACCI[OÓ]N|VENTA|PARA|COMPRA|PROVEEDOR|RECORDAR|ABONO|GASTO|MERMA)[ \t]*:.*$",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 
 # El operador pide ir a algún lado o hacer algo ("quiero registrar una compra", "llévame a
@@ -81,7 +84,11 @@ _PIDE_IR_O_HACER = re.compile(
     # pide hacerlo). Sin "vendí": "¿cuánto vendí hoy?" es una pregunta de cifras
     # El pasado no es un pedido: "dime que ya registraste…" no lleva a ningún lado
     r"(?:reg[ií]str|an[oó]t|agr[eé]g|ap[uú]nt|c[oó]br|revis)(?!aste\b|é\b|ó\b)\w*|"
-    r"h[aá]z(?:lo|la|me)\w*|h[aá]cel[oa]\w*|contar)\b",
+    r"h[aá]z(?:lo|la|me)\w*|h[aá]cel[oa]\w*|contar|"
+    # Pedidos a un proveedor: "pídele a…", "encárgale…", "haz un pedido". Sin "pedí" ni "compras":
+    # "¿qué le pedí?" y "¿qué compras tengo?" son preguntas
+    r"p[ií]de(?:le|les|me)|ped[ií]rle|enc[aá]rg(?:a|ale|ales|ar|arle)|c[oó]mpra(?:le|les|me)|"
+    r"h[aá]z\s+un\s+pedido)\b",
     re.IGNORECASE,
 )
 

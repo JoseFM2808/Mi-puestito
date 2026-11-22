@@ -13,7 +13,7 @@ cualquier API compatible con OpenAI a través de `compatible_openai.py`.
 import logging
 from dataclasses import dataclass, field
 
-from . import borrador, configuracion, formularios, memoria
+from . import borrador, configuracion, formularios, memoria, pedido
 from .acciones import APARTADOS, PANTALLAS, extraer, texto_si_solo_hubo_accion
 from .cifras import cifras_no_respaldadas
 from .compatible_openai import ProveedorCompatibleOpenAI, es_transitorio, motivo_error
@@ -109,6 +109,15 @@ Ejemplos: "anota que Cliente 9 me pagó 10 soles" → ABONO: Cliente 9 | 10.00 |
 "anota un gasto de 5 soles de pasaje" → GASTO: 5.00 | transporte | efectivo | puesto | pasaje
 "se vencieron 2 leches gloria" → MERMA: 2 x Leche Gloria | vencido
 Dile que lo revise y toque «Guardar». En ese caso no agregues ACCION.
+- Si pide hacer un PEDIDO a un proveedor (comprarle mercadería), llénalo con UNA línea por producto y, si \
+dijo a quién, una con el proveedor (el monto es el total de ese producto y va SOLO si el operador lo dijo; \
+si no, deja ese campo vacío):
+COMPRA: <producto> | <cantidad como la dijo> | <monto total>
+PROVEEDOR: <proveedor>
+Ejemplo: "pídele a Proveedor A 2 sacos de arroz por 180 soles" → estas dos líneas:
+COMPRA: Arroz | 2 sacos | 180.00
+PROVEEDOR: Proveedor A
+Dile que lo revise y toque «Guardar pedido». En ese caso no agregues ACCION.
 - Si preguntan CÓMO hacer algo, explica los pasos con los nombres exactos de los botones, en 2 o \
 3 frases, y ofrece hacerlo por él. Ejemplo para una venta: toca «Nueva orden», agrega lo que \
 lleva y toca «Cobrar en efectivo», «Cobrar con Yape o Plin» o «Fiar a un cliente»; o dime qué \
@@ -153,6 +162,8 @@ class RespuestaIA:
     para: str | None = None
     # Un pago de fiado, un gasto o una merma llenados para que el operador los confirme (D-28)
     formulario: dict | None = None
+    # Un pedido a un proveedor llenado para que el operador lo confirme (Compras)
+    pedido: dict | None = None
     # Hechos que el modelo propone recordar (D-26); el router decide si se guardan
     recuerdos: list[str] = field(default_factory=list)
 
@@ -229,15 +240,16 @@ async def preguntar(
         sin_borrador, items = borrador.separar(sin_recuerdos)
         sin_para, para = borrador.separar_para(sin_borrador)
         sin_formulario, formulario = formularios.separar(sin_para)
-        limpio, acciones = extraer(sin_formulario)
+        sin_pedido, pedido_llenado = pedido.separar(sin_formulario)
+        limpio, acciones = extraer(sin_pedido)
         # Un monto inventado nunca llega al operador (ADR-042)
         if cifras_no_respaldadas(limpio, contexto_json, dicho_por_el_operador):
             alguna_cifra_rechazada = True
             registro.warning("Respuesta de %s descartada: monto sin respaldo en los datos", modelo)
             continue
-        if not limpio and recuerdos_propuestos and not (items or formulario or acciones):
+        if not limpio and recuerdos_propuestos and not (items or formulario or pedido_llenado or acciones):
             limpio = TEXTO_SI_SOLO_HUBO_RECUERDO
-        if not limpio and (items or formulario):
+        if not limpio and (items or formulario or pedido_llenado):
             limpio = TEXTO_SI_SOLO_HUBO_BORRADOR if items else TEXTO_SI_SOLO_HUBO_FORMULARIO
         elif not limpio and acciones:
             limpio = texto_si_solo_hubo_accion(acciones)
@@ -248,6 +260,7 @@ async def preguntar(
             borrador=items,
             para=para if items else None,
             formulario=formulario,
+            pedido=pedido_llenado,
             recuerdos=recuerdos_propuestos,
         )
 

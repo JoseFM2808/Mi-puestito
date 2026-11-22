@@ -280,10 +280,17 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
         useBorradorAsistente.getState().poner(proyecto, items, respuesta.borrador?.para)
         verBorrador()
       }
+      // O un pedido a un proveedor: Compras abre «Nuevo pedido» llenado
+      const pedidoLlenado = items.length === 0 && !formulario ? respuesta.pedido : null
+      if (pedidoLlenado && proyecto) {
+        useBorradorAsistente.getState().ponerPedido(proyecto, pedidoLlenado)
+        const { pantalla, asistenteFlotante, llevarConAsistente } = useNavegacion.getState()
+        if (pantalla !== 'compras' || !asistenteFlotante) llevarConAsistente('compras')
+      }
       agregar({
         quienHabla: 'asistente',
         texto: respuesta.respuesta,
-        acciones: items.length > 0 || formulario ? [] : respuesta.acciones,
+        acciones: items.length > 0 || formulario || pedidoLlenado ? [] : respuesta.acciones,
         idRespuesta: respuesta.id_respuesta,
         conBorrador: items.length > 0,
         recordado: respuesta.recordado.length > 0 ? respuesta.recordado : undefined,
@@ -291,7 +298,9 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
           ? `Lo dejé llenado en ${nombreDe(PANTALLA_DEL_FORMULARIO[formulario.tipo])}. Revísalo y toca «${BOTON_DEL_FORMULARIO[formulario.tipo]}»: hasta entonces no se guarda nada.`
           : items.length > 0
             ? 'La orden está en Ventas, arriba. Hasta que toques «Guardar orden» no se guarda nada.'
-            : hacerSolo(respuesta.acciones),
+            : pedidoLlenado
+              ? 'Dejé el pedido llenado en Compras. Revísalo y toca «Guardar pedido»: hasta entonces no se guarda nada.'
+              : hacerSolo(respuesta.acciones),
       })
     } catch (error) {
       const aviso =

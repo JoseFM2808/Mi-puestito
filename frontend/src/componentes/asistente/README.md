@@ -62,3 +62,7 @@ se avisa que va a Google o Microsoft.
 Si pide anotar un pago de fiado, un gasto o una merma, la respuesta trae `formulario`: se deja en
 `stores/borradorAsistente.ts` (`ponerFormulario`), se abre Fiados, Gastos o Inventario y esa pantalla lo toma una vez
 (`tomarFormulario`) para abrir su formulario de siempre ya llenado (D-28).
+
+Si pide hacer un pedido a un proveedor, la respuesta trae `pedido` (proveedor y productos): se deja en
+`stores/borradorAsistente.ts` (`ponerPedido`), se abre Compras y esa pantalla lo toma una vez (`tomarPedido`) para abrir
+«Nuevo pedido» llenado. Debajo se lee "Dejé el pedido llenado en Compras…".

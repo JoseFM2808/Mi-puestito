@@ -86,11 +86,28 @@ class FormularioLlenado(BaseModel):
     nota: str | None = None
 
 
+class ItemPedido(BaseModel):
+    producto: str
+    # Texto libre, como en Compras ("2 sacos")
+    cantidad: str | None = None
+    # Monto TOTAL de ese producto, solo si el operador lo dijo
+    monto: str | None = None
+
+
+class PedidoLlenado(BaseModel):
+    """Un pedido a un proveedor que el Asistente llenó; el operador lo revisa y lo guarda."""
+
+    # A quién se le pide (nombre real), si el operador lo dijo
+    proveedor: str | None = None
+    items: list[ItemPedido]
+
+
 class RespuestaSalida(BaseModel):
     respuesta: str
     acciones: list[AccionSugerida] = []
     borrador: BorradorVenta | None = None
     formulario: FormularioLlenado | None = None
+    pedido: PedidoLlenado | None = None
     # Lo que se guardó en su memoria con esta respuesta (D-26), para decírselo al operador
     recordado: list[str] = []
     # Para valorar la respuesta ("Me sirvió" / "No me sirvió")

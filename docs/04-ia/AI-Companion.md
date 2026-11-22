@@ -32,7 +32,7 @@ IA: [navega y resalta el checklist] "Estamos aquí. ¿Te ayudo a completarlo?"
 
 La orquestación del companion corre sobre LangGraph → [[Orquestacion-IA]]. El modelo subyacente es intercambiable → [[Conexion-Agnostica]]. Su identidad visual (color, ubicación) se define en [[Design-System]].
 
-## Estado (2026-11-08)
+## Estado (2026-11-22)
 
 - Capacidades 1 y 2: hechas (cifras de hoy con verificador, guía de la app).
 - Capacidad 3: hecha sin pedir confirmación, porque solo abre pantallas cuando el operador lo pide ("quiero registrar
@@ -41,5 +41,8 @@ La orquestación del companion corre sobre LangGraph → [[Orquestacion-IA]]. El
   abre por pedido, no una parte fija de la pantalla.
 - Capacidad 4 (rellenar formularios): hecha para órdenes de venta (ADR-049). El Asistente llena y el operador revisa y
   toca «Guardar orden»; los precios solo salen de lo que dijo el operador o del inventario. Se le puede hablar
-  (dictado del navegador). Compras y pagos: pendientes (D-28).
+  (dictado del navegador). También pagos de fiado, gastos y mermas (D-28) y, desde el 2026-11-22, pedidos a proveedores:
+  «Nuevo pedido» se abre con el proveedor y los productos; lo que no tiene monto lo completa el operador.
+- Memoria (D-26, ADR-052): la conversación sobrevive a una recarga y el Asistente recuerda lo que el operador le pide
+  ("acuérdate que…"), con un tope que lo obliga a consolidar; el operador lo ve y lo olvida en «Lo que recuerdo».
 - Capacidad 5 (ayuda proactiva): pendiente; exigirá una decisión formal nueva.

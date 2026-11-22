@@ -15,7 +15,10 @@ Una tabla: `memorias_asistente` (lo que recuerda del negocio, D-26, ADR-052). En
    un nombre. Un cliente o proveedor guardado que se nombre en el texto también recibe código aunque no esté en el
    resumen (`registrar_mencionados`).
 3. Pregunta al modelo (`ia/servicio.py`), en el orden verificado de `ia/configuracion.py` (ADR-036).
-4. Convierte las líneas `ACCION: ir_a <pantalla>` en botones de lista blanca (`ia/acciones.py`, ADR-037).
+4. Convierte las líneas `ACCION: ir_a <pantalla>` en botones de lista blanca (`ia/acciones.py`, ADR-037), y las de
+   llenado en datos para que el operador los confirme: `VENTA`/`PARA` (orden, `ia/borrador.py`), `ABONO`/`GASTO`/`MERMA`
+   (`ia/formularios.py`) y `COMPRA`/`PROVEEDOR` (pedido a un proveedor, `ia/pedido.py`). Solo si el operador pidió
+   hacerlo, y solo con los montos que él dijo.
 5. Si el operador pidió recordar algo (`ia/memoria.py`), guarda las líneas `RECORDAR:` con el nombre real; pasado el
    tope de 20, el modelo consolida la lista en 15 (si falla, quedan los más nuevos).
 6. Si el registro está activo, guarda el intercambio seudonimizado para un futuro fine-tuning (`ia/registro.py`, ADR-038).

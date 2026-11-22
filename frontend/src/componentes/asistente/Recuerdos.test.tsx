@@ -1,9 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as Cliente from '../../api/cliente'
 
 const pedir = vi.fn()
 vi.mock('../../api/cliente', async (original) => ({
-  ...(await original<typeof import('../../api/cliente')>()),
+  ...(await original<typeof Cliente>()),
   pedir: (...argumentos: unknown[]) => pedir(...argumentos),
 }))
 
@@ -34,7 +35,9 @@ describe('Lo que el Asistente recuerda (D-26)', () => {
   it('muestra lo que recuerda y olvida uno por uno', async () => {
     render(<Recuerdos alCerrar={() => {}} />)
     expect(await screen.findByText('Sra. Rosa paga por Yape')).toBeTruthy()
-    fireEvent.click(document.querySelector('[data-ai-id="asistente.olvidar-a"]')!)
+    const olvidarRosa = document.querySelector('[data-ai-id="asistente.olvidar-a"]')
+    if (!olvidarRosa) throw new Error('Falta el botón Olvidar esto')
+    fireEvent.click(olvidarRosa)
     await waitFor(() => expect(screen.queryByText('Sra. Rosa paga por Yape')).toBeNull())
     expect(screen.getByText('Los sábados vendo menú')).toBeTruthy()
     expect(pedir).toHaveBeenCalledWith('DELETE', '/api/asistente/recuerdos/a')

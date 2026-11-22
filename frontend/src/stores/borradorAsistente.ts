@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { FormularioLlenadoCable, ItemBorradorCable } from '../api/contrato'
+import type { FormularioLlenadoCable, ItemBorradorCable, PedidoLlenadoCable } from '../api/contrato'
 
 /**
  * La orden que el Asistente llenó y espera que el operador revise y guarde (ADR-049).
@@ -25,9 +25,20 @@ export interface FormularioAsistente {
   version: number
 }
 
+/** Pedido a un proveedor llenado: Compras lo abre en «Nuevo pedido» y lo quita */
+export interface PedidoAsistente {
+  proyecto: string
+  pedido: PedidoLlenadoCable
+  version: number
+}
+
 interface EstadoBorrador {
   borrador: BorradorAsistente | null
   formulario: FormularioAsistente | null
+  pedido: PedidoAsistente | null
+  ponerPedido: (proyecto: string, pedido: PedidoLlenadoCable) => void
+  /** Compras lo toma una vez: abre «Nuevo pedido» llenado y lo quita de aquí */
+  tomarPedido: (proyecto: string) => PedidoLlenadoCable | null
   ponerFormulario: (proyecto: string, formulario: FormularioLlenadoCable) => void
   /** La pantalla lo toma una vez: lo abre en su formulario de siempre y lo quita de aquí */
   tomarFormulario: (tipo: FormularioLlenadoCable['tipo'], proyecto: string) => FormularioLlenadoCable | null
@@ -38,6 +49,15 @@ interface EstadoBorrador {
 export const useBorradorAsistente = create<EstadoBorrador>()((set, get) => ({
   borrador: null,
   formulario: null,
+  pedido: null,
+  ponerPedido: (proyecto, pedido) =>
+    set({ pedido: { proyecto, pedido, version: (get().pedido?.version ?? 0) + 1 } }),
+  tomarPedido: (proyecto) => {
+    const actual = get().pedido
+    if (!actual || actual.proyecto !== proyecto) return null
+    set({ pedido: null })
+    return actual.pedido
+  },
   ponerFormulario: (proyecto, formulario) =>
     set({ formulario: { proyecto, formulario, version: (get().formulario?.version ?? 0) + 1 } }),
   tomarFormulario: (tipo, proyecto) => {

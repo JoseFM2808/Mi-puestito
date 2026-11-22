@@ -448,6 +448,16 @@
       "uuid"
     ]
   },
+  "ItemPedido": {
+    "required": [
+      "producto"
+    ],
+    "properties": [
+      "cantidad",
+      "monto",
+      "producto"
+    ]
+  },
   "ItemRecepcionEntrada": {
     "required": [
       "estado",
@@ -573,6 +583,15 @@
       "ocurrido_en",
       "proveedor_uuid",
       "uuid"
+    ]
+  },
+  "PedidoLlenado": {
+    "required": [
+      "items"
+    ],
+    "properties": [
+      "items",
+      "proveedor"
     ]
   },
   "PedidoPorLlegar": {
@@ -769,6 +788,7 @@
       "formulario",
       "id_respuesta",
       "modelo",
+      "pedido",
       "recordado",
       "respuesta"
     ]

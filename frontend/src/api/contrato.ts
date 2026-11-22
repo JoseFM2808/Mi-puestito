@@ -326,11 +326,27 @@ export interface FormularioLlenadoCable {
   nota: string | null
 }
 
+/** Un producto del pedido a un proveedor que llenó el Asistente */
+export interface ItemPedidoCable {
+  producto: string
+  /** Texto libre, como en Compras ("2 sacos") */
+  cantidad: string | null
+  /** Monto TOTAL de ese producto, solo si el operador lo dijo */
+  monto: string | null
+}
+
+/** Pedido a un proveedor que el Asistente llenó; el operador lo revisa y lo guarda */
+export interface PedidoLlenadoCable {
+  proveedor: string | null
+  items: ItemPedidoCable[]
+}
+
 export interface RespuestaAsistenteCable {
   respuesta: string
   acciones: AccionSugeridaCable[]
   borrador: BorradorVentaCable | null
   formulario: FormularioLlenadoCable | null
+  pedido: PedidoLlenadoCable | null
   /** Lo que guardó en su memoria con esta respuesta (D-26) */
   recordado: string[]
   id_respuesta: string
@@ -665,11 +681,14 @@ export const CAMPOS_DEL_CONTRATO = {
     'acciones',
     'borrador',
     'formulario',
+    'pedido',
     'recordado',
     'id_respuesta',
     'modelo',
   ]),
   RecuerdoSalida: camposDe<RecuerdoCable>()(['uuid', 'texto', 'creado_en']),
+  PedidoLlenado: camposDe<PedidoLlenadoCable>()(['proveedor', 'items']),
+  ItemPedido: camposDe<ItemPedidoCable>()(['producto', 'cantidad', 'monto']),
   BorradorVenta: camposDe<BorradorVentaCable>()(['items', 'para']),
   ItemBorrador: camposDe<ItemBorradorCable>()(['nombre', 'cantidad', 'precio']),
   FormularioLlenado: camposDe<FormularioLlenadoCable>()([
