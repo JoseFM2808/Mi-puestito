@@ -50,3 +50,7 @@ se enlaza con su producto del inventario por nombre (`inventario/nombres.ts`) y,
 Al escribir el producto aparecen los del inventario que coinciden (`ventas-*.sugerido-N`). Al elegir uno, la cantidad se
 pide en su unidad, el monto se sugiere con su precio y se puede cambiar. El ítem lleva `producto_uuid` y `cantidad_num`,
 y el servidor descuenta el stock; quitar el ítem lo devuelve. Sin inventario, o sin elegir, todo funciona como antes.
+
+Por código de barras (D-30): si lo que se escribe en «Producto» es el código de un producto (un lector USB lo escribe
+solo), se elige ese producto. Si algún producto tiene código y el navegador puede, aparece **Escanear con la cámara**
+(`ventas-*.escanear`); un código que ningún producto tiene se dice con palabras.

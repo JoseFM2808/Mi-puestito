@@ -11,6 +11,7 @@ import {
 import { OperacionesRechazadas } from '../../componentes/sincronizacion/EstadoSincronizacion'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Campo, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
+import { EscanearCodigo } from '../../componentes/escaner/EscanearCodigo'
 import { senalar } from '../../componentes/asistente/senalar'
 import { useBorradorAsistente } from '../../stores/borradorAsistente'
 import { aMilesimas, formatearCantidad, leerCantidadEscrita, useInventario } from './almacen'
@@ -143,13 +144,14 @@ function NuevoProducto({ alTerminar }: { alTerminar: () => void }) {
           id="prod-codigo"
           aiId="inventario.codigo-barras"
           etiqueta="Código de barras"
-          ayuda="Opcional: pasa el lector o escríbelo"
+          ayuda="Opcional: pasa el lector, escanéalo con la cámara o escríbelo"
           valor={codigo}
           alCambiar={setCodigo}
           maxLength={32}
           inputMode="numeric"
         />
       </div>
+      <EscanearCodigo aiId="inventario.escanear-codigo" alLeer={setCodigo} />
       <Boton
         aiId="inventario.vence"
         variante="secundario"
@@ -493,10 +495,11 @@ export function Inventario() {
   }, [proyecto, iniciar])
 
   const texto = busqueda.trim().toLowerCase()
-  // Por nombre o por código de barras: un lector USB o Bluetooth "escribe" el código (D-22)
+  // Por nombre o por código de barras: un lector USB o Bluetooth "escribe" el código (D-22), o la
+  // cámara lo lee (D-30)
   const visibles = productos.filter(
     (p) =>
-      (p.nombre.toLowerCase().includes(texto) || (texto !== '' && p.codigo_barras === texto)) &&
+      (p.nombre.toLowerCase().includes(texto) || (texto !== '' && p.codigo_barras === busqueda.trim())) &&
       (!soloPoco || p.bajo_minimo || p.descuadre) &&
       (!porVencer || p.vence_pronto),
   )
@@ -539,6 +542,7 @@ export function Inventario() {
               alCambiar={setBusqueda}
             />
           </div>
+          <EscanearCodigo aiId="inventario.escanear-buscar" alLeer={setBusqueda} />
           <Boton
             aiId="inventario.solo-poco"
             variante="secundario"
@@ -555,7 +559,13 @@ export function Inventario() {
           >
             {`Solo lo que vence pronto (${cuantosPorVencer})`}
           </Boton>
-          {visibles.length === 0 && <Nota>Ningún producto coincide.</Nota>}
+          {visibles.length === 0 && (
+            <Nota>
+              {/^\d{6,}$/.test(texto)
+                ? `Ningún producto tiene el código ${texto}. Puedes ponérselo al crearlo con «Nuevo producto».`
+                : 'Ningún producto coincide.'}
+            </Nota>
+          )}
           {visibles.map((producto) => (
             <TarjetaProducto
               key={producto.uuid}

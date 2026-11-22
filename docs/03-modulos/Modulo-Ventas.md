@@ -43,7 +43,7 @@ Funciona **sin** [[Modulo-Inventario]]: no se valida stock al vender. La informa
   `frontend/src/modules/ventas/README.md` y `backend/modules/ventas/README.md`).
   La deuda se deriva (Σ ventas fiadas − Σ abonos); los montos se guardan en
   céntimos. Al vender se puede elegir un producto de [[Modulo-Inventario]]: la
-  cantidad descuenta su stock y su precio sugiere el monto. Pendiente: QR de
-  YAPE/Plin (necesita el número del vendedor) y registro por foto o código de barras.
+  cantidad descuenta su stock y su precio sugiere el monto; también se elige por código de barras, con el lector o
+  con la cámara (D-30). Pendiente: QR de YAPE/Plin (necesita el número del vendedor) y registro por foto.
 - **Con el Asistente (ADR-049):** "quiero registrar 2 fideos Anita a 4.80 para la señora Bertha" deja la orden llenada
   arriba de Ventas; el vendedor la revisa y toca «Guardar orden». También se le puede hablar.

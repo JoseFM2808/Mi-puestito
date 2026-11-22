@@ -35,7 +35,7 @@ lo confirma.
 
 ## Límites conocidos
 
-- Sin búsqueda por código de barras, foto, alertas de vencimiento ni costo desde la última compra (pendientes del módulo).
+- Sin registro por foto del producto.
 - Las ventas descuentan stock solo si el operador elige el producto del inventario al venderlo (`FormularioProducto`);
   con texto libre no se toca el stock.
 
@@ -46,3 +46,6 @@ lo confirma.
 - **Cambiar precio, mínimo o vencimiento** (`inventario.precio-vence`) corrige la fecha; vaciarla la borra.
 - **Solo lo que vence pronto** (`inventario.por-vencer`) filtra; el buscador acepta el código de barras y **Nuevo
   producto** tiene el campo `inventario.codigo-barras` (un lector USB o Bluetooth lo escribe solo).
+- **Escanear con la cámara** (D-30, `componentes/escaner`): junto al buscador (`inventario.escanear-buscar`) y en Nuevo
+  producto (`inventario.escanear-codigo`). Solo aparece si el navegador trae `BarcodeDetector` (Chrome/Edge en Android y
+  ChromeOS); la imagen no sale del equipo.

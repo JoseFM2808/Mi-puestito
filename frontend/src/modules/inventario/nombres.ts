@@ -98,3 +98,16 @@ export function trozosConProductos<P extends ConNombre>(texto: string, productos
   if (cursor < texto.length) trozos.push({ texto: texto.slice(cursor) })
   return trozos
 }
+
+/**
+ * El producto con ese código de barras (D-22, D-30), si hay uno. El código se compara tal cual,
+ * sin espacios: lo da un lector, la cámara o se escribe.
+ */
+export function productoPorCodigo<T extends { codigo_barras: string | null }>(
+  productos: T[],
+  codigo: string,
+): T | undefined {
+  const buscado = codigo.trim()
+  if (!buscado) return undefined
+  return productos.find((p) => p.codigo_barras !== null && p.codigo_barras === buscado)
+}

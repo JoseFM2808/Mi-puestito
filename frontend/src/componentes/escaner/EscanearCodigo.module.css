@@ -1,0 +1,17 @@
+/* Cámara para leer códigos de barras (D-30). CSS Module. Solo tokens. */
+
+.camara {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.video {
+  width: 100%;
+  max-width: 28rem;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--texto);
+  border-radius: var(--radio);
+  border: 2px solid var(--borde-fuerte);
+}

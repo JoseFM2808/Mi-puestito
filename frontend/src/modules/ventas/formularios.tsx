@@ -7,6 +7,7 @@ import {
   type MetodoPago,
   type ProductoCable,
 } from '../../api/contrato'
+import { EscanearCodigo } from '../../componentes/escaner/EscanearCodigo'
 import { useSesion } from '../../stores/sesion'
 import { Boton, Campo, Nota, Tarjeta } from '../../ui/componentes'
 import {
@@ -16,6 +17,7 @@ import {
   montoPorCantidad,
   useInventario,
 } from '../inventario/almacen'
+import { productoPorCodigo } from '../inventario/nombres'
 import { useVentas } from './almacen'
 import estilos from './Ventas.module.css'
 
@@ -30,7 +32,8 @@ const MAX_SUGERENCIAS = 4
  * Producto vendido. Si coincide con uno del inventario, se puede elegir: entonces la
  * cantidad va en su unidad, el monto se sugiere con su precio y el servidor descuenta
  * el stock (ADR-031). Sin elegir, se vende con texto libre, como siempre: el inventario
- * es opcional.
+ * es opcional. También se elige por código de barras: el lector lo escribe en «Producto»
+ * o la cámara lo lee (D-30).
  */
 export function FormularioProducto({
   prefijo,
@@ -62,6 +65,18 @@ export function FormularioProducto({
   }, [proyecto, proyectoInventario, iniciarInventario])
 
   const texto = nombre.trim().toLowerCase()
+  // Un lector USB "escribe" el código en el campo: si es el de un producto, se elige solo
+  const porCodigo = elegido ? undefined : productoPorCodigo(productos, nombre)
+  useEffect(() => {
+    if (porCodigo) elegir(porCodigo)
+  }, [porCodigo])
+
+  const leerCodigo = (codigo: string) => {
+    const producto = productoPorCodigo(productos, codigo)
+    if (producto) elegir(producto)
+    else setError(`Ningún producto del inventario tiene el código ${codigo}. Escribe su nombre.`)
+  }
+
   const sugerencias =
     elegido || !texto
       ? []
@@ -135,6 +150,9 @@ export function FormularioProducto({
           autoComplete="off"
           maxLength={120}
         />
+      )}
+      {!elegido && productos.some((p) => p.codigo_barras) && (
+        <EscanearCodigo aiId={`${prefijo}.escanear`} alLeer={leerCodigo} />
       )}
       {sugerencias.length > 0 && (
         <div className={estilos.sugerencias} data-ai-id={`${prefijo}.sugerencias`}>
