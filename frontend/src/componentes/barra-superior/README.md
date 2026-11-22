@@ -3,7 +3,7 @@
 ## Qué es
 
 Franja fija (`sticky top`) presente en **toda** la experiencia, definida en
-`docs/06-diseno/Design-System.md` (sección 6). No pertenece a ningún módulo:
+`docs/design-system/producto/Design-System.md` (sección 6). No pertenece a ningún módulo:
 es el punto de anclaje de la navegación, del AI Companion y del selector de
 tamaño de letra.
 

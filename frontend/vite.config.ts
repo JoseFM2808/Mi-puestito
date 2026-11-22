@@ -4,20 +4,24 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig, type Plugin } from 'vitest/config'
 
-// tokens.css vive en docs/06-diseno (fuente de verdad visual, ver Design-System.md).
-// Se importa directo desde ahí: no se copia para evitar que las versiones se desvíen.
-const rutaDiseno = fileURLToPath(new URL('../docs/06-diseno', import.meta.url))
+// El sistema de diseño vive en docs/design-system (ADR-050): tokens/tokens.css lo genera
+// el estándar desde tokens.json (colores, fuente, radios) y producto/tokens-producto.css
+// trae lo propio de la interfaz. Se importan directo desde ahí: nada se copia.
+const rutaDiseno = fileURLToPath(new URL('../docs/design-system', import.meta.url))
 
 /**
  * El manifest de la PWA y la <meta theme-color> no pueden leer variables CSS:
- * necesitan el hex. En vez de copiarlo a mano (y que se desvíe), se lee de
- * tokens.css al construir. Si el token no existe, el build falla.
+ * necesitan el hex. En vez de copiarlo a mano (y que se desvíe), se lee de los
+ * tokens generados al construir, siguiendo los alias (--primario → --color-accion → #hex).
+ * Si el token no existe, el build falla.
  */
-function colorDeToken(nombre: string): string {
-  const tokens = readFileSync(`${rutaDiseno}/tokens.css`, 'utf8')
-  const coincidencia = tokens.match(new RegExp(`--${nombre}:\\s*(#[0-9A-Fa-f]{6})`))
-  if (!coincidencia) throw new Error(`tokens.css no define --${nombre}`)
-  return coincidencia[1]
+function colorDeToken(nombre: string, vistos: string[] = []): string {
+  const tokens = readFileSync(`${rutaDiseno}/tokens/tokens.css`, 'utf8')
+  const coincidencia = tokens.match(new RegExp(`--${nombre}:\\s*(#[0-9A-Fa-f]{6}|var\\(--([\\w-]+)\\))`))
+  if (!coincidencia) throw new Error(`tokens/tokens.css no define --${nombre}`)
+  if (coincidencia[1].startsWith('#')) return coincidencia[1]
+  if (vistos.includes(nombre)) throw new Error(`alias circular en --${nombre}`)
+  return colorDeToken(coincidencia[2], [...vistos, nombre])
 }
 
 const COLOR_FONDO = colorDeToken('fondo')
@@ -69,7 +73,7 @@ export default defineConfig({
     },
   },
   server: {
-    // Permite servir tokens.css desde docs/, fuera de la raíz del frontend
+    // Permite servir los tokens desde docs/, fuera de la raíz del frontend
     fs: { allow: ['..'] },
     // En desarrollo el backend corre aparte (puerto 8000); en la app de
     // escritorio empaquetada comparten origen. Este proxy hace que el

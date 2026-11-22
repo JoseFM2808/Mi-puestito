@@ -59,10 +59,28 @@ export function montoPorCantidad(precioCentimos: number, milesimas: number): num
 }
 
 /** Igual que `_con_estado` del backend: la pantalla lo dice con palabras al instante. */
+/** Con cuánta anticipación se avisa que algo vence: igual que DIAS_AVISO_VENCE del backend (D-22) */
+export const DIAS_AVISO_VENCE = 7
+
+function diaDeLima(desdeHoy = 0): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(
+    new Date(Date.now() + desdeHoy * 86_400_000),
+  )
+}
+
 export function conEstado(producto: ProductoCable): ProductoCable {
   const stock = aMilesimas(producto.stock_actual)
   const minimo = producto.stock_minimo === null ? null : aMilesimas(producto.stock_minimo)
-  return { ...producto, bajo_minimo: minimo !== null && stock <= minimo, descuadre: stock < 0 }
+  // Fechas "AAAA-MM-DD": se comparan como texto, igual que el día peruano del servidor
+  const vence = producto.vence_el
+  const queda = stock > 0
+  return {
+    ...producto,
+    bajo_minimo: minimo !== null && stock <= minimo,
+    descuadre: stock < 0,
+    vencido: queda && vence !== null && vence < diaDeLima(),
+    vence_pronto: queda && vence !== null && vence <= diaDeLima(DIAS_AVISO_VENCE),
+  }
 }
 
 let dejarDeEscuchar: (() => void) | null = null
@@ -82,8 +100,14 @@ interface EstadoInventario {
     stockInicial?: number
     stockMinimo?: number
     tieneVencimiento: boolean
+    /** Lo que "escribe" un lector de códigos (D-22) */
+    codigoBarras?: string
   }) => Promise<void>
-  editar: (uuid: string, cambios: { precioVenta?: string; stockMinimo?: number }) => Promise<void>
+  /** `venceEl: null` borra la fecha; sin `venceEl` no se toca (D-22) */
+  editar: (
+    uuid: string,
+    cambios: { precioVenta?: string; stockMinimo?: number; venceEl?: string | null },
+  ) => Promise<void>
   contar: (uuid: string, contado: number) => Promise<void>
   merma: (uuid: string, cantidad: number, nota?: string) => Promise<void>
   /**
@@ -176,7 +200,15 @@ export const useInventario = create<EstadoInventario>()((set, get) => {
       }
     },
 
-    crear: async ({ nombre, unidad, precioVenta, stockInicial, stockMinimo, tieneVencimiento }) => {
+    crear: async ({
+      nombre,
+      unidad,
+      precioVenta,
+      stockInicial,
+      stockMinimo,
+      tieneVencimiento,
+      codigoBarras,
+    }) => {
       const uuid = crypto.randomUUID()
       reemplazar(
         conEstado({
@@ -186,10 +218,14 @@ export const useInventario = create<EstadoInventario>()((set, get) => {
           precio_venta: precioVenta ?? null,
           stock_actual: aCantidad(stockInicial ?? 0),
           stock_minimo: stockMinimo === undefined ? null : aCantidad(stockMinimo),
-          codigo_barras: null,
+          codigo_barras: codigoBarras ?? null,
           tiene_vencimiento: tieneVencimiento,
+          costo_ultimo: null,
+          vence_el: null,
           bajo_minimo: false,
           descuadre: false,
+          vence_pronto: false,
+          vencido: false,
         }),
       )
       await enviar('POST', '/api/inventario/productos', `Registrar ${nombre}`, {
@@ -200,19 +236,22 @@ export const useInventario = create<EstadoInventario>()((set, get) => {
         stock_inicial: stockInicial === undefined ? null : aCantidad(stockInicial),
         stock_minimo: stockMinimo === undefined ? null : aCantidad(stockMinimo),
         tiene_vencimiento: tieneVencimiento,
+        codigo_barras: codigoBarras ?? null,
       })
     },
 
-    editar: async (uuid, { precioVenta, stockMinimo }) => {
+    editar: async (uuid, { precioVenta, stockMinimo, venceEl }) => {
       const producto = cambiarLocal(uuid, (p) => ({
         ...p,
         precio_venta: precioVenta ?? p.precio_venta,
         stock_minimo: stockMinimo === undefined ? p.stock_minimo : aCantidad(stockMinimo),
+        vence_el: venceEl === undefined ? p.vence_el : venceEl,
       }))
       if (!producto) return
       const cuerpo: Record<string, unknown> = {}
       if (precioVenta !== undefined) cuerpo.precio_venta = precioVenta
       if (stockMinimo !== undefined) cuerpo.stock_minimo = aCantidad(stockMinimo)
+      if (venceEl !== undefined) cuerpo.vence_el = venceEl
       await enviar(
         'PATCH',
         `/api/inventario/productos/${uuid}`,

@@ -70,6 +70,52 @@
       "producto"
     ]
   },
+  "AnalisisDelPeriodo": {
+    "required": [
+      "desde",
+      "fiados_por_cobrar",
+      "gastos_de_la_casa",
+      "gastos_del_puesto",
+      "hasta",
+      "libre",
+      "mejores_productos",
+      "pagado_a_proveedores",
+      "periodo",
+      "por_dia",
+      "resultado_del_negocio",
+      "vendido",
+      "ventas"
+    ],
+    "properties": [
+      "desde",
+      "fiados_por_cobrar",
+      "gastos_de_la_casa",
+      "gastos_del_puesto",
+      "hasta",
+      "libre",
+      "mejores_productos",
+      "no_disponibles",
+      "pagado_a_proveedores",
+      "periodo",
+      "por_dia",
+      "resultado_del_negocio",
+      "vendido",
+      "ventas"
+    ]
+  },
+  "AperturaEntrada": {
+    "required": [
+      "efectivo_inicial",
+      "uuid",
+      "yape_inicial"
+    ],
+    "properties": [
+      "efectivo_inicial",
+      "ocurrido_en",
+      "uuid",
+      "yape_inicial"
+    ]
+  },
   "BorradorVenta": {
     "required": [
       "items"
@@ -79,12 +125,38 @@
       "para"
     ]
   },
+  "CajaDelDia": {
+    "required": [
+      "abierta",
+      "dia",
+      "egresos",
+      "en_caja",
+      "ingresos",
+      "inicial"
+    ],
+    "properties": [
+      "abierta",
+      "dia",
+      "egresos",
+      "en_caja",
+      "ingresos",
+      "inicial",
+      "no_disponibles"
+    ]
+  },
   "CambioEstadoEntrada": {
     "required": [
       "estado"
     ],
     "properties": [
       "estado",
+      "ocurrido_en"
+    ]
+  },
+  "CierreEntrada": {
+    "required": [],
+    "properties": [
+      "medio",
       "ocurrido_en"
     ]
   },
@@ -173,6 +245,18 @@
       "stock_segun_movimientos"
     ]
   },
+  "DiaDelPeriodo": {
+    "required": [
+      "dia",
+      "gastado",
+      "vendido"
+    ],
+    "properties": [
+      "dia",
+      "gastado",
+      "vendido"
+    ]
+  },
   "EstadoAsistente": {
     "required": [
       "listo",
@@ -190,6 +274,88 @@
     "properties": [
       "cliente_uuid",
       "ocurrido_en"
+    ]
+  },
+  "FormularioLlenado": {
+    "required": [
+      "tipo"
+    ],
+    "properties": [
+      "ambito",
+      "cantidad",
+      "categoria",
+      "cliente",
+      "medio",
+      "monto",
+      "nota",
+      "producto",
+      "tipo"
+    ]
+  },
+  "GananciaPorProducto": {
+    "required": [
+      "ganancia_estimada",
+      "nombre",
+      "vendido"
+    ],
+    "properties": [
+      "ganancia_estimada",
+      "nombre",
+      "vendido"
+    ]
+  },
+  "GastoEntrada": {
+    "required": [
+      "medio",
+      "monto",
+      "uuid"
+    ],
+    "properties": [
+      "ambito",
+      "categoria",
+      "descripcion",
+      "medio",
+      "monto",
+      "ocurrido_en",
+      "uuid"
+    ]
+  },
+  "GastoSalida": {
+    "required": [
+      "ambito",
+      "categoria",
+      "creado_en",
+      "descripcion",
+      "medio",
+      "monto",
+      "orden_compra_uuid",
+      "uuid"
+    ],
+    "properties": [
+      "ambito",
+      "categoria",
+      "creado_en",
+      "descripcion",
+      "medio",
+      "monto",
+      "orden_compra_uuid",
+      "uuid"
+    ]
+  },
+  "GastosDelDia": {
+    "required": [
+      "del_hogar",
+      "del_puesto",
+      "dia",
+      "gastos",
+      "total"
+    ],
+    "properties": [
+      "del_hogar",
+      "del_puesto",
+      "dia",
+      "gastos",
+      "total"
     ]
   },
   "HTTPValidationError": {
@@ -292,7 +458,8 @@
       "estado",
       "item_uuid",
       "monto_sustituto",
-      "producto_sustituto"
+      "producto_sustituto",
+      "vence_el"
     ]
   },
   "ItemVentaSalida": {
@@ -439,13 +606,15 @@
       "nombre",
       "precio_venta",
       "stock_minimo",
-      "tiene_vencimiento"
+      "tiene_vencimiento",
+      "vence_el"
     ]
   },
   "ProductoConEstado": {
     "required": [
       "bajo_minimo",
       "codigo_barras",
+      "costo_ultimo",
       "descuadre",
       "nombre",
       "precio_venta",
@@ -453,11 +622,15 @@
       "stock_minimo",
       "tiene_vencimiento",
       "unidad",
-      "uuid"
+      "uuid",
+      "vence_el",
+      "vence_pronto",
+      "vencido"
     ],
     "properties": [
       "bajo_minimo",
       "codigo_barras",
+      "costo_ultimo",
       "descuadre",
       "nombre",
       "precio_venta",
@@ -465,7 +638,10 @@
       "stock_minimo",
       "tiene_vencimiento",
       "unidad",
-      "uuid"
+      "uuid",
+      "vence_el",
+      "vence_pronto",
+      "vencido"
     ]
   },
   "ProductoEntrada": {
@@ -502,23 +678,27 @@
   "ProductoSalida": {
     "required": [
       "codigo_barras",
+      "costo_ultimo",
       "nombre",
       "precio_venta",
       "stock_actual",
       "stock_minimo",
       "tiene_vencimiento",
       "unidad",
-      "uuid"
+      "uuid",
+      "vence_el"
     ],
     "properties": [
       "codigo_barras",
+      "costo_ultimo",
       "nombre",
       "precio_venta",
       "stock_actual",
       "stock_minimo",
       "tiene_vencimiento",
       "unidad",
-      "uuid"
+      "uuid",
+      "vence_el"
     ]
   },
   "ProveedorEntrada": {
@@ -574,6 +754,7 @@
     "properties": [
       "acciones",
       "borrador",
+      "formulario",
       "id_respuesta",
       "modelo",
       "respuesta"
@@ -615,11 +796,32 @@
       "motivo_proyeccion",
       "ordenes_activas",
       "pedidos_por_llegar",
+      "productos_por_vencer",
       "proyeccion_manana",
       "secciones_no_disponibles",
       "ventas_cerradas",
       "ventas_hoy",
       "ventas_rapidas_pendientes"
+    ]
+  },
+  "SaldoPorMedio": {
+    "required": [
+      "efectivo",
+      "yape_plin"
+    ],
+    "properties": [
+      "efectivo",
+      "yape_plin"
+    ]
+  },
+  "TotalesPorMedio": {
+    "required": [
+      "efectivo",
+      "yape_plin"
+    ],
+    "properties": [
+      "efectivo",
+      "yape_plin"
     ]
   },
   "TurnoPrevio": {

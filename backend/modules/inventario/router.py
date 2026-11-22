@@ -5,12 +5,15 @@ momento cada item vendido con `producto_uuid` descuenta stock. Si este
 módulo no carga, Ventas sigue funcionando igual (sin descontar).
 """
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 import eventos
 from database import obtener_sesion, obtener_sesion_escritura
+from fechas import dia_peruano
 
 from . import servicio
 from .models import MovimientoInventario, Producto
@@ -37,11 +40,20 @@ def _http(error: servicio.ErrorDeInventario) -> HTTPException:
     return HTTPException(status_code=error.codigo, detail=error.mensaje)
 
 
+# Con cuánta anticipación se avisa que algo vence (D-22): una semana alcanza para venderlo o rematarlo
+DIAS_AVISO_VENCE = 7
+
+
 def _con_estado(producto: Producto) -> ProductoConEstado:
+    hoy = dia_peruano()
+    queda = producto.stock_actual > 0
+    vence = producto.vence_el
     return ProductoConEstado(
         **ProductoSalida.model_validate(producto).model_dump(),
         bajo_minimo=producto.stock_minimo is not None and producto.stock_actual <= producto.stock_minimo,
         descuadre=producto.stock_actual < 0,
+        vencido=bool(queda and vence is not None and vence < hoy),
+        vence_pronto=bool(queda and vence is not None and vence <= hoy + timedelta(days=DIAS_AVISO_VENCE)),
     )
 
 
@@ -50,12 +62,21 @@ def listar_productos(
     sesion: Session = Depends(obtener_sesion),
     buscar: str | None = Query(None, max_length=60),
     solo_bajo_minimo: bool = False,
+    por_vencer: bool = False,
     limite: int = Query(100, ge=1, le=500),
     desde: int = Query(0, ge=0),
 ):
     consulta = select(Producto).order_by(Producto.nombre).offset(desde).limit(limite)
     if buscar:
-        consulta = consulta.where(Producto.nombre.ilike(f"%{buscar.strip()}%"))
+        # Por nombre o por código de barras: un lector USB o Bluetooth "escribe" el código (D-22)
+        texto = buscar.strip()
+        consulta = consulta.where(or_(Producto.nombre.ilike(f"%{texto}%"), Producto.codigo_barras == texto))
+    if por_vencer:
+        consulta = consulta.where(
+            Producto.vence_el.is_not(None),
+            Producto.vence_el <= dia_peruano() + timedelta(days=DIAS_AVISO_VENCE),
+            Producto.stock_actual > 0,
+        )
     if solo_bajo_minimo:
         consulta = consulta.where(
             Producto.stock_minimo.is_not(None), Producto.stock_actual <= Producto.stock_minimo

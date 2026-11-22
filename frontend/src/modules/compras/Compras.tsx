@@ -152,13 +152,23 @@ export function Compras() {
             <Nota>Se había pedido por {formatearCentimos(aCentimos(orden.monto_total))}.</Nota>
           )}
           <Productos orden={orden} />
-          <Boton
-            aiId={`compras.cerrar-${orden.uuid}`}
-            variante="secundario"
-            onClick={() => void cerrar(orden.uuid)}
-          >
-            Ya le pagué: cerrar pedido
-          </Boton>
+          {/* Con qué se pagó: así sale de la gaveta o del Yape en la caja (D-24) */}
+          <div className={estilos.acciones} data-ai-id={`compras.cerrar-${orden.uuid}`}>
+            <Boton
+              aiId={`compras.pague-efectivo-${orden.uuid}`}
+              variante="secundario"
+              onClick={() => void cerrar(orden.uuid, 'efectivo')}
+            >
+              Ya le pagué en efectivo
+            </Boton>
+            <Boton
+              aiId={`compras.pague-yape-${orden.uuid}`}
+              variante="secundario"
+              onClick={() => void cerrar(orden.uuid, 'yape_plin')}
+            >
+              Ya le pagué con Yape
+            </Boton>
+          </div>
         </Tarjeta>
       ))}
 

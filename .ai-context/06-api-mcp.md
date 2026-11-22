@@ -122,11 +122,24 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 | GET | `/api/respaldo/copia` | — | Archivo `application/octet-stream` | `Cache-Control: no-store`. Solo del proyecto del token |
 | POST | `/api/respaldo/restaurar` | Bytes de la copia en el cuerpo | `204` | `400` no sirve · `409` otro negocio o versión más nueva · `413` > 200 MB · `507` sin disco |
 
+### Caja y Gastos (token, ADR-051)
+
+| Método | Ruta | Entrada | Respuesta | Notas |
+|---|---|---|---|---|
+| POST | `/api/caja/apertura` | `AperturaEntrada {uuid, efectivo_inicial, yape_inicial, ocurrido_en?}` | `CajaDelDia` | Una por día peruano; repetirla corrige los saldos |
+| GET | `/api/caja?dia=` | — | `CajaDelDia {dia, abierta, inicial, ingresos, egresos, en_caja, no_disponibles}` | Cada parte `{efectivo, yape_plin}`; hoy por defecto |
+| POST | `/api/gastos` | `GastoEntrada {uuid, monto, medio, ambito?, categoria?, descripcion?, ocurrido_en?}` | `GastoSalida` | `201` nuevo, `200` reenvío |
+| DELETE | `/api/gastos/{uuid}` | — | `204` | Idempotente |
+| GET | `/api/gastos?dia=` | — | `GastosDelDia {dia, gastos, total, del_puesto, del_hogar}` | Hoy por defecto |
+
+`POST /api/compras/ordenes/{uuid}/cerrar` acepta `CierreEntrada {medio?: efectivo|yape_plin, ocurrido_en?}`: con medio
+publica `compra.pagada` y Gastos anota el pago.
+
 ### Asistente (token)
 
 | Método | Ruta | Entrada | Respuesta | Notas |
 |---|---|---|---|---|
-| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12), pantalla_actual? (caja\|ventas\|fiados\|compras\|inventario\|asistente)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a\|resaltar, pantalla, etiqueta, automatica, apartado}], borrador? {items [{nombre, cantidad, precio?}], para?}, id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta e historial antes de salir al proveedor y restituye los nombres en la respuesta (ADR-034). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
+| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12), pantalla_actual? (caja\|ventas\|fiados\|compras\|gastos\|inventario\|asistente)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a\|resaltar, pantalla, etiqueta, automatica, apartado}], borrador? {items [{nombre, cantidad, precio?}], para?}, id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta e historial antes de salir al proveedor y restituye los nombres en la respuesta (ADR-034). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
 | POST | `/api/asistente/valoracion` | `ValoracionEntrada {id_respuesta, util}` | `204` | "Me sirvió" / "No me sirvió". Se guarda solo si el registro está activo (ADR-038) |
 | GET | `/api/asistente/estado` | — | `EstadoAsistente {listo, puede_guardar_llave, llave_guardada}` | Nunca incluye la llave |
 | POST | `/api/asistente/llave` | `LlaveEntrada {llave}` | `EstadoAsistente` | Solo modo local, Windows y desde el mismo equipo (`403`); mal copiada o rechazada → `400`, sin repetirla (ADR-043) |
@@ -157,3 +170,28 @@ esquema de cada herramienta.
 2. `cd backend && python exportar_openapi.py` actualiza `frontend/src/api/openapi.json`.
 3. `pytest` (incluye `test_contrato.py`) y `npm run test` (incluye `contrato.test.ts`) deben pasar.
 4. Actualiza esta pestaña y ejecuta el sync de contexto del workspace.
+
+### Inventario: costo, vencimiento y código (D-22)
+
+- `ProductoConEstado` suma `costo_ultimo`, `vence_el`, `vence_pronto` y `vencido`.
+- `GET /api/inventario/productos?buscar=` busca por nombre **o** por código de barras exacto; `por_vencer=true` deja solo
+  lo que vence en 7 días o menos (con stock).
+- `PATCH /api/inventario/productos/{uuid}` acepta `vence_el`; enviar `null` la borra, omitirla no la toca.
+- `POST /api/compras/ordenes/{uuid}/recepcion`: cada ítem acepta `vence_el` (fecha del lote), que viaja en
+  `compra.item_recibido`.
+- `GET /api/dashboard/resumen` suma `productos_por_vencer`.
+
+### Formularios llenados por el Asistente (D-28)
+
+`RespuestaSalida.formulario` (`FormularioLlenado`, o `null`): `{tipo: abono|gasto|merma, cliente?, producto?, monto?,
+cantidad?, medio?: efectivo|yape_plin, ambito?: puesto|hogar, categoria?, nota?}`. Viene de una línea `ABONO:`,
+`GASTO:` o `MERMA:` del modelo; solo si el operador pidió anotar y con el monto solo si él lo dijo. La app lo abre en
+Fiados, Gastos o Inventario sin guardarlo.
+
+### Análisis (token, Fase 7)
+
+| Método | Ruta | Respuesta | Notas |
+|---|---|---|---|
+| GET | `/api/analisis?periodo=semana\|mes\|mes_pasado` | `AnalisisDelPeriodo {periodo, desde, hasta, vendido, ventas, pagado_a_proveedores, gastos_del_puesto, gastos_de_la_casa, resultado_del_negocio, libre, fiados_por_cobrar, por_dia [{dia, vendido, gastado}], mejores_productos [{nombre, vendido, ganancia_estimada}], no_disponibles}` | Solo lectura; un período desconocido da `422` |
+
+El contexto del Asistente suma `semana` y `mes` con esas cifras; `pantalla_actual` acepta `analisis`.

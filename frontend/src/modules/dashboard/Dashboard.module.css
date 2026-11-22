@@ -243,3 +243,31 @@
     display: none;
   }
 }
+
+/* ---- En caja ahora (D-24): apertura y saldos por medio ---- */
+.apertura {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.camposApertura,
+.saldos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+  gap: var(--esp-2);
+}
+
+.saldo {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--tam-subtitulo);
+  color: var(--texto-suave);
+}
+
+.botonesApertura {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+  margin-top: var(--esp-1);
+}

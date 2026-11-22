@@ -11,7 +11,7 @@ from decimal import Decimal
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from fechas import momento_de_operacion
+from fechas import dia_peruano, momento_de_operacion
 
 from .models import MotivoMovimiento, MovimientoInventario, Producto, Unidad
 from .schemas import AjusteEntrada, MermaEntrada, ProductoCambios, ProductoEntrada
@@ -137,6 +137,9 @@ def editar_producto(sesion: Session, uuid: str, cambios: ProductoCambios) -> Pro
         valor = getattr(cambios, campo)
         if valor is not None:
             setattr(producto, campo, valor)
+    # La fecha de vencimiento sí se puede borrar: se mira si vino en el pedido, aunque sea null
+    if "vence_el" in cambios.model_fields_set:
+        producto.vence_el = cambios.vence_el
     sesion.commit()
     return producto
 
@@ -225,11 +228,27 @@ def al_recibir_compra(sesion: Session, datos: dict) -> list[str]:
     )
     if producto is None:
         return [f"«{datos['nombre_producto']}» no está en el inventario: no se sumó al stock."]
-    registrar_movimiento(
+    _, es_nuevo = registrar_movimiento(
         sesion, producto, datos["cantidad"], MotivoMovimiento.COMPRA,
         "item_compra", datos["item_uuid"], ocurrido_en=datos.get("ocurrido_en"),
     )
+    if es_nuevo:
+        actualizar_costo_y_vencimiento(producto, datos)
     return []
+
+
+def actualizar_costo_y_vencimiento(producto: Producto, datos: dict) -> None:
+    """D-22. Costo: lo que salió UNA unidad en esta compra (monto ÷ cantidad), redondeado al céntimo.
+    Vencimiento: se guarda la fecha del lote que vence primero y aún no venció; si la fecha guardada
+    ya pasó (ese lote se vendió o se botó), manda la del lote nuevo."""
+    monto, cantidad = datos.get("monto"), datos.get("cantidad")
+    if monto is not None and cantidad and Decimal(cantidad) > 0:
+        producto.costo_ultimo = (Decimal(monto) / Decimal(cantidad)).quantize(Decimal("0.01"))
+    nueva = datos.get("vence_el")
+    if nueva is not None:
+        actual = producto.vence_el
+        if actual is None or actual < dia_peruano() or nueva < actual:
+            producto.vence_el = nueva
 
 
 def al_anular_item(sesion: Session, datos: dict) -> list[str]:

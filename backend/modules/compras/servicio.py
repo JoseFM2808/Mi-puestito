@@ -31,6 +31,7 @@ from .models import (
 )
 from .schemas import (
     CambioEstadoEntrada,
+    CierreEntrada,
     OrdenCompraSalida,
     OrdenEntrada,
     ProductoFrecuente,
@@ -267,6 +268,7 @@ def registrar_recepcion(
             nombre_producto=item.producto_sustituto if cambiado else item.nombre_producto,
             cantidad=entrada.cantidad_stock,
             monto=item.monto_sustituto if cambiado else item.monto,
+            vence_el=entrada.vence_el,
             ocurrido_en=datos.ocurrido_en,
         )
 
@@ -278,13 +280,27 @@ def registrar_recepcion(
     return orden, avisos
 
 
-def cerrar_orden(sesion: Session, uuid: str) -> OrdenCompra:
-    """Cuenta saldada: de Recibida a Cerrada. Cerrar dos veces no hace nada."""
+def cerrar_orden(sesion: Session, uuid: str, datos: CierreEntrada | None = None) -> OrdenCompra:
+    """Cuenta saldada: de Recibida a Cerrada. Cerrar dos veces no hace nada.
+
+    Si se dijo con qué se pagó, anuncia `compra.pagada`: Gastos lo anota como un gasto del puesto
+    y la caja lo descuenta (D-24). Sin Gastos, o si falla, el pedido se cierra igual.
+    """
     orden = buscar_orden(sesion, uuid)
     if orden.estado == EstadoOrdenCompra.CERRADA:
         return orden
     if orden.estado != EstadoOrdenCompra.RECIBIDA:
         raise ErrorDeCompra("Solo se cierra un pedido que ya llegó.")
     orden.estado = EstadoOrdenCompra.CERRADA
+    if datos is not None and datos.medio:
+        eventos.publicar(
+            sesion,
+            "compra.pagada",
+            orden_uuid=orden.uuid,
+            proveedor=orden.proveedor.nombre,
+            monto=orden.monto_real if orden.monto_real is not None else orden.monto_total,
+            medio=datos.medio,
+            ocurrido_en=datos.ocurrido_en,
+        )
     sesion.commit()
     return orden

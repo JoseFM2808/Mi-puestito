@@ -104,6 +104,7 @@ export interface ResumenDashboardCable {
   clientes_con_fiado: number
   ventas_rapidas_pendientes: number
   pedidos_por_llegar: PedidoPorLlegarCable[]
+  productos_por_vencer: number
   secciones_no_disponibles: string[]
 }
 
@@ -123,6 +124,8 @@ export interface ResumenCaja {
   clientesConFiado: number
   ventasRapidasPendientes: number
   pedidosPorLlegar: { uuid: string; proveedor: string; fechaEstimada: Date; monto: number }[]
+  /** Productos con stock que vencen esta semana o ya vencieron (D-22) */
+  productosPorVencer: number
   seccionesNoDisponibles: string[]
 }
 
@@ -153,6 +156,7 @@ export function leerResumen(cable: ResumenDashboardCable): ResumenCaja {
       fechaEstimada: fechaPeruana(pedido.fecha_estimada),
       monto: aCentimos(pedido.monto),
     })),
+    productosPorVencer: cable.productos_por_vencer,
     seccionesNoDisponibles: cable.secciones_no_disponibles,
   }
 }
@@ -308,10 +312,25 @@ export interface BorradorVentaCable {
   para: string | null
 }
 
+/** Un pago de fiado, un gasto o una merma que el Asistente llenó; el operador lo guarda (D-28) */
+export interface FormularioLlenadoCable {
+  tipo: 'abono' | 'gasto' | 'merma'
+  cliente: string | null
+  producto: string | null
+  /** Solo si el operador lo dijo */
+  monto: string | null
+  cantidad: string | null
+  medio: 'efectivo' | 'yape_plin' | null
+  ambito: 'puesto' | 'hogar' | null
+  categoria: string | null
+  nota: string | null
+}
+
 export interface RespuestaAsistenteCable {
   respuesta: string
   acciones: AccionSugeridaCable[]
   borrador: BorradorVentaCable | null
+  formulario: FormularioLlenadoCable | null
   id_respuesta: string
   modelo: string
 }
@@ -382,8 +401,15 @@ export interface ProductoCable {
   stock_minimo: string | null
   codigo_barras: string | null
   tiene_vencimiento: boolean
+  /** Lo que costó UNA unidad (kg, litro) en la última compra recibida (D-22) */
+  costo_ultimo: string | null
+  /** "2026-11-24": cuándo vence lo más antiguo que queda (D-22) */
+  vence_el: string | null
   bajo_minimo: boolean
   descuadre: boolean
+  /** Vence en 7 días o menos (o ya venció) y aún queda stock */
+  vence_pronto: boolean
+  vencido: boolean
 }
 
 export interface MovimientoCable {
@@ -403,7 +429,123 @@ export interface EstadoAsistenteCable {
 }
 
 /** Esquema del backend (nombre en openapi.json) → campos que el frontend espera. */
+// ------------------------------------------------------------------ caja y gastos (D-24, ADR-051)
+
+/** De dónde entra o sale el dinero: la gaveta o el Yape */
+export type MedioPago = 'efectivo' | 'yape_plin'
+
+export interface SaldoPorMedioCable {
+  efectivo: string
+  yape_plin: string
+}
+
+export interface CajaDelDiaCable {
+  dia: string
+  abierta: boolean
+  inicial: SaldoPorMedioCable
+  ingresos: SaldoPorMedioCable
+  egresos: SaldoPorMedioCable
+  en_caja: SaldoPorMedioCable
+  no_disponibles: string[]
+}
+
+export type AmbitoGasto = 'puesto' | 'hogar'
+export type CategoriaGasto =
+  'proveedor' | 'alquiler' | 'servicios' | 'transporte' | 'alimentacion' | 'educacion' | 'otros'
+
+export interface GastoCable {
+  uuid: string
+  monto: string
+  medio: MedioPago
+  ambito: AmbitoGasto
+  categoria: CategoriaGasto
+  descripcion: string | null
+  orden_compra_uuid: string | null
+  creado_en: string
+}
+
+export interface GastosDelDiaCable {
+  dia: string
+  gastos: GastoCable[]
+  total: SaldoPorMedioCable
+  del_puesto: string
+  del_hogar: string
+}
+
+// ------------------------------------------------------------------ análisis (Fase 7)
+
+export type PeriodoAnalisis = 'semana' | 'mes' | 'mes_pasado'
+
+export interface DiaDelPeriodoCable {
+  dia: string
+  vendido: string
+  gastado: string
+}
+
+export interface GananciaPorProductoCable {
+  nombre: string
+  vendido: string
+  ganancia_estimada: string
+}
+
+export interface AnalisisCable {
+  periodo: PeriodoAnalisis
+  desde: string
+  hasta: string
+  vendido: string
+  ventas: number
+  pagado_a_proveedores: string
+  gastos_del_puesto: string
+  gastos_de_la_casa: string
+  resultado_del_negocio: string
+  libre: string
+  fiados_por_cobrar: string
+  por_dia: DiaDelPeriodoCable[]
+  mejores_productos: GananciaPorProductoCable[]
+  no_disponibles: string[]
+}
+
 export const CAMPOS_DEL_CONTRATO = {
+  AnalisisDelPeriodo: camposDe<AnalisisCable>()([
+    'periodo',
+    'desde',
+    'hasta',
+    'vendido',
+    'ventas',
+    'pagado_a_proveedores',
+    'gastos_del_puesto',
+    'gastos_de_la_casa',
+    'resultado_del_negocio',
+    'libre',
+    'fiados_por_cobrar',
+    'por_dia',
+    'mejores_productos',
+    'no_disponibles',
+  ]),
+  DiaDelPeriodo: camposDe<DiaDelPeriodoCable>()(['dia', 'vendido', 'gastado']),
+  GananciaPorProducto: camposDe<GananciaPorProductoCable>()(['nombre', 'vendido', 'ganancia_estimada']),
+  SaldoPorMedio: camposDe<SaldoPorMedioCable>()(['efectivo', 'yape_plin']),
+  TotalesPorMedio: camposDe<SaldoPorMedioCable>()(['efectivo', 'yape_plin']),
+  CajaDelDia: camposDe<CajaDelDiaCable>()([
+    'dia',
+    'abierta',
+    'inicial',
+    'ingresos',
+    'egresos',
+    'en_caja',
+    'no_disponibles',
+  ]),
+  GastoSalida: camposDe<GastoCable>()([
+    'uuid',
+    'monto',
+    'medio',
+    'ambito',
+    'categoria',
+    'descripcion',
+    'orden_compra_uuid',
+    'creado_en',
+  ]),
+  GastosDelDia: camposDe<GastosDelDiaCable>()(['dia', 'gastos', 'total', 'del_puesto', 'del_hogar']),
   IngresoSalida: camposDe<IngresoCable>()(['token', 'proyecto', 'nombre_proyecto', 'es_real']),
   CuentaVisible: camposDe<CuentaVisibleCable>()(['nombre_usuario', 'nombre_proyecto', 'es_real']),
   ResumenDashboard: camposDe<ResumenDashboardCable>()([
@@ -416,6 +558,7 @@ export const CAMPOS_DEL_CONTRATO = {
     'clientes_con_fiado',
     'ventas_rapidas_pendientes',
     'pedidos_por_llegar',
+    'productos_por_vencer',
     'secciones_no_disponibles',
   ]),
   OrdenActivaResumen: camposDe<OrdenActivaResumenCable>()([
@@ -490,8 +633,12 @@ export const CAMPOS_DEL_CONTRATO = {
     'stock_minimo',
     'codigo_barras',
     'tiene_vencimiento',
+    'costo_ultimo',
+    'vence_el',
     'bajo_minimo',
     'descuadre',
+    'vence_pronto',
+    'vencido',
   ]),
   MovimientoSalida: camposDe<MovimientoCable>()(['delta', 'motivo', 'origen_tipo', 'nota', 'creado_en']),
   ProductoFrecuente: camposDe<ProductoFrecuenteCable>()(['nombre_producto', 'cantidad', 'monto', 'veces']),
@@ -508,11 +655,23 @@ export const CAMPOS_DEL_CONTRATO = {
     'respuesta',
     'acciones',
     'borrador',
+    'formulario',
     'id_respuesta',
     'modelo',
   ]),
   BorradorVenta: camposDe<BorradorVentaCable>()(['items', 'para']),
   ItemBorrador: camposDe<ItemBorradorCable>()(['nombre', 'cantidad', 'precio']),
+  FormularioLlenado: camposDe<FormularioLlenadoCable>()([
+    'tipo',
+    'cliente',
+    'producto',
+    'monto',
+    'cantidad',
+    'medio',
+    'ambito',
+    'categoria',
+    'nota',
+  ]),
   AccionSugerida: camposDe<AccionSugeridaCable>()(['tipo', 'pantalla', 'etiqueta', 'automatica', 'apartado']),
   AbonoSalida: camposDe<AbonoCable>()([
     'uuid',

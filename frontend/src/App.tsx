@@ -8,6 +8,8 @@ import { MenuLateral } from './componentes/menu-lateral/MenuLateral'
 import { Compras } from './modules/compras/Compras'
 import { Dashboard } from './modules/dashboard/Dashboard'
 import { Fiados } from './modules/fiados/Fiados'
+import { Gastos } from './modules/gastos/Gastos'
+import { Analisis } from './modules/analisis/Analisis'
 import { Inventario } from './modules/inventario/Inventario'
 import { Ventas } from './modules/ventas/Ventas'
 import { iniciarSincronizacion } from './sincronizacion/cola'
@@ -65,6 +67,16 @@ export function App() {
         {pantalla === 'compras' && (
           <LimiteErrores nombreModulo="Compras" idModulo="compras">
             <Compras />
+          </LimiteErrores>
+        )}
+        {pantalla === 'gastos' && (
+          <LimiteErrores nombreModulo="Gastos" idModulo="gastos">
+            <Gastos />
+          </LimiteErrores>
+        )}
+        {pantalla === 'analisis' && (
+          <LimiteErrores nombreModulo="¿Cómo me va?" idModulo="analisis">
+            <Analisis />
           </LimiteErrores>
         )}
         {pantalla === 'inventario' && (

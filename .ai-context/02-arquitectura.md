@@ -26,6 +26,8 @@ flowchart TB
         App --> Fia[modules/fiados]
         App --> Com[modules/compras<br/>almacen.ts optimista]
         App --> Inv[modules/inventario<br/>almacen.ts optimista]
+        App --> Gas[modules/gastos<br/>almacen.ts optimista]
+        App --> Ana[modules/analisis<br/>¿Cómo me va?]
         App --> Asis[componentes/asistente<br/>apartado + ventana al lado<br/>senalar.ts · dictado.ts]
         Asis --> Conv[stores/conversacion.ts<br/>sobrevive al cambiar de pantalla]
         Menu --> Res[Respaldo · ReiniciarPractica]
@@ -34,7 +36,7 @@ flowchart TB
         Cola --> IDB[(IndexedDB por proyecto)]
         Caja & Ven & Fia & Com & Inv & Asis --> Api[api/cliente.ts + api/contrato.ts<br/>céntimos · snake→camel]
         UI[ui/componentes.tsx<br/>Boton · Campo · Monto · Aviso] -.usa.- Caja & Ven & Fia & Com & Inv & Asis
-        Tokens[(docs/06-diseno/tokens.css)] -.alias Vite.-> UI
+        Tokens[(docs/design-system/<br/>tokens/tokens.css + producto/tokens-producto.css)] -.alias Vite.-> UI
         Nucleo[(docs/design-system/tokens/tokens.json<br/>núcleo de marca, ADR-048)] -.ds-validar vigila que coincidan.- Tokens
     end
 
@@ -44,6 +46,12 @@ flowchart TB
         Main --> MVen[ventas<br/>servicio.py]
         Main --> MCom[compras<br/>servicio.py]
         Main --> MInv[inventario<br/>servicio.py]
+        Main --> MCaja[caja<br/>apertura · en caja]
+        Main --> MGas[gastos<br/>servicio.py]
+        MCom -- compra.pagada --> MGas
+        MCaja -. lee, no exige .-> MVen & MGas
+        Main --> MAna[analisis<br/>solo lectura]
+        MAna -. lee, no exige .-> MVen & MGas & MInv
         Main --> MAsi[asistente]
         Main --> MRes[respaldo<br/>archivo completo]
         MVen & MCom -- eventos.py<br/>SAVEPOINT --> MInv
@@ -108,9 +116,12 @@ flowchart LR
   y los enlaces de la conversación. Voz: `componentes/asistente/dictado.ts` (Web Speech API del navegador, `es-PE`).
 - **Evaluación:** `python -m ia.evaluar` mide cifras, navegación, memoria y honestidad con 29 casos fijos (también qué abre solo, qué señala y qué orden llena); decide el orden
   de modelos junto con `ia.verificar`. Vigila además que ningún nombre real salga hacia el proveedor.
-- **Design System:** el frontend importa `docs/06-diseno/tokens.css` (alias `@tokens`). Desde ADR-048 el núcleo de marca del
-  estándar del workspace vive en `docs/design-system/` (`tokens/tokens.json` en W3C DTCG, `marca/01–07`, y los generados
-  `tokens/tokens.css` y `DESIGN.md`); `ds-validar` (Estudio-Contenido) comprueba en cada sync que los colores coincidan.
+- **Design System (ADR-048, ADR-050):** todo vive en `docs/design-system/`. El frontend importa, en este orden,
+  `tokens/tokens.css`, generado por el estándar desde `tokens/tokens.json` (colores, fuente y radios, con los alias del
+  producto: `--fondo`, `--primario`, `--ia`…), y `producto/tokens-producto.css` (espaciado, escala tipográfica, tamaños
+  táctiles, tintes). `vite.config.ts` lee los colores de la PWA siguiendo esos alias, y
+  `frontend/src/pruebas/estilos-aislados.test.ts` falla si un CSS usa un token que no existe. El documento de diseño del
+  producto está en `docs/design-system/producto/Design-System.md`; `ds-validar` revisa el núcleo en cada sync.
 - **Contexto de desarrollo:** `AGENTS.md` (fuente de verdad) + `.ai-context/` + `docs/` + subagente revisor en
   `.claude/agents/revisor.md` (solo lectura, bajo demanda).
 

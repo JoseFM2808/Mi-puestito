@@ -1,7 +1,7 @@
 # 03 · Base de datos
 
 > Modelo entidad-relación y diccionario de datos. Última revisión: 2026-11-01.
-> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0005).
+> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0007).
 > Un archivo SQLite **por proyecto** (`mi_puestito_demo.db`, `mi_puestito_<real>.db`), mismo esquema en cada uno.
 > `backend/tests/test_migraciones.py` falla si un modelo cambia sin su migración.
 
@@ -17,6 +17,7 @@ erDiagram
     PROVEEDORES ||--o{ ALIAS_PROVEEDORES : "mismo RUC, otro uuid"
     ORDENES_COMPRA ||--o{ ITEMS_ORDEN_COMPRA : "cascade delete"
     PRODUCTOS ||--o{ MOVIMIENTOS_INVENTARIO : "libro mayor"
+    ORDENES_COMPRA |o..o| GASTOS : "orden_compra_uuid, SIN clave foránea"
     PRODUCTOS |o..o{ ITEMS_VENTA : "producto_uuid, SIN clave foránea"
 
     CLIENTES {
@@ -107,8 +108,30 @@ erDiagram
         int stock_actual "milésimas; caché de Σ movimientos"
         int stock_minimo "milésimas"
         bool tiene_vencimiento
+        int costo_ultimo "céntimos, última compra"
+        date vence_el "lote que vence primero"
         datetime creado_en
         datetime actualizado_en
+    }
+    APERTURAS_CAJA {
+        int id PK
+        string uuid UK
+        date dia UK "día peruano"
+        int efectivo_inicial "céntimos, >= 0"
+        int yape_inicial "céntimos, >= 0"
+        datetime creado_en
+        datetime actualizado_en
+    }
+    GASTOS {
+        int id PK
+        string uuid UK "del dispositivo"
+        int monto "céntimos, > 0"
+        enum medio "efectivo|yape_plin"
+        enum ambito "puesto|hogar"
+        enum categoria "proveedor|alquiler|servicios|transporte|alimentacion|educacion|otros"
+        string descripcion
+        string orden_compra_uuid UK "solo el pago de un pedido"
+        datetime creado_en "UTC, idx"
     }
     MOVIMIENTOS_INVENTARIO {
         int id PK
@@ -181,3 +204,42 @@ erDiagram
 - **Sin FK entre módulos:** Ventas y Compras funcionan sin Inventario.
 - **Tabla solo en copias:** `respaldo_info (proyecto, creado_en)` existe únicamente dentro del archivo de respaldo; se quita
   al restaurar y no forma parte del esquema (ADR-044).
+
+### Caja y Gastos (migración 0006, ADR-051)
+
+| Tabla.columna | Tipo SQL | Nulo | Restricción / índice | Significado |
+|---|---|---|---|---|
+| `aperturas_caja.dia` | DATE | no | UNIQUE | Día peruano de la caja: una apertura por día; repetirla corrige |
+| `aperturas_caja.efectivo_inicial`, `.yape_inicial` | INTEGER | no | `>= 0` | Con cuánto se empezó, en céntimos |
+| `gastos.monto` | INTEGER | no | `> 0` | Céntimos que salieron |
+| `gastos.medio` | VARCHAR | no | `efectivo` \| `yape_plin` | De dónde salió la plata |
+| `gastos.ambito` | VARCHAR | no | `puesto` \| `hogar` | Del negocio o de la casa |
+| `gastos.categoria` | VARCHAR | no | enum | `proveedor` lo crea Compras al pagar; el resto lo elige el operador |
+| `gastos.orden_compra_uuid` | VARCHAR(36) | sí | UNIQUE | Pago de un pedido: un pedido se paga una vez |
+| `gastos.creado_en` | DATETIME | no | índice | Hora real en el dispositivo (UTC) |
+
+En IndexedDB (versión 4): `cajas` (por día) y `gastos` (con su día), para ver la caja y los gastos sin red.
+
+### Costo y vencimiento (migración 0007, D-22)
+
+| Tabla.columna | Tipo SQL | Nulo | Significado |
+|---|---|---|---|
+| `productos.costo_ultimo` | INTEGER | sí | Céntimos que costó UNA unidad (kg, litro) en la última compra recibida con cantidad |
+| `productos.vence_el` | DATE | sí | Día peruano en que vence el lote más antiguo que queda |
+
+En IndexedDB (versión 5): `analisis` (el último análisis de cada período, para verlo sin red). Análisis no tiene tablas
+en el servidor: solo lee `ventas`, `items_venta`, `gastos` y `productos`.
+
+## memorias_asistente (migración 0008, D-26 en curso)
+
+Lo que el Asistente recuerda del negocio: hechos cortos que el operador le pidió recordar. Vive en la base del
+proyecto; hacia el proveedor de IA viajará seudonimizado (ADR-034). Límite de 20; al pasarlo se consolida en 15.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | entero | PK |
+| `uuid` | texto(36) | único |
+| `texto` | texto(160) | el hecho, con nombres reales (solo en el dispositivo) |
+| `creado_en` | fecha y hora UTC | |
+
+Todavía no la usa ninguna ruta: falta conectarla al Asistente (ver D-26 en 05).

@@ -91,7 +91,8 @@ interface EstadoCompras {
   }) => Promise<void>
   avanzar: (orden: string, estado: 'pendiente' | 'en_camino') => Promise<void>
   recibir: (orden: string, entradas: EntradaRecepcion[]) => Promise<void>
-  cerrar: (orden: string) => Promise<void>
+  /** "Ya le pagué": cierra el pedido; con `medio`, la caja lo descuenta como gasto (D-24) */
+  cerrar: (orden: string, medio?: 'efectivo' | 'yape_plin') => Promise<void>
   descartarAviso: (indice: number) => void
 }
 
@@ -289,11 +290,16 @@ export const useCompras = create<EstadoCompras>()((set, get) => {
       })
     },
 
-    cerrar: async (uuid) => {
+    cerrar: async (uuid, medio) => {
       const orden = buscar(uuid)
       if (!orden) return
       reemplazar({ ...orden, estado: 'cerrada' })
-      await enviar('POST', `/api/compras/ordenes/${uuid}/cerrar`, `Cerrar pedido de ${orden.proveedor}`)
+      await enviar(
+        'POST',
+        `/api/compras/ordenes/${uuid}/cerrar`,
+        `Pagar pedido de ${orden.proveedor}`,
+        medio ? { medio } : undefined,
+      )
     },
 
     descartarAviso: (indice) => set({ avisos: get().avisos.filter((_, i) => i !== indice) }),

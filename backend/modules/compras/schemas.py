@@ -25,6 +25,13 @@ class _Operacion(BaseModel):
     ocurrido_en: datetime | None = None
 
 
+class CierreEntrada(_Operacion):
+    """"Ya le pagué": con qué se pagó. Sin medio (versiones anteriores de la app) el pedido se
+    cierra igual, pero la caja no lo descuenta (D-24, ADR-051)."""
+
+    medio: Literal["efectivo", "yape_plin"] | None = None
+
+
 # ---- Proveedores ----
 
 class ProveedorEntrada(_Operacion):
@@ -89,6 +96,8 @@ class ItemRecepcionEntrada(BaseModel):
     monto_sustituto: MontoNoNegativo | None = None
     # Cuánto entra al stock, si ese producto se lleva en Inventario
     cantidad_stock: CantidadPositiva | None = None
+    # Cuándo vence este lote (si vence): Inventario avisa antes (D-22)
+    vence_el: date | None = None
 
     @model_validator(mode="after")
     def _cambio_completo(self):

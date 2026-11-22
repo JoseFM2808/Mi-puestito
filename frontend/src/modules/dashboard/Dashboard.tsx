@@ -7,6 +7,7 @@ import { useNavegacion } from '../../stores/navegacion'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
 import estilos from './Dashboard.module.css'
+import { EnCaja } from './EnCaja'
 import { estaAtrasado, formatearFechaLarga, formatearFechaRelativa } from './formato'
 import { Icono, type NombreIcono } from '../../ui/iconos'
 import type { Pantalla } from '../../stores/navegacion'
@@ -51,6 +52,13 @@ const ACCESOS: {
     texto: 'Llegó un pedido',
     ayuda: 'Revisar lo que trajeron',
     destino: 'compras',
+  },
+  {
+    aiId: 'dashboard.gasto',
+    icono: 'gastos',
+    texto: 'Anotar un gasto',
+    ayuda: 'Lo que sale de la caja',
+    destino: 'gastos',
   },
   {
     aiId: 'dashboard.preguntar',
@@ -150,6 +158,9 @@ export function Dashboard() {
         </div>
       </section>
 
+      {/* Lo primero del día: con cuánto se empieza, y luego cuánto hay (D-24) */}
+      <EnCaja />
+
       {error && (
         <div className={estilos.filaAviso}>
           <Aviso tipo="error" aiId="dashboard.error">
@@ -190,6 +201,18 @@ function ContenidoCaja({ resumen }: { resumen: ResumenCaja }) {
 
   return (
     <>
+      {resumen.productosPorVencer > 0 && (
+        <div className={estilos.filaAviso}>
+          <Aviso tipo="pendiente" aiId="dashboard.por-vencer">
+            {resumen.productosPorVencer === 1
+              ? 'Un producto vence esta semana o ya venció: véndelo primero o retíralo.'
+              : `${resumen.productosPorVencer} productos vencen esta semana o ya vencieron: véndelos primero o retíralos.`}
+          </Aviso>
+          <Boton aiId="dashboard.ver-por-vencer" variante="secundario" onClick={() => irA('inventario')}>
+            Ver en Inventario
+          </Boton>
+        </div>
+      )}
       <section className={estilos.resumen}>
         <Tarjeta aiId="dashboard.ventas-hoy">
           <div className={estilos.etiqueta}>Vendiste hoy</div>

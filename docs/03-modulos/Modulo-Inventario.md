@@ -38,3 +38,7 @@
   precio sugiere el monto ([[Modulo-Ventas]]).
 - **Pendiente:** alertas de vencimiento, costo desde la última compra, código de barras y sugerencia de pedido por stock
   bajo.
+
+- **Hecho (2026-11-17, D-22):** costo de la última compra y ganancia por unidad; vencimiento del lote más antiguo con
+  aviso en Inventario y en la [[Modulo-Dashboard]]; búsqueda por código de barras (lector USB o Bluetooth). Pendiente:
+  escanear con la cámara (D-30).

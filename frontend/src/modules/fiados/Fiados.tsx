@@ -3,8 +3,11 @@ import { SinConexion, pedir } from '../../api/cliente'
 import { aSoles, leerClienteConDeuda, leerMontoEscrito, type ClienteConDeudaCable } from '../../api/contrato'
 import { OperacionesRechazadas } from '../../componentes/sincronizacion/EstadoSincronizacion'
 import { alAplicarOperacion, encolar } from '../../sincronizacion/cola'
+import { senalar } from '../../componentes/asistente/senalar'
+import { useBorradorAsistente } from '../../stores/borradorAsistente'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Campo, Monto, Nota, Tarjeta, TituloPagina } from '../../ui/componentes'
+import { productoPorNombre } from '../inventario/nombres'
 import estilos from './Fiados.module.css'
 
 /**
@@ -17,8 +20,12 @@ export function Fiados() {
   const [sinConexion, setSinConexion] = useState(false)
   const [abonando, setAbonando] = useState<string | null>(null)
   const [monto, setMonto] = useState('')
+  // En efectivo o por Yape: así el abono suma en el lugar correcto de la caja (D-24)
+  const [medio, setMedio] = useState<'efectivo' | 'yape_plin'>('efectivo')
   const [error, setError] = useState<string | null>(null)
   const [avisos, setAvisos] = useState<string[]>([])
+  const [llenadoPorAsistente, setLlenadoPorAsistente] = useState(false)
+  const formularioAsistente = useBorradorAsistente((estado) => estado.formulario)
 
   const cargar = useCallback(async () => {
     try {
@@ -40,6 +47,24 @@ export function Fiados() {
     })
   }, [cargar])
 
+  // El Asistente dejó un pago llenado (D-28): se abre en la tarjeta de ese cliente, sin guardar
+  useEffect(() => {
+    if (!proyecto || clientes.length === 0 || formularioAsistente?.formulario.tipo !== 'abono') return
+    const pedido = useBorradorAsistente.getState().tomarFormulario('abono', proyecto)
+    if (!pedido?.cliente) return
+    const cliente = productoPorNombre(clientes, pedido.cliente)
+    if (!cliente) {
+      setAvisos((actuales) => [...actuales, `No encontré a «${pedido.cliente}» entre los que te deben.`])
+      return
+    }
+    setAbonando(cliente.uuid)
+    setMonto(pedido.monto ?? '')
+    setMedio(pedido.medio ?? 'efectivo')
+    setError(null)
+    setLlenadoPorAsistente(true)
+    void senalar(`fiados.cliente-${cliente.uuid}`)
+  }, [proyecto, clientes, formularioAsistente])
+
   const total = clientes.reduce((suma, cliente) => suma + leerClienteConDeuda(cliente).deuda, 0)
 
   const registrarAbono = (cliente: ClienteConDeudaCable) => {
@@ -54,7 +79,7 @@ export function Fiados() {
         uuid: crypto.randomUUID(),
         cliente_uuid: cliente.uuid,
         monto: aSoles(centimos),
-        metodo_pago: 'efectivo',
+        metodo_pago: medio,
       },
     })
     // Se refleja al instante; el servidor confirma al sincronizar
@@ -65,7 +90,9 @@ export function Fiados() {
     )
     setAbonando(null)
     setMonto('')
+    setMedio('efectivo')
     setError(null)
+    setLlenadoPorAsistente(false)
   }
 
   return (
@@ -133,6 +160,24 @@ export function Fiados() {
                       autoFocus
                       error={error}
                     />
+                    {llenadoPorAsistente && (
+                      <Nota>
+                        Lo llenó el Asistente: revísalo y toca «Guardar abono». Aún no se guardó nada.
+                      </Nota>
+                    )}
+                    <div className={estilos.fila}>
+                      {(['efectivo', 'yape_plin'] as const).map((opcion) => (
+                        <Boton
+                          key={opcion}
+                          aiId={`${id}.medio-${opcion}`}
+                          variante="secundario"
+                          presionado={medio === opcion}
+                          onClick={() => setMedio(opcion)}
+                        >
+                          {opcion === 'efectivo' ? 'Pagó en efectivo' : 'Pagó por Yape o Plin'}
+                        </Boton>
+                      ))}
+                    </div>
                     <div className={estilos.fila}>
                       <Boton tipo="submit" aiId={`${id}.guardar-abono`}>
                         Guardar abono
@@ -140,7 +185,10 @@ export function Fiados() {
                       <Boton
                         aiId={`${id}.cancelar-abono`}
                         variante="discreto"
-                        onClick={() => setAbonando(null)}
+                        onClick={() => {
+                          setAbonando(null)
+                          setLlenadoPorAsistente(false)
+                        }}
                       >
                         Cancelar
                       </Boton>
@@ -153,7 +201,9 @@ export function Fiados() {
                     onClick={() => {
                       setAbonando(cliente.uuid)
                       setMonto('')
+                      setMedio('efectivo')
                       setError(null)
+                      setLlenadoPorAsistente(false)
                     }}
                   >
                     Registrar un pago

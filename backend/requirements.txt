@@ -12,3 +12,5 @@ tzdata>=2024.1
 
 # tests
 pytest>=8.3
+# Cliente del TestClient de Starlette (D-10: con httpx está obsoleto)
+httpx2>=2.16

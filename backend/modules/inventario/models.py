@@ -15,11 +15,11 @@ Ventas y Compras no tienen clave foránea hacia aquí: funcionan sin Inventario.
 """
 
 import enum
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, Date, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base, Cantidad, Dinero, FechaHoraUTC
@@ -58,6 +58,10 @@ class Producto(Base):
     # Debajo de esto, el sistema sugiere pedirlo al proveedor
     stock_minimo: Mapped[Decimal | None] = mapped_column(Cantidad)
     tiene_vencimiento: Mapped[bool] = mapped_column(default=False)
+    # Lo que costó UNA unidad (kg, litro) en la última compra recibida: monto ÷ cantidad (D-22)
+    costo_ultimo: Mapped[Decimal | None] = mapped_column(Dinero)
+    # Cuándo vence lo más antiguo que queda: el lote que hay que vender primero (D-22)
+    vence_el: Mapped[date | None] = mapped_column(Date)
     creado_en: Mapped[datetime] = mapped_column(FechaHoraUTC, default=ahora_utc)
     actualizado_en: Mapped[datetime] = mapped_column(
         FechaHoraUTC, default=ahora_utc, onupdate=ahora_utc

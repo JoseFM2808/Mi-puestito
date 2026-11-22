@@ -15,6 +15,20 @@ from string import ascii_uppercase
 # Rótulos genéricos que la app genera y que no identifican a nadie
 NO_PERSONALES = re.compile(r"^Orden \d+$")
 
+# Formas de decir el mismo tratamiento: "Sra. Rosa" también llega como "señora Rosa" o "doña Rosa"
+_FEMENINO = ("sra.", "sra", "señora", "senora", "doña", "dona")
+_MASCULINO = ("sr.", "sr", "señor", "senor", "don")
+_TRATAMIENTOS = {forma: grupo for grupo in (_FEMENINO, _MASCULINO) for forma in grupo}
+
+
+def _formas_de(nombre: str) -> list[str]:
+    """El nombre tal como está guardado y, si empieza con un tratamiento, sus otras formas."""
+    partes = nombre.split(maxsplit=1)
+    grupo = _TRATAMIENTOS.get(partes[0].lower()) if len(partes) == 2 else None
+    if grupo is None:
+        return [nombre]
+    return [nombre, *(f"{forma} {partes[1]}" for forma in grupo)]
+
 
 class Seudonimos:
     def __init__(self) -> None:
@@ -39,10 +53,18 @@ class Seudonimos:
         return self._alias[nombre]
 
     def ocultar_en_texto(self, texto: str) -> str:
-        """Reemplaza en texto libre (la pregunta) cada nombre conocido por su alias."""
-        # Primero los nombres largos: "Sra. Flora Quispe" antes que "Flora"
-        for real in sorted(self._alias, key=len, reverse=True):
-            texto = re.sub(re.escape(real), self._alias[real], texto, flags=re.IGNORECASE)
+        """Reemplaza en texto libre (la pregunta) cada nombre conocido por su alias.
+
+        La gente no escribe el nombre como está guardado: "Sra. Rosa" llega como "señora Rosa",
+        "sra rosa" o "doña Rosa". Se reconocen esas formas del tratamiento (D-28: sin esto el
+        modelo veía el nombre real y llenaba el pago a otro cliente). El nombre solo, sin
+        tratamiento, no se toca: "rosa" también es un color.
+        """
+        variantes = [(forma, alias) for real, alias in self._alias.items() for forma in _formas_de(real)]
+        # Primero las formas largas: "Sra. Flora Quispe" antes que "Flora"
+        for forma, alias in sorted(variantes, key=lambda par: len(par[0]), reverse=True):
+            patron = r"(?<!\w)" + r"\s+".join(re.escape(p) for p in forma.split()) + r"(?!\w)"
+            texto = re.sub(patron, alias, texto, flags=re.IGNORECASE)
         return texto
 
     def reidentificar(self, texto: str) -> str:

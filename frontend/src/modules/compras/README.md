@@ -14,14 +14,14 @@ cada acción cambia la pantalla al instante, se guarda en IndexedDB y se encola;
 
 ## Qué acciones permite
 
-| Acción                  | Botón                                                         |
-| ----------------------- | ------------------------------------------------------------- |
-| Armar un pedido         | **Nuevo pedido** → **Agregar al pedido** → **Guardar pedido** |
-| Dejarlo sin confirmar   | **Guardar como borrador** → **Confirmar pedido**              |
-| Registrar un proveedor  | **Registrar proveedor nuevo** (se le puede pasar la tablet)   |
-| Marcar que ya salió     | **Ya viene en camino**                                        |
-| Revisar lo que llegó    | **Llegó este pedido** → **Llegó / No llegó / Cambió**         |
-| Saldar con el proveedor | **Ya le pagué: cerrar pedido**                                |
+| Acción                  | Botón                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| Armar un pedido         | **Nuevo pedido** → **Agregar al pedido** → **Guardar pedido**                       |
+| Dejarlo sin confirmar   | **Guardar como borrador** → **Confirmar pedido**                                    |
+| Registrar un proveedor  | **Registrar proveedor nuevo** (se le puede pasar la tablet)                         |
+| Marcar que ya salió     | **Ya viene en camino**                                                              |
+| Revisar lo que llegó    | **Llegó este pedido** → **Llegó / No llegó / Cambió**                               |
+| Saldar con el proveedor | **Ya le pagué en efectivo** / **Ya le pagué con Yape** (la caja lo descuenta, D-24) |
 
 ## Cómo debe interactuar la IA
 

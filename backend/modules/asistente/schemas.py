@@ -22,7 +22,9 @@ class PreguntaEntrada(BaseModel):
     mensaje: Texto
     historial: list[TurnoPrevio] = Field(default_factory=list, max_length=12)
     # Qué pantalla tiene abierta el operador: para decirle "toca este botón" donde está (ADR-047)
-    pantalla_actual: Literal["caja", "ventas", "fiados", "compras", "inventario", "asistente"] | None = None
+    pantalla_actual: (
+        Literal["caja", "ventas", "fiados", "compras", "gastos", "analisis", "inventario", "asistente"] | None
+    ) = None
 
 
 class LlaveEntrada(BaseModel):
@@ -67,10 +69,27 @@ class BorradorVenta(BaseModel):
     para: str | None = None
 
 
+class FormularioLlenado(BaseModel):
+    """Un pago de fiado, un gasto o una merma que el Asistente llenó; el operador lo guarda (D-28)."""
+
+    tipo: Literal["abono", "gasto", "merma"]
+    # abono: a quién; merma: qué producto (nombre que dijo el operador o del inventario)
+    cliente: str | None = None
+    producto: str | None = None
+    # Solo si el operador lo dijo; si no, el campo queda para que lo escriba él
+    monto: str | None = None
+    cantidad: str | None = None
+    medio: Literal["efectivo", "yape_plin"] | None = None
+    ambito: Literal["puesto", "hogar"] | None = None
+    categoria: str | None = None
+    nota: str | None = None
+
+
 class RespuestaSalida(BaseModel):
     respuesta: str
     acciones: list[AccionSugerida] = []
     borrador: BorradorVenta | None = None
+    formulario: FormularioLlenado | None = None
     # Para valorar la respuesta ("Me sirvió" / "No me sirvió")
     id_respuesta: str
     modelo: str

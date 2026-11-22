@@ -1,6 +1,6 @@
 """Esquemas del módulo Inventario. Cantidades con 3 decimales (kg), dinero como string."""
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
 
@@ -33,6 +33,8 @@ class ProductoCambios(BaseModel):
     stock_minimo: CantidadNoNegativa | None = None
     codigo_barras: Annotated[str, StringConstraints(max_length=32)] | None = None
     tiene_vencimiento: bool | None = None
+    # Enviar `"vence_el": null` borra la fecha (ya no queda ese lote); omitirlo no la toca
+    vence_el: date | None = None
 
 
 class ProductoSalida(BaseModel):
@@ -46,12 +48,17 @@ class ProductoSalida(BaseModel):
     stock_minimo: Decimal | None
     codigo_barras: str | None
     tiene_vencimiento: bool
+    costo_ultimo: Decimal | None
+    vence_el: date | None
 
 
 class ProductoConEstado(ProductoSalida):
     # Se dice con palabras, no solo con color (Design-System §1)
     bajo_minimo: bool
     descuadre: bool
+    # Vence en los próximos DIAS_AVISO_VENCE días (o ya venció) y todavía queda stock (D-22)
+    vence_pronto: bool
+    vencido: bool
 
 
 class AjusteEntrada(BaseModel):

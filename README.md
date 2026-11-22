@@ -91,7 +91,7 @@ y toca **Asistente**. Los nombres de clientes se cambian por códigos antes de s
 │   ├── agents/            # Subagentes (revisor)
 │   └── settings.json      # Permisos de Claude Code
 ├── docs/                  # Bóveda Obsidian (planificación completa)
-│   └── 06-diseno/tokens.css   # Fuente de verdad visual (el frontend la importa directo)
+│   └── design-system/         # Fuente de verdad visual: tokens/ (generado) + producto/ (lo propio)
 ├── frontend/              # PWA React + TS + Vite + Zustand
 │   └── src/
 │       ├── componentes/barra-superior/   # Menú, Asistente, tamaño de letra

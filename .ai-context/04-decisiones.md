@@ -28,6 +28,8 @@
 | 047 | 2026-11-08 | Aceptada | El Asistente abre pantallas y señala partes de ellas cuando el operador lo pide; nunca llena datos |
 | 048 | 2026-11-08 | Aceptada | Núcleo de marca en `docs/design-system/` con el estándar de Design System del workspace |
 | 049 | 2026-11-08 | Aceptada | El Asistente llena órdenes de venta que el operador revisa y guarda; voz por dictado del navegador |
+| 050 | 2026-11-17 | Aceptada | `docs/06-diseno/` pasa a `docs/design-system/producto/`; los colores salen solo de `tokens.json` |
+| 051 | 2026-11-17 | Aceptada | Caja con saldo inicial en efectivo y en Yape; Gastos como módulo propio que recibe los pagos a proveedores |
 
 ---
 
@@ -302,3 +304,50 @@
   compras o pagos exigirá ampliar este ADR. La voz depende de un tercero y de internet; el dictado local (Whisper) queda
   como opción futura. La demo trae 7 productos para practicar. `ia.evaluar` pasa a 29 casos, con la conversación real
   del owner incluida.
+- **Ampliación (2026-11-17, D-28)**: el mismo patrón llena un **pago de fiado**, un **gasto** o una **merma**
+  (`ia/formularios.py`, `RespuestaSalida.formulario`), con las mismas reglas: solo si el operador lo pidió, montos solo
+  suyos, listas cerradas, y nada se guarda hasta su botón. La seudonimización (ADR-034) reconoce las formas del tratamiento
+  ("señora Rosa" = "Sra. Rosa").
+
+## ADR-050 · Una sola fuente de color: el sistema de diseño entero en `docs/design-system/` — Aceptada
+
+- **Fecha**: 2026-11-17.
+- **Contexto**: ADR-048 copió el núcleo de marca a `docs/design-system/` sin mover `docs/06-diseno/`, porque mover archivos
+  necesita la aprobación del owner. Quedaron dos fuentes de color (D-27): `tokens.css` del producto, que importaba el
+  frontend, y `tokens.json` del estándar. `ds-validar` avisaba si se separaban, pero solo después de pasar. El owner aprobó
+  el traslado el 2026-11-17.
+- **Decisión**:
+  1. `docs/06-diseno/` pasa con `git mv` a `docs/design-system/producto/`: `Design-System.md` (bóveda Obsidian; el validador
+     solo revisa los `.md` de la raíz del núcleo y de `marca/`, así que sus wikilinks siguen sirviendo), `assets/` y
+     `tokens.css`, que pasa a llamarse `tokens-producto.css`.
+  2. Los colores de marca, la fuente y los radios **solo** están en `tokens/tokens.json`. El frontend importa, en este
+     orden, `tokens/tokens.css` (generado por `py run.py ds-generar`, con los alias del producto) y
+     `producto/tokens-producto.css` (espaciado, escala tipográfica, tamaños táctiles, tintes, sombra), que no define
+     colores de marca.
+  3. `vite.config.ts` lee los colores de la PWA del archivo generado siguiendo los alias (`--primario` → `--color-accion`
+     → hex). Se quita `css_producto` de `tokens.json`: comparaba dos copias que ya no existen.
+  4. Nuevo test `todo token que usa un CSS existe en el sistema de diseño`: falla si un CSS usa una variable que no
+     está en ninguno de los dos archivos.
+- **Consecuencias**: un cambio de color ya no puede quedar a medias; se hace en `tokens.json` y se regenera. La PWA
+  sigue con los mismos colores (`#1E6E42`, `#FAF7F2`). `AGENTS.md`, `CLAUDE.md`, el README, los README de `ui` y de la
+  barra, el subagente revisor y estas pestañas apuntan a la ruta nueva. Las menciones a `06-diseno/` que quedan son
+  historia (ADR-048, el changelog).
+
+## ADR-051 · Caja con saldo inicial y Gastos como módulo propio — Aceptada
+
+- **Fecha**: 2026-11-17.
+- **Contexto**: "Ya le pagué" cerraba el pedido sin descontar de la caja (D-24), y la caja solo sabía cuánto se vendió,
+  no cuánto había. El owner decidió que la caja empieza siempre con un saldo en efectivo y otro en Yape. La Fase 7 pedía
+  además un módulo de Gastos que separe el puesto de la casa (`Modulo-Gastos.md`).
+- **Decisión**:
+  1. Módulo **caja**: una apertura por día peruano (`aperturas_caja`) con efectivo y Yape iniciales; repetirla corrige.
+     `GET /api/caja` calcula `en_caja = inicial + ingresos − egresos` por medio, leyendo `pagos` de Ventas y los totales
+     de Gastos dentro de un `try` (si uno falla, se dice en `no_disponibles`).
+  2. Módulo **gastos**: monto, medio, ámbito (puesto o casa) y categoría; idempotente por `uuid`; borrar corrige.
+  3. **Pagar un pedido** pide el medio ("Ya le pagué en efectivo / con Yape"); Compras publica `compra.pagada` y Gastos lo
+     anota una vez por pedido (`orden_compra_uuid` único). Sin medio (versión anterior) el pedido se cierra sin gasto.
+  4. Todo offline-first por la misma cola; el dispositivo guarda la caja y los gastos del día (IndexedDB v4).
+  5. El Asistente recibe `caja_abierta` y `en_caja`, y conoce la pantalla Gastos.
+- **Consecuencias**: la caja dice cuánto hay de verdad en la gaveta y en el Yape; un egreso a proveedor ya no queda
+  fuera. Análisis (Fase 7) podrá separar la rentabilidad del negocio de los gastos de la casa con estos datos. Ventas,
+  Compras y Gastos siguen sin claves foráneas entre sí. Migración 0006. `ia.evaluar` 30/30 con el caso de gastos.

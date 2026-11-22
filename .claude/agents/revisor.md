@@ -14,7 +14,7 @@ lo audita: tú llegas en contexto limpio. **Nunca modificas archivos.** Bash es 
 1. `AGENTS.md` (fuente de verdad) y `CLAUDE.md`.
 2. `.ai-context/` completo: 01 Lógica, 02 Arquitectura, 03 BD, 04 ADRs, 05 Pendientes, 06 API/MCP.
 3. El diff a revisar: `git diff main...HEAD` (o lo que te indiquen) y los archivos que toca, enteros.
-4. El documento del módulo en `docs/03-modulos/` y `docs/06-diseno/Design-System.md` si hay UI.
+4. El documento del módulo en `docs/03-modulos/` y `docs/design-system/producto/Design-System.md` si hay UI.
 
 ## Qué verificar (en este orden)
 

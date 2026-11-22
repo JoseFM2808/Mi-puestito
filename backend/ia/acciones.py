@@ -21,6 +21,8 @@ PANTALLAS = {
     "fiados": "Ir a Fiados",
     "compras": "Ir a Compras",
     "inventario": "Ir a Inventario",
+    "gastos": "Ir a Gastos",
+    "analisis": "Ir a ¿Cómo me va?",
 }
 
 # Partes de la pantalla que el Asistente puede señalar. La clave es el `data-ai-id` real del
@@ -41,6 +43,8 @@ APARTADOS = {
     "fiados.total": ("fiados", "lo que te deben en total"),
     "compras.nuevo-pedido": ("compras", "el botón Nuevo pedido"),
     "inventario.nuevo-producto": ("inventario", "el botón Nuevo producto"),
+    "dashboard.en-caja": ("caja", "cuánto hay en caja ahora"),
+    "gastos.anotar": ("gastos", "el botón Anotar un gasto"),
     "inventario.buscar": ("inventario", "el buscador de productos"),
     "inventario.solo-poco": ("inventario", "el botón de lo que se está acabando"),
 }
@@ -51,7 +55,7 @@ MAX_ACCIONES = 2
 # pantalla ("ve a la pantalla fiados"), igual se ofrece el botón. Los modelos
 # muy pequeños olvidan el formato más que el contenido.
 _MENCION = re.compile(
-    r"\b(?:pantalla|secci[oó]n|men[uú])\s+(?:de\s+)?(?:la\s+|los\s+)?[«\"']?(?P<destino>fiados|ventas|caja|compras|inventario)\b",
+    r"\b(?:pantalla|secci[oó]n|men[uú])\s+(?:de\s+)?(?:la\s+|los\s+)?[«\"']?(?P<destino>fiados|ventas|caja|compras|inventario|gastos|analisis)\b",
     re.IGNORECASE,
 )
 
@@ -93,6 +97,52 @@ _PREGUNTA_DONDE = re.compile(
 def pide_ir_o_hacer(mensaje_del_operador: str) -> bool:
     """El operador pidió ir a algún lado o hacer algo (no solo preguntó)."""
     return bool(_PIDE_IR_O_HACER.search(mensaje_del_operador))
+
+
+# El modelo a veces manda a la Caja de hoy lo que vive en otra pantalla ("quiero ver quiénes me
+# deben" → caja, visto en ia.evaluar). La Caja solo resume: si el mensaje habla claramente de un
+# tema con pantalla propia, el "Ir a la Caja" se corrige hacia esa pantalla.
+_TEMA_CON_PANTALLA = [
+    (re.compile(r"\b(?:me\s+deben|deud\w*|fiad\w*|abon\w*)\b", re.IGNORECASE), "fiados"),
+    (re.compile(r"\b(?:proveedor\w*|pedido\w*|compra\w*)\b", re.IGNORECASE), "compras"),
+    (re.compile(r"\b(?:stock|inventario|me\s+queda\w*|merma\w*)\b", re.IGNORECASE), "inventario"),
+    (re.compile(r"\b(?:gast\w*|alquiler|pasaje\w*)\b", re.IGNORECASE), "gastos"),
+    (re.compile(r"\b(?:semana|mes|rentable|ganancia\w*|gan[eé]|ganado|libre)\b", re.IGNORECASE), "analisis"),
+]
+
+
+def corregir_destino(mensaje_del_operador: str, acciones: list[dict]) -> list[dict]:
+    """Cambia una acción hacia la Caja de hoy ("Ir a la Caja" o señalar una de sus tarjetas, que
+    solo resumen) por la pantalla del tema del mensaje, si es una sola."""
+    temas = {pantalla for patron, pantalla in _TEMA_CON_PANTALLA if patron.search(mensaje_del_operador)}
+    if len(temas) != 1:
+        return acciones
+    (destino,) = temas
+    if any(a["pantalla"] == destino for a in acciones):
+        return acciones
+    hacia_el_tema = {"tipo": "ir_a", "pantalla": destino, "etiqueta": PANTALLAS[destino]}
+    return [dict(hacia_el_tema) if a["pantalla"] == "caja" else a for a in acciones]
+
+
+# Para cuando el operador pide HACER algo y el modelo no propuso pantalla ("quiero registrar una
+# compra" → explicó los pasos sin la línea ACCION). Aquí sí entra Ventas: en una corrección de la
+# Caja no, porque "mis ventas de hoy" sí se ven en la Caja.
+_TEMA_PARA_HACER = [
+    (re.compile(r"\b(?:venta\w*|vender|orden\w*)\b", re.IGNORECASE), "ventas"),
+    *_TEMA_CON_PANTALLA,
+]
+
+
+def accion_por_tema(mensaje_del_operador: str, acciones: list[dict]) -> list[dict]:
+    """Si el operador pidió hacer algo y no hay ninguna acción, ofrece la pantalla de su tema
+    (solo si el tema es uno solo: con dos, no se adivina)."""
+    if acciones or not pide_ir_o_hacer(mensaje_del_operador):
+        return acciones
+    temas = {pantalla for patron, pantalla in _TEMA_PARA_HACER if patron.search(mensaje_del_operador)}
+    if len(temas) != 1:
+        return acciones
+    (destino,) = temas
+    return [{"tipo": "ir_a", "pantalla": destino, "etiqueta": PANTALLAS[destino]}]
 
 
 def marcar_automatica(mensaje_del_operador: str, acciones: list[dict]) -> list[dict]:

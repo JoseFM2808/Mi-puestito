@@ -272,3 +272,81 @@ encola nada. Sin elegir, se vende con texto libre y el stock no cambia.
 `POST /api/dashboard/demo/reiniciar` borra lo practicado y vuelve a sembrar con las fechas de hoy; con un negocio real da
 `403`. El botón pide confirmación en dos pasos y limpia también lo guardado en el dispositivo, para que la cola no reenvíe
 operaciones de la práctica anterior.
+
+## 9. Caja con saldo inicial y Gastos (ADR-051)
+
+Código: `backend/modules/caja/`, `backend/modules/gastos/`, `frontend/src/modules/dashboard/EnCaja.tsx`,
+`frontend/src/modules/gastos/`. Decisión del owner (2026-11-17): la caja empieza siempre con un saldo en efectivo y
+otro en Yape.
+
+```mermaid
+flowchart LR
+    A[Abrir caja<br/>efectivo + Yape iniciales] --> C{En caja ahora<br/>por medio}
+    V[Ventas cobradas y abonos<br/>tabla pagos, por metodo_pago] -->|+| C
+    G[Gastos del puesto y de la casa] -->|−| C
+    P[Compras: Ya le pagué en efectivo / con Yape] -->|evento compra.pagada| G
+```
+
+- **En caja = inicial + ingresos − egresos**, por separado en efectivo y en Yape. Un fiado no es dinero: no entra hasta
+  que se abona. El día es el peruano (`rango_utc_del_dia`); la hora de cada operación la pone el dispositivo.
+- **Una apertura por día**: repetirla corrige los saldos (dato maestro, gana la última). Si la caja no se abrió, se
+  muestra el formulario "¿Con cuánto empiezas hoy?" y todo cuenta desde cero.
+- **Gastos**: monto, de dónde salió (gaveta o Yape), si es del puesto o de la casa, y su categoría. Separar el puesto de
+  la casa es lo que deja ver si el negocio gana (Modulo-Gastos.md). Idempotentes por `uuid`; borrar uno mal anotado lo
+  elimina.
+- **Pagar un pedido**: "Ya le pagué en efectivo / con Yape" cierra el pedido y publica `compra.pagada` con `monto_real`.
+  Gastos lo anota una sola vez por pedido (`orden_compra_uuid` único). Sin Gastos, el pedido se cierra igual.
+- **Aislamiento**: la Caja lee Ventas y Gastos dentro de un `try`; si uno falla, esa parte queda en cero y se dice en
+  `no_disponibles`.
+- **El Asistente** recibe `caja_abierta` y `en_caja` en su contexto: "¿cuánto tengo en efectivo?" se responde con la cifra
+  real. Lleva a Gastos ("quiero anotar un gasto") y corrige hacia Gastos un "Ir a la Caja" cuando se habla de gastos.
+
+## 10. Costo, vencimientos y código de barras (D-22)
+
+- **Costo de la última compra**: al recibir un pedido con cantidad (`compra.item_recibido`), Inventario guarda
+  `costo_ultimo = monto ÷ cantidad`, redondeado al céntimo, solo si el movimiento es nuevo (un reenvío no lo cambia). La
+  tarjeta dice "Costó S/ 3.60 · ganas S/ 0.60 por unidad" (en rojo si se vende por debajo del costo).
+- **Vencimiento**: cada producto guarda la fecha del lote que vence primero y aún no venció (`vence_el`). Un lote nuevo
+  la cambia si es más temprano, o si la guardada ya pasó. Se corrige o se borra a mano ("ya no queda ese lote").
+  `vence_pronto` = vence en 7 días o menos (o ya venció) **y queda stock**; `vencido` = ya pasó. La Caja de hoy avisa
+  cuántos hay (`productos_por_vencer`) y lleva a Inventario.
+- **Código de barras**: se guarda al crear el producto y la búsqueda acepta el código exacto: un lector USB o Bluetooth
+  lo "escribe" en el buscador. Escanear con la cámara queda pendiente (D-30).
+
+## 11. Pago de fiado, gasto y merma llenados por el Asistente (D-28)
+
+Mismo principio que la orden de venta (ADR-049): **el Asistente llena, el operador guarda**. Una línea por respuesta
+(`ia/formularios.py`):
+
+```
+ABONO: Cliente 3 | 10.00 | yape
+GASTO: 5.00 | transporte | efectivo | puesto | pasaje
+MERMA: 2 x Leche Gloria | vencido
+```
+
+La app abre Fiados, Gastos o Inventario con el formulario de siempre ya llenado y la frase "Lo llenó el Asistente:
+revísalo y toca «Guardar …». Aún no se guardó nada". Reglas fijas: solo si el operador pidió anotar; el monto solo si lo
+dijo; medio, ámbito y categoría de listas cerradas (un "otros" del modelo se corrige por palabras claras: pasaje →
+transporte, luz → servicios); el cliente se busca en la lista de los que deben y el producto en el inventario, sin
+importar plurales ni tildes; si no aparece, se dice.
+
+**Seudónimos y tratamientos**: "Sra. Rosa" también se oculta cuando llega como "señora Rosa", "sra rosa" o "doña Rosa"
+(y "Don Julio" como "señor Julio"). Sin esto, el modelo veía el nombre real y llenaba el pago a otra clienta (visto en
+`ia.evaluar`). El nombre solo, sin tratamiento, no se toca ("rosa" también es un color).
+
+**Abono por medio de pago**: el formulario de Fiados pregunta "Pagó en efectivo / Pagó por Yape o Plin"; antes todo
+abono entraba como efectivo y la caja lo sumaba en la gaveta aunque llegara por Yape.
+
+## 12. ¿Cómo me va? — Análisis (Fase 7)
+
+Código: `backend/modules/analisis/`, `frontend/src/modules/analisis/`. Solo lectura, sin tablas propias.
+
+- **Vendido** (como "Vendiste hoy", sumado por día peruano) − **pagado a proveedores** − **gastos del puesto** =
+  **resultado del negocio**; menos **gastos de la casa** = **libre**. Los fiados se muestran aparte: no son dinero hasta
+  que se abonan.
+- Períodos: esta semana (desde el lunes), este mes (hasta hoy) y el mes pasado completo.
+- **Ganancia por producto**: lo vendido de cada producto del inventario menos cantidad × costo de la última compra;
+  es un estimado y solo cuenta productos con costo.
+- La frase de arriba dice el resultado en palabras: "te quedó S/ X libre", "el negocio dejó S/ X pero la casa gastó
+  más" o "gastaste más de lo que vendiste".
+- El Asistente recibe la semana y el mes: deja de responder "solo tengo las cifras de hoy".

@@ -21,8 +21,8 @@ from sqlalchemy.orm import Session
 import seguridad
 from database import obtener_sesion
 from fechas import dia_peruano
-from ia import borrador, configuracion, llave_local, registro
-from ia.acciones import marcar_automatica, pide_ir_o_hacer
+from ia import borrador, configuracion, formularios, llave_local, registro
+from ia.acciones import accion_por_tema, corregir_destino, marcar_automatica, pide_ir_o_hacer
 from ia.privacidad import seudonimizar_resumen
 from ia.servicio import AsistenteNoDisponible, armar_mensajes, preguntar
 from seguridad import proyecto_autenticado
@@ -72,6 +72,34 @@ def _resumen_del_proyecto(sesion: Session) -> dict:
     try:
         resumen["clientes_que_deben"] = _clientes_que_deben(sesion)
     except Exception:  # noqa: BLE001 — sin Ventas, se responde con lo que hay
+        sesion.rollback()
+    try:
+        from modules.caja.servicio import del_dia
+
+        caja = del_dia(sesion, dia_peruano())
+        resumen["caja_abierta"] = caja.abierta
+        resumen["en_caja"] = caja.en_caja.model_dump(mode="json")
+    except Exception:  # noqa: BLE001 — sin Caja, se responde con lo demás
+        sesion.rollback()
+    try:
+        # La semana y el mes (Fase 7): "¿cuánto vendí esta semana?" ya tiene respuesta
+        from modules.analisis.servicio import del_periodo
+
+        for periodo in ("semana", "mes"):
+            datos = del_periodo(sesion, periodo).model_dump(mode="json")
+            resumen[periodo] = {
+                campo: datos[campo]
+                for campo in (
+                    "desde",
+                    "vendido",
+                    "pagado_a_proveedores",
+                    "gastos_del_puesto",
+                    "gastos_de_la_casa",
+                    "resultado_del_negocio",
+                    "libre",
+                )
+            }
+    except Exception:  # noqa: BLE001 — sin Análisis, solo las cifras de hoy
         sesion.rollback()
     try:
         resumen["productos_del_inventario"] = _nombres_de_productos(sesion)
@@ -135,18 +163,29 @@ async def preguntar_endpoint(
             {**item, "nombre": alias.reidentificar(item["nombre"])}
             for item in borrador.validar(respuesta.borrador, dicho)
         ]
+    # Pago de fiado, gasto o merma llenados (D-28): mismas reglas que la orden de venta
+    formulario = None
+    if respuesta.formulario and lo_pidio:
+        dicho = " ".join([datos.mensaje, *del_operador])
+        formulario = formularios.validar(respuesta.formulario, dicho)
+        if formulario.get("cliente"):
+            formulario = {**formulario, "cliente": alias.reidentificar(formulario["cliente"])}
     texto = alias.reidentificar(respuesta.texto)
     # Nunca "revisa la orden" si no hay orden llenada: el operador la buscaría y no estaría
-    if not items and borrador.HABLA_DE_UNA_ORDEN_LLENADA.search(texto):
+    if not items and not formulario and borrador.HABLA_DE_UNA_ORDEN_LLENADA.search(texto):
         texto = borrador.PEDIR_PRODUCTOS
     return RespuestaSalida(
         respuesta=texto,
-        acciones=marcar_automatica(datos.mensaje, respuesta.acciones),
+        acciones=marcar_automatica(
+            datos.mensaje,
+            accion_por_tema(datos.mensaje, corregir_destino(datos.mensaje, respuesta.acciones)),
+        ),
         borrador=(
             {"items": items, "para": alias.reidentificar(respuesta.para) if respuesta.para else None}
             if items
             else None
         ),
+        formulario=formulario,
         id_respuesta=id_respuesta,
         modelo=respuesta.modelo,
     )

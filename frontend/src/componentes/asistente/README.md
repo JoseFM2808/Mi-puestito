@@ -51,3 +51,7 @@ En la ventana los `data-ai-id` llevan el prefijo `asistente-ventana` (`asistente
 Si pide registrar una venta, la respuesta trae `borrador`: la app lo deja en `stores/borradorAsistente.ts`, abre Ventas y
 lo señala (ADR-049). El Asistente nunca guarda. La voz usa `dictado.ts` (Web Speech API, `es-PE`); en un negocio real
 se avisa que va a Google o Microsoft.
+
+Si pide anotar un pago de fiado, un gasto o una merma, la respuesta trae `formulario`: se deja en
+`stores/borradorAsistente.ts` (`ponerFormulario`), se abre Fiados, Gastos o Inventario y esa pantalla lo toma una vez
+(`tomarFormulario`) para abrir su formulario de siempre ya llenado (D-28).

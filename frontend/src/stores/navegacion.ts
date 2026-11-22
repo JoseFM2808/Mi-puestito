@@ -6,7 +6,8 @@ import { create } from 'zustand'
  * estaba. El AI Companion puede navegar llamando a `irA`.
  */
 
-export type Pantalla = 'caja' | 'ventas' | 'fiados' | 'compras' | 'inventario' | 'asistente'
+export type Pantalla =
+  'caja' | 'ventas' | 'fiados' | 'compras' | 'gastos' | 'analisis' | 'inventario' | 'asistente'
 
 /**
  * El menú lateral muestra cada pantalla con su nombre y, debajo, para qué sirve:
@@ -17,6 +18,8 @@ export const PANTALLAS: { clave: Pantalla; nombre: string; ayuda: string }[] = [
   { clave: 'ventas', nombre: 'Ventas', ayuda: 'Registrar y cobrar' },
   { clave: 'fiados', nombre: 'Fiados', ayuda: 'Quién te debe' },
   { clave: 'compras', nombre: 'Compras', ayuda: 'Pedidos a proveedores' },
+  { clave: 'gastos', nombre: 'Gastos', ayuda: 'Lo que sale de la caja' },
+  { clave: 'analisis', nombre: '¿Cómo me va?', ayuda: 'Si el puesto deja ganancia' },
   { clave: 'inventario', nombre: 'Inventario', ayuda: 'Cuánto te queda' },
   { clave: 'asistente', nombre: 'Asistente', ayuda: 'Pregúntale lo que necesites' },
 ]

@@ -1,0 +1,96 @@
+/* Gastos (D-24, ADR-051). CSS Module. Solo tokens. */
+
+.pantalla {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--esp-4) var(--esp-3) var(--esp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.grupo {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+}
+
+.pregunta {
+  font-size: var(--tam-subtitulo);
+  font-weight: 600;
+  margin-bottom: var(--esp-1);
+}
+
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+/* Dos tarjetas lado a lado si caben; en el teléfono una debajo de otra */
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  gap: var(--esp-2);
+}
+
+.rotulo {
+  display: block;
+  font-size: var(--tam-subtitulo);
+  color: var(--texto-suave);
+  margin-bottom: var(--esp-1);
+}
+
+.lineaMonto {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--esp-2);
+  font-size: var(--tam-nombre);
+}
+
+.lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.gasto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.detalle {
+  flex: 1;
+  min-width: min(12rem, 100%);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--tam-nombre);
+}
+
+.nota {
+  font-size: var(--tam-nota);
+  color: var(--texto-suave);
+}

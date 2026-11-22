@@ -13,7 +13,7 @@ cualquier API compatible con OpenAI a través de `compatible_openai.py`.
 import logging
 from dataclasses import dataclass, field
 
-from . import borrador, configuracion
+from . import borrador, configuracion, formularios
 from .acciones import APARTADOS, PANTALLAS, extraer, texto_si_solo_hubo_accion
 from .cifras import cifras_no_respaldadas
 from .compatible_openai import ProveedorCompatibleOpenAI, es_transitorio, motivo_error
@@ -26,7 +26,8 @@ REINTENTOS_TRANSITORIOS = 2
 GUIA_APP = """\
 - Caja de hoy: cuánto se vendió hoy, órdenes abiertas, fiados por cobrar, ventas rápidas por \
 completar y pedidos de proveedores por llegar. "Mañana necesitas en caja" es lo que hay que \
-pagar por pedidos que llegan mañana.
+pagar por pedidos que llegan mañana. "En caja ahora" dice cuánto hay en efectivo y en Yape: \
+cada día se empieza con "Abrir caja" (con cuánto se empieza en efectivo y en Yape).
 - Ventas: "Nueva orden" abre una orden (por ejemplo, una mesa que sigue pidiendo). Se agregan \
 productos con su monto y se cierra con "Cobrar en efectivo", "Cobrar con Yape o Plin" o "Fiar a \
 un cliente". "Venta rápida" registra solo el monto cobrado; el detalle se completa después en \
@@ -36,12 +37,17 @@ a los que deben o anotar lo que un cliente pagó, es aquí: la Caja de hoy solo 
 "Registrar un pago" anota lo que el cliente abona.
 - Compras: pedidos a proveedores. "Nuevo pedido" arma un pedido y registra al proveedor si es \
 nuevo. Cuando llega, "Llegó este pedido" abre la lista para marcar cada producto como "Llegó", \
-"No llegó" o "Cambió", y calcula lo que hay que pagar. "Ya le pagué: cerrar pedido" lo termina.
+"No llegó" o "Cambió", y calcula lo que hay que pagar. "Ya le pagué en efectivo" o "Ya le pagué \
+con Yape" lo termina y lo descuenta de la caja.
+- Gastos: lo que sale de la caja, del puesto (alquiler, transporte, luz) o de la casa (comida, \
+colegio). "Anotar un gasto" pide cuánto, si salió de la gaveta o del Yape y para qué fue.
 - Inventario: cuánto hay de cada producto. "Contar lo que hay" corrige el stock y "Registrar merma" \
 anota lo que se perdió o venció. Tú NO ves el stock: si preguntan cuánto queda, di que no lo \
 sabes y ofrece ir a Inventario.
-Solo hay cifras de HOY: si preguntan por la semana o el mes, di que solo tienes las de hoy y \
-ofrece la Caja de hoy. No menciones pantallas que no estén en esta lista."""
+- ¿Cómo me va? (analisis): cuánto vendió, pagó a proveedores y gastó en el puesto y en la casa en la \
+semana o el mes, y cuánto le quedó libre. También qué productos le dejan más ganancia.
+Hay cifras de HOY, de ESTA SEMANA (semana) y de ESTE MES (mes). De otros períodos no: dilo y ofrece \
+¿Cómo me va?. No menciones pantallas que no estén en esta lista."""
 
 PROMPT_SISTEMA = """Eres el Asistente de Mi Puestito, una app para vendedores \
 informales en Perú. Responde SIEMPRE en español peruano sencillo, en 1 a 4 frases \
@@ -59,8 +65,12 @@ cuántas ventas se cobraron hoy. proyeccion_manana = lo que hay que pagar mañan
 = lo que deben TODOS los clientes, ya sumado. clientes_que_deben = quienes más deben. \
 ordenes_activas = órdenes abiertas ahora (deuda_cliente = lo que ese cliente ya debía antes). \
 pedidos_por_llegar = pedidos a proveedores (atrasado true = debió llegar y no llegó). \
-pantalla_actual = la pantalla que el operador tiene abierta ahora. productos_del_inventario = \
-nombres de los productos registrados (sin stock ni precios).
+pantalla_actual = la pantalla que el operador tiene abierta ahora. en_caja = cuánto hay ahora en \
+efectivo y en Yape (caja_abierta false = aún no se abrió la caja hoy). productos_del_inventario = \
+nombres de los productos registrados (sin stock ni precios). semana y mes = vendido, \
+pagado_a_proveedores, gastos_del_puesto, gastos_de_la_casa, resultado_del_negocio (lo que ganó el \
+negocio: "¿cuánto gané?") y libre (lo que quedó después de los gastos de la casa) de esta semana y \
+de este mes.
 
 Reglas:
 - Copia las cifras tal como están en los datos: no las sumes, no las redondees ni calcules \
@@ -85,6 +95,16 @@ VENTA: 1 x Arroz Costeño
 PARA: Sra. Lucía
 La app abre Ventas con la orden llenada. Dile en una frase que la revise y toque «Guardar orden». \
 En ese caso no agregues ACCION.
+- Si pide anotar que un cliente PAGÓ lo que debía, un GASTO o una MERMA (algo que se perdió o \
+venció), llénalo con UNA línea al final (el monto solo si el operador lo dijo; si no, déjalo vacío):
+ABONO: <cliente> | <monto> | <efectivo o yape>
+GASTO: <monto> | <categoría> | <efectivo o yape> | <puesto o hogar> | <nota>
+(categoría: alquiler, servicios, transporte, alimentacion, educacion u otros)
+MERMA: <cantidad> x <producto> | <qué pasó>
+Ejemplos: "anota que Cliente 9 me pagó 10 soles" → ABONO: Cliente 9 | 10.00 | efectivo
+"anota un gasto de 5 soles de pasaje" → GASTO: 5.00 | transporte | efectivo | puesto | pasaje
+"se vencieron 2 leches gloria" → MERMA: 2 x Leche Gloria | vencido
+Dile que lo revise y toque «Guardar». En ese caso no agregues ACCION.
 - Si preguntan CÓMO hacer algo, explica los pasos con los nombres exactos de los botones, en 2 o \
 3 frases, y ofrece hacerlo por él. Ejemplo para una venta: toca «Nueva orden», agrega lo que \
 lleva y toca «Cobrar en efectivo», «Cobrar con Yape o Plin» o «Fiar a un cliente»; o dime qué \
@@ -122,8 +142,13 @@ class RespuestaIA:
     borrador: list[dict[str, str | None]] = field(default_factory=list)
     # Para quién es esa orden ("Sra. Bertha"), si el operador lo dijo
     para: str | None = None
+    # Un pago de fiado, un gasto o una merma llenados para que el operador los confirme (D-28)
+    formulario: dict | None = None
 
 
+TEXTO_SI_SOLO_HUBO_FORMULARIO = (
+    "Te lo dejé llenado. Revísalo y toca «Guardar»: hasta entonces no se guarda nada."
+)
 TEXTO_SI_SOLO_HUBO_BORRADOR = "Te dejé la orden llenada en Ventas. Revísala y toca «Guardar orden»."
 
 
@@ -179,14 +204,15 @@ async def preguntar(
         # Primero las líneas VENTA (borrador, ADR-049) y luego las ACCION
         sin_borrador, items = borrador.separar(texto)
         sin_para, para = borrador.separar_para(sin_borrador)
-        limpio, acciones = extraer(sin_para)
+        sin_formulario, formulario = formularios.separar(sin_para)
+        limpio, acciones = extraer(sin_formulario)
         # Un monto inventado nunca llega al operador (ADR-042)
         if cifras_no_respaldadas(limpio, contexto_json, dicho_por_el_operador):
             alguna_cifra_rechazada = True
             registro.warning("Respuesta de %s descartada: monto sin respaldo en los datos", modelo)
             continue
-        if not limpio and items:
-            limpio = TEXTO_SI_SOLO_HUBO_BORRADOR
+        if not limpio and (items or formulario):
+            limpio = TEXTO_SI_SOLO_HUBO_BORRADOR if items else TEXTO_SI_SOLO_HUBO_FORMULARIO
         elif not limpio and acciones:
             limpio = texto_si_solo_hubo_accion(acciones)
         return RespuestaIA(
@@ -195,6 +221,7 @@ async def preguntar(
             acciones=acciones,
             borrador=items,
             para=para if items else None,
+            formulario=formulario,
         )
 
     if alguna_cifra_rechazada:
