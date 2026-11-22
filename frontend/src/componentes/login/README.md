@@ -11,7 +11,8 @@ los del negocio real.
 
 Solo el PIN que el operador escribe (no se guarda en el frontend). Llama a
 `POST /api/auth/ingresar`; si es correcto, el token y el proyecto quedan en
-`src/stores/sesion.ts` (persistido en `sessionStorage`, dura la sesión).
+`src/stores/sesion.ts` (persistido en `sessionStorage`, dura la sesión). Si no entra, dice por qué: PIN errado, que
+espere unos segundos tras varios intentos (el tiempo lo da el servidor, D-04) o que el programa tuvo un problema.
 
 En el primer arranque, si el programa generó el PIN del negocio, lo pide a
 `GET /api/auth/primer-ingreso` y lo muestra grande una sola vez (solo llega a la

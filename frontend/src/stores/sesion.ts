@@ -43,7 +43,7 @@ export const useSesion = create<EstadoSesion>()(
             body: JSON.stringify({ nombre_usuario: nombreUsuario, pin }),
           })
           if (!respuesta.ok) {
-            set({ cargando: false, error: 'Usuario o PIN incorrecto' })
+            set({ cargando: false, error: await motivoDelRechazo(respuesta) })
             return false
           }
           const datos = await respuesta.json()
@@ -91,6 +91,21 @@ export const useSesion = create<EstadoSesion>()(
     },
   ),
 )
+
+/**
+ * Por qué no entró, en palabras: tras varios PIN errados el servidor pide esperar (429) y hay que
+ * decírselo, o la persona sigue probando sin saber que por ahora no la dejará entrar.
+ */
+async function motivoDelRechazo(respuesta: Response): Promise<string> {
+  if (respuesta.status === 429) {
+    const cuerpo = (await respuesta.json().catch(() => null)) as { detail?: unknown } | null
+    return typeof cuerpo?.detail === 'string'
+      ? cuerpo.detail
+      : 'Demasiados intentos con PIN incorrecto. Espera un momento antes de volver a intentar.'
+  }
+  if (respuesta.status >= 500) return 'El programa tuvo un problema. Intenta de nuevo en un momento.'
+  return 'Usuario o PIN incorrecto'
+}
 
 /** Cabecera lista para usar en cualquier fetch protegido del backend. */
 export function cabeceraAutorizacion(): Record<string, string> {

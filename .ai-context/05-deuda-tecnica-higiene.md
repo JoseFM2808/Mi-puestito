@@ -83,6 +83,7 @@
 | — | 2026-11-22 | Memoria: una línea `RECORDAR:` pegada al final de una frase llegaba al operador sin guardarse, y una consolidación numerada («1. …») dejaba el número en el recuerdo | `ia/memoria.py` acepta `RECORDAR:` en mayúsculas tras un punto y limpia viñetas y números; `tests/test_asistente.py` (4 casos) |
 | — | 2026-11-22 | `COMPRA`, `PROVEEDOR`, `ABONO`, `GASTO` y `MERMA` pegados al final de una frase no llenaban el formulario y llegaban al operador | `formularios.linea_de_control()` (en su línea, o en mayúsculas tras un punto), usado también por `ia/pedido.py`; `tests/test_asistente.py` |
 | — | 2026-11-22 | `npm audit fix`: dependencias de desarrollo al día (typescript-eslint y otras); producción sigue en 0 vulnerabilidades | Quedan 3 moderadas de desarrollo (glob, minimatch vía `workbox-build`) sin arreglo compatible; `pip-audit` del backend con LangGraph: ninguna conocida |
+| — | 2026-11-22 | Tras 5 PIN errados el servidor pide esperar (`429`, D-04), pero la pantalla decía «Usuario o PIN incorrecto»: la persona seguía probando sin saber que debía esperar. Un error del programa también se veía como PIN errado | `sesion.ts` muestra el motivo del servidor; `sesion.test.ts`; navegador a 375 px: el 6.º intento dice «Espera 30 segundos». Además: axe-core sin problemas de accesibilidad en las 9 pantallas |
 
 ## 3. Resueltos en la auditoría inicial (2026-09-27, verificados en Staging)
 
