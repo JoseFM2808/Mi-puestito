@@ -1485,3 +1485,19 @@ def test_la_lista_consolidada_numerada_se_limpia():
         "los lunes no abro",
         "vendo menú",
     ]
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "Revísalo y toca Guardar. GASTO: 5.00 | transporte | efectivo | puesto | pasaje",
+        "Revísalo. COMPRA: Arroz | 2 sacos | 180.00",
+    ],
+)
+def test_las_lineas_de_llenado_pegadas_a_una_frase_tambien_se_leen(texto):
+    from ia import formularios, pedido
+
+    sin_formulario, formulario = formularios.separar(texto)
+    limpio, pedido_llenado = pedido.separar(sin_formulario)
+    assert limpio in ("Revísalo y toca Guardar.", "Revísalo.")
+    assert formulario or pedido_llenado

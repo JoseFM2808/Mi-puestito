@@ -28,9 +28,18 @@ MAX_TEXTO = 80
 MAX_CANTIDAD = Decimal("9999")
 
 _FIN = r"[ \t]*\.?[ \t]*$"
-_ABONO = re.compile(r"^[ \t]*ABONO[ \t]*:[ \t]*(?P<resto>[^\n]+?)" + _FIN, re.IGNORECASE | re.MULTILINE)
-_GASTO = re.compile(r"^[ \t]*GASTO[ \t]*:[ \t]*(?P<resto>[^\n]+?)" + _FIN, re.IGNORECASE | re.MULTILINE)
-_MERMA = re.compile(r"^[ \t]*MERMA[ \t]*:[ \t]*(?P<resto>[^\n]+?)" + _FIN, re.IGNORECASE | re.MULTILINE)
+
+
+def linea_de_control(nombre: str) -> re.Pattern:
+    """`NOMBRE: …` en su propia línea (en cualquier caso) o pegada al final de una frase, como hacen
+    algunos modelos (ahí solo en mayúsculas: en una frase normal la palabra no es una línea de control)."""
+    inicio = rf"(?:^[ \t]*(?i:{nombre})|(?<=[.!?])[ \t]+{nombre})"
+    return re.compile(inicio + r"[ \t]*:[ \t]*(?P<resto>[^\n]+?)" + _FIN, re.MULTILINE)
+
+
+_ABONO = linea_de_control("ABONO")
+_GASTO = linea_de_control("GASTO")
+_MERMA = linea_de_control("MERMA")
 _CANTIDAD_Y_PRODUCTO = re.compile(
     r"^(?P<cantidad>\d+(?:[.,]\d{1,3})?)\s*(?:x|×|\*|de)?\s*(?P<producto>.+)$", re.IGNORECASE
 )

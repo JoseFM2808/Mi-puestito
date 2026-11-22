@@ -22,17 +22,15 @@ import re
 from decimal import Decimal, InvalidOperation
 
 from .cifras import _numeros
+from .formularios import linea_de_control
 
 MAX_ITEMS = 10
 MAX_TEXTO = 80
 MAX_CANTIDAD_TEXTO = 60
 MAX_MONTO = Decimal("99999")
 
-_FIN = r"[ \t]*\.?[ \t]*$"
-_COMPRA = re.compile(r"^[ \t]*COMPRA[ \t]*:[ \t]*(?P<resto>[^\n]+?)" + _FIN, re.IGNORECASE | re.MULTILINE)
-_PROVEEDOR = re.compile(
-    r"^[ \t]*PROVEEDOR[ \t]*:[ \t]*(?P<nombre>[^\n]{1,80}?)" + _FIN, re.IGNORECASE | re.MULTILINE
-)
+_COMPRA = linea_de_control("COMPRA")
+_PROVEEDOR = linea_de_control("PROVEEDOR")
 # Relleno que algunos modelos escriben en vez de dejar el campo vacío
 _RELLENO = re.compile(r"^(?:<[^>]*>|\.{2,}|_+|\?+|-+|monto|cantidad|ninguno|n/?a)$", re.IGNORECASE)
 
@@ -67,7 +65,7 @@ def separar(texto: str) -> tuple[str, dict | None]:
             "monto": _monto(partes[2] if len(partes) > 2 else None),
         })
     encontrado = _PROVEEDOR.search(texto)
-    proveedor = _texto(encontrado["nombre"]) if encontrado else None
+    proveedor = _texto(encontrado["resto"]) if encontrado else None
     limpio = re.sub(r"\n{3,}", "\n\n", _PROVEEDOR.sub("", _COMPRA.sub("", texto))).strip()
     if not items:
         return limpio, None
