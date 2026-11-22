@@ -434,3 +434,16 @@
   "Qué acciones permite" pasa a ser contrato: nombres de botones exactos, sin rutas internas (se limpian `código` y
   referencias como (D-24)).
 
+## ADR-057 · El flujo del Asistente corre en un grafo de LangGraph — Aceptada
+
+- **Fecha**: 2026-11-22 (Fase 6: "orquestación con LangGraph"; materializa la decisión 9 de `Decisiones-Tecnicas`).
+- **Contexto**: `preguntar` era un bucle a mano (modelos por prioridad, reintento, verificador). Cada capacidad nueva
+  (memoria, pantalla, manual, pedidos) lo volvía más largo y difícil de seguir.
+- **Decisión**: cuatro nodos (`preparar`, `generar`, `verificar`, `sin_respuesta`) y aristas condicionales en un
+  `StateGraph`; `preguntar` conserva su firma y su resultado (`RespuestaIA`), así que el router y los tests no cambian.
+  `langgraph>=1.0` en `requirements.txt`. Sin checkpointer: una pregunta dura segundos. Si la importación falla, los
+  mismos nodos se recorren en orden (`_recorrido_simple`) y un test cubre ambos caminos.
+- **Consecuencias**: agregar un paso (por ejemplo, clasificar la intención antes de generar, o un modelo local primero)
+  es agregar un nodo. El `.exe` pasa de ~64 MB a ~90 MB (LangGraph + langchain-core); verificado con PyInstaller en Linux
+  que arranca sin módulos degradados y responde por el grafo. Falta confirmarlo en el build de Windows del CI.
+

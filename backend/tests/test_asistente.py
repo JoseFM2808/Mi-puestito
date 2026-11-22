@@ -1366,3 +1366,59 @@ def test_el_detalle_llega_al_prompt():
     sistema = armar_mensajes("hola", "{}", [], detalle="Fiados:\n- Pagar: Registrar un pago")[0]["content"]
     assert "Botones de esas pantallas" in sistema and "Registrar un pago" in sistema
     assert "Botones de esas pantallas" not in armar_mensajes("hola", "{}", [])[0]["content"]
+
+
+
+# ---- Fase 6: el flujo del Asistente es un grafo de LangGraph ----
+
+
+def _modelos_que_responden(monkeypatch, respuestas):
+    from ia import configuracion, servicio
+
+    class Falso:
+        def __init__(self, *_):
+            pass
+
+        async def responder(self, mensajes, modelo, tiempo_limite, extra=None):
+            valor = respuestas[modelo]
+            if isinstance(valor, Exception):
+                raise valor
+            return valor
+
+    monkeypatch.setattr(servicio, "ProveedorCompatibleOpenAI", Falso)
+    monkeypatch.setattr(
+        configuracion,
+        "leer",
+        lambda: configuracion.ConfiguracionIA("nvidia", "x", "llave", tuple(respuestas), 5.0, ""),
+    )
+
+
+@pytest.mark.parametrize("con_langgraph", [True, False])
+def test_el_grafo_prueba_modelos_hasta_uno_que_pase_el_verificador(monkeypatch, con_langgraph):
+    import asyncio
+
+    from ia import servicio
+
+    if not con_langgraph:
+        monkeypatch.setattr(servicio, "grafo", lambda: None)
+    _modelos_que_responden(
+        monkeypatch,
+        {
+            "cae": ValueError("modelo inexistente"),
+            "inventa": "Vendiste S/ 999.00.",
+            "bien": "Hola.\nACCION: ir_a ventas",
+        },
+    )
+    respuesta = asyncio.run(servicio.preguntar("¿cómo vendo?", "{}"))
+    assert (respuesta.modelo, respuesta.texto) == ("bien", "Hola.")
+    assert respuesta.acciones[0]["pantalla"] == "ventas"
+
+
+def test_el_grafo_es_de_langgraph():
+    from langgraph.graph.state import CompiledStateGraph
+
+    from ia import servicio
+
+    flujo = servicio.grafo()
+    assert isinstance(flujo, CompiledStateGraph)
+    assert set(servicio.NODOS) <= set(flujo.get_graph().nodes)

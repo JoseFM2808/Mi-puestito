@@ -1,5 +1,5 @@
-"""Orquestación del Asistente: arma el contexto, prueba modelos por prioridad
-y devuelve la primera respuesta que llegue a tiempo.
+"""Orquestación del Asistente (LangGraph): arma el contexto, prueba modelos por
+prioridad y devuelve la primera respuesta que llegue a tiempo y pase el verificador.
 
 El operador atiende clientes mientras pregunta: un modelo que tarda demasiado
 no sirve aunque responda mejor. Cada modelo tiene `tiempo_limite` segundos;
@@ -12,6 +12,8 @@ cualquier API compatible con OpenAI a través de `compatible_openai.py`.
 
 import logging
 from dataclasses import dataclass, field
+from functools import lru_cache
+from typing import Any, TypedDict
 
 from . import borrador, configuracion, formularios, memoria, pedido
 from .acciones import APARTADOS, PANTALLAS, EnPantalla, extraer, texto_si_solo_hubo_accion
@@ -216,64 +218,104 @@ def armar_mensajes(
     return mensajes
 
 
-async def preguntar(
-    mensaje: str,
-    contexto_json: str,
-    historial: list[tuple[str, str]] | None = None,
-    recuerdos: list[str] | None = None,
-    en_pantalla: EnPantalla | None = None,
-    detalle: str = "",
-) -> RespuestaIA:
+class EstadoPregunta(TypedDict, total=False):
+    """Lo que pasa de un nodo a otro del grafo del Asistente (LangGraph)."""
+
+    # Entrada (ya seudonimizada por el router)
+    mensaje: str
+    contexto_json: str
+    historial: list[tuple[str, str]]
+    recuerdos: list[str]
+    en_pantalla: EnPantalla | None
+    detalle: str
+    # Armado en "preparar"
+    proveedor: Any
+    config: Any
+    mensajes: list[dict[str, str]]
+    dicho_por_el_operador: str
+    modelos_pendientes: list[str]
+    # Cada vuelta de "generar" → "verificar"
+    modelo: str
+    texto: str | None
+    alguna_cifra_rechazada: bool
+    ultimo_error: Exception | None
+    resultado: RespuestaIA | None
+
+
+async def _preparar(estado: EstadoPregunta) -> EstadoPregunta:
+    """Nodo 1: configuración, prompt (datos, recuerdos, pantalla y manual) y modelos por probar."""
     config = configuracion.leer()
     if not config.lista:
         raise AsistenteNoDisponible(
             "El Asistente todavía no está configurado en esta computadora "
             "(falta la variable de entorno NVIDIA_API_KEY)."
         )
+    historial = estado.get("historial") or []
+    recuerdos = estado.get("recuerdos") or []
+    return {
+        "config": config,
+        "proveedor": ProveedorCompatibleOpenAI(config.url_base, config.api_key),
+        "mensajes": armar_mensajes(
+            estado["mensaje"],
+            estado["contexto_json"],
+            historial,
+            recuerdos,
+            estado.get("en_pantalla"),
+            estado.get("detalle", ""),
+        ),
+        # Lo que recuerda también lo dijo el operador (antes): sus cifras no son inventadas
+        "dicho_por_el_operador": " ".join(
+            [estado["mensaje"], *(texto for rol, texto in historial if rol != "asistente"), *recuerdos]
+        ),
+        "modelos_pendientes": list(config.modelos),
+        "alguna_cifra_rechazada": False,
+        "ultimo_error": None,
+        "resultado": None,
+    }
 
-    proveedor = ProveedorCompatibleOpenAI(config.url_base, config.api_key)
-    mensajes = armar_mensajes(mensaje, contexto_json, historial or [], recuerdos, en_pantalla, detalle)
-    # Lo que recuerda también lo dijo el operador (antes): sus cifras no son inventadas
-    dicho_por_el_operador = " ".join(
-        [mensaje, *(texto for rol, texto in (historial or []) if rol != "asistente"), *(recuerdos or [])]
-    )
 
-    ultimo_error: Exception | None = None
-    alguna_cifra_rechazada = False
-    for modelo in config.modelos:
-        texto = None
-        for intento in range(REINTENTOS_TRANSITORIOS + 1):
-            try:
-                texto = await proveedor.responder(
-                    mensajes, modelo, config.tiempo_limite, configuracion.ajustes_para(modelo)
-                )
+async def _generar(estado: EstadoPregunta) -> EstadoPregunta:
+    """Nodo 2: el siguiente modelo por prioridad responde (con reintento si el fallo es pasajero)."""
+    modelo, *resto = estado["modelos_pendientes"]
+    config = estado["config"]
+    ultimo_error = estado.get("ultimo_error")
+    texto = None
+    for intento in range(REINTENTOS_TRANSITORIOS + 1):
+        try:
+            texto = await estado["proveedor"].responder(
+                estado["mensajes"], modelo, config.tiempo_limite, configuracion.ajustes_para(modelo)
+            )
+            break
+        except Exception as error:  # noqa: BLE001 — se prueba el siguiente modelo
+            ultimo_error = error
+            registro.warning("El modelo %s falló: %s", modelo, motivo_error(error))
+            if not es_transitorio(error) or intento == REINTENTOS_TRANSITORIOS:
                 break
-            except Exception as error:  # noqa: BLE001 — se prueba el siguiente modelo
-                ultimo_error = error
-                registro.warning("El modelo %s falló: %s", modelo, motivo_error(error))
-                if not es_transitorio(error) or intento == REINTENTOS_TRANSITORIOS:
-                    break
-        if texto is None:
-            continue
-        # Primero lo que propone recordar (D-26), luego las líneas VENTA (ADR-049) y al final las ACCION
-        sin_recuerdos, recuerdos_propuestos = memoria.separar(texto)
-        sin_borrador, items = borrador.separar(sin_recuerdos)
-        sin_para, para = borrador.separar_para(sin_borrador)
-        sin_formulario, formulario = formularios.separar(sin_para)
-        sin_pedido, pedido_llenado = pedido.separar(sin_formulario)
-        limpio, acciones = extraer(sin_pedido, en_pantalla)
-        # Un monto inventado nunca llega al operador (ADR-042)
-        if cifras_no_respaldadas(limpio, contexto_json, dicho_por_el_operador):
-            alguna_cifra_rechazada = True
-            registro.warning("Respuesta de %s descartada: monto sin respaldo en los datos", modelo)
-            continue
-        if not limpio and recuerdos_propuestos and not (items or formulario or pedido_llenado or acciones):
-            limpio = TEXTO_SI_SOLO_HUBO_RECUERDO
-        if not limpio and (items or formulario or pedido_llenado):
-            limpio = TEXTO_SI_SOLO_HUBO_BORRADOR if items else TEXTO_SI_SOLO_HUBO_FORMULARIO
-        elif not limpio and acciones:
-            limpio = texto_si_solo_hubo_accion(acciones)
-        return RespuestaIA(
+    return {"modelo": modelo, "modelos_pendientes": resto, "texto": texto, "ultimo_error": ultimo_error}
+
+
+async def _verificar(estado: EstadoPregunta) -> EstadoPregunta:
+    """Nodo 3: separa las líneas de control y descarta la respuesta si trae un monto sin respaldo."""
+    texto, modelo, en_pantalla = estado["texto"] or "", estado["modelo"], estado.get("en_pantalla")
+    # Primero lo que propone recordar (D-26), luego las líneas VENTA (ADR-049) y al final las ACCION
+    sin_recuerdos, recuerdos_propuestos = memoria.separar(texto)
+    sin_borrador, items = borrador.separar(sin_recuerdos)
+    sin_para, para = borrador.separar_para(sin_borrador)
+    sin_formulario, formulario = formularios.separar(sin_para)
+    sin_pedido, pedido_llenado = pedido.separar(sin_formulario)
+    limpio, acciones = extraer(sin_pedido, en_pantalla)
+    # Un monto inventado nunca llega al operador (ADR-042)
+    if cifras_no_respaldadas(limpio, estado["contexto_json"], estado["dicho_por_el_operador"]):
+        registro.warning("Respuesta de %s descartada: monto sin respaldo en los datos", modelo)
+        return {"alguna_cifra_rechazada": True}
+    if not limpio and recuerdos_propuestos and not (items or formulario or pedido_llenado or acciones):
+        limpio = TEXTO_SI_SOLO_HUBO_RECUERDO
+    if not limpio and (items or formulario or pedido_llenado):
+        limpio = TEXTO_SI_SOLO_HUBO_BORRADOR if items else TEXTO_SI_SOLO_HUBO_FORMULARIO
+    elif not limpio and acciones:
+        limpio = texto_si_solo_hubo_accion(acciones)
+    return {
+        "resultado": RespuestaIA(
             texto=limpio or texto,
             modelo=modelo,
             acciones=acciones,
@@ -283,18 +325,107 @@ async def preguntar(
             pedido=pedido_llenado,
             recuerdos=recuerdos_propuestos,
         )
+    }
 
-    if alguna_cifra_rechazada:
+
+async def _sin_respuesta(estado: EstadoPregunta) -> EstadoPregunta:
+    """Nodo final si ningún modelo sirvió."""
+    if estado.get("alguna_cifra_rechazada"):
         # Mejor admitirlo que dar un monto dudoso: la pantalla sí tiene la cifra exacta
-        return RespuestaIA(
-            texto=SIN_CIFRA_SEGURA,
-            modelo=MODELO_VERIFICADOR,
-            acciones=[{"tipo": "ir_a", "pantalla": "caja", "etiqueta": PANTALLAS["caja"]}],
-        )
-
+        return {
+            "resultado": RespuestaIA(
+                texto=SIN_CIFRA_SEGURA,
+                modelo=MODELO_VERIFICADOR,
+                acciones=[{"tipo": "ir_a", "pantalla": "caja", "etiqueta": PANTALLAS["caja"]}],
+            )
+        }
     raise AsistenteNoDisponible(
         "El Asistente no pudo responder ahora mismo. Intenta de nuevo en un momento."
-    ) from ultimo_error
+    ) from estado.get("ultimo_error")
+
+
+def _tras_generar(estado: EstadoPregunta) -> str:
+    if estado.get("texto") is not None:
+        return "verificar"
+    return "generar" if estado["modelos_pendientes"] else "sin_respuesta"
+
+
+def _tras_verificar(estado: EstadoPregunta) -> str:
+    if estado.get("resultado") is not None:
+        return "fin"
+    return "generar" if estado["modelos_pendientes"] else "sin_respuesta"
+
+
+def _tras_preparar(estado: EstadoPregunta) -> str:
+    return "generar" if estado["modelos_pendientes"] else "sin_respuesta"
+
+
+NODOS = {"preparar": _preparar, "generar": _generar, "verificar": _verificar, "sin_respuesta": _sin_respuesta}
+ARISTAS = {"preparar": _tras_preparar, "generar": _tras_generar, "verificar": _tras_verificar}
+
+
+@lru_cache(maxsize=1)
+def grafo():
+    """El flujo del Asistente como grafo con estado (LangGraph, decisión 9 de Decisiones-Tecnicas):
+
+    preparar → generar → verificar → fin
+                  ↑   ↘ (falló)   ↘ (monto inventado)
+                  └──── siguiente modelo ────┘ → sin_respuesta
+
+    Si LangGraph no está instalado (un empaquetado incompleto), devuelve None y `preguntar` recorre
+    los mismos nodos en orden: el Asistente no se cae por su orquestador.
+    """
+    try:
+        from langgraph.graph import END, START, StateGraph
+    except ImportError:  # pragma: no cover — depende del entorno
+        registro.warning("LangGraph no está disponible: el Asistente usa el recorrido simple")
+        return None
+    constructor = StateGraph(EstadoPregunta)
+    for nombre, nodo in NODOS.items():
+        constructor.add_node(nombre, nodo)
+    constructor.add_edge(START, "preparar")
+    constructor.add_conditional_edges("preparar", _tras_preparar, ["generar", "sin_respuesta"])
+    constructor.add_conditional_edges("generar", _tras_generar, ["verificar", "generar", "sin_respuesta"])
+    constructor.add_conditional_edges(
+        "verificar", _tras_verificar, {"fin": END, "generar": "generar", "sin_respuesta": "sin_respuesta"}
+    )
+    constructor.add_edge("sin_respuesta", END)
+    return constructor.compile()
+
+
+async def _recorrido_simple(estado: EstadoPregunta) -> EstadoPregunta:
+    """Los mismos nodos y aristas, sin LangGraph."""
+    actual = "preparar"
+    while actual not in ("fin", None):
+        estado = {**estado, **(await NODOS[actual](estado))}
+        actual = ARISTAS[actual](estado) if actual in ARISTAS else "fin"
+    return estado
+
+
+async def preguntar(
+    mensaje: str,
+    contexto_json: str,
+    historial: list[tuple[str, str]] | None = None,
+    recuerdos: list[str] | None = None,
+    en_pantalla: EnPantalla | None = None,
+    detalle: str = "",
+) -> RespuestaIA:
+    entrada: EstadoPregunta = {
+        "mensaje": mensaje,
+        "contexto_json": contexto_json,
+        "historial": historial or [],
+        "recuerdos": recuerdos or [],
+        "en_pantalla": en_pantalla,
+        "detalle": detalle,
+    }
+    flujo = grafo()
+    if flujo is None:
+        final = await _recorrido_simple(entrada)
+    else:
+        # Cada modelo da 2 pasos (generar, verificar): el límite crece con la lista
+        pasos = 4 * len(configuracion.leer().modelos) + 10
+        final = await flujo.ainvoke(entrada, {"recursion_limit": pasos})
+    return final["resultado"]
 
 
 async def consolidar_recuerdos(recuerdos: list[str]) -> list[str]:

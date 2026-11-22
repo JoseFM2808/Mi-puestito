@@ -1,6 +1,6 @@
 # 01 · Lógica del sistema
 
-> Flujos transaccionales, inventario, cobro offline y Asistente. Última revisión: 2026-11-01.
+> Flujos transaccionales, inventario, cobro offline y Asistente. Última revisión: 2026-11-22.
 > Todo lo descrito aquí está **implementado** salvo lo marcado **[Pendiente]**.
 > Fuente funcional: `docs/03-modulos/Modulo-Ventas.md`, `Modulo-Inventario.md`, `docs/02-arquitectura/Sincronizacion-Offline.md`.
 > Código: `backend/modules/ventas/servicio.py`, `backend/modules/inventario/servicio.py`, `frontend/src/sincronizacion/cola.ts`.
@@ -153,13 +153,15 @@ sequenceDiagram
     participant P as ia.privacidad
     participant S as ia.servicio
     participant M as Modelo (NVIDIA hoy · local mañana)
-    UI->>R: {mensaje, historial (≤ 6 turnos)} + token
-    R->>D: resumen SOLO del proyecto del token
-    R->>P: nombres → "Cliente 1", "Proveedor A" (resumen, pregunta e historial)
-    R->>S: preguntar(pregunta, contexto, historial)
+    UI->>R: {mensaje, historial (≤ 6 turnos), pantalla_actual, en_pantalla} + token
+    R->>D: resumen SOLO del proyecto del token + recuerdos (memorias_asistente)
+    R->>P: nombres → "Cliente 1", "Proveedor A" (resumen, pregunta, historial, recuerdos y pantalla)
+    R->>S: preguntar(…, recuerdos, en_pantalla, manual de la pantalla si pide ayuda)
+    Note over S: grafo LangGraph: preparar → generar → verificar (ADR-057)
     loop modelos en el orden verificado (ia_modelos.json)
         S->>M: chat/completions (≤ 12 s por modelo)
         M-->>S: texto o error → siguiente modelo
+        S->>S: verificar: separa líneas de control; monto sin respaldo → siguiente modelo
     end
     S-->>R: texto + "ACCION: ir_a <pantalla>" o "ACCION: resaltar <apartado>"
     R->>R: acciones de la lista blanca · la 1.ª automatica si pidió ir/hacer o preguntó dónde (ADR-047)
@@ -167,8 +169,10 @@ sequenceDiagram
     UI-->>UI: automatica → abre la pantalla y marca la parte · si no, botón · "Me sirvió"
 ```
 
-Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y solo navega y señala:
-abre una pantalla o marca una parte de ella, nunca llena ni guarda datos (ADR-037, ADR-047). Sin Dashboard disponible responde igual, avisando que no tiene cifras.
+Reglas: el Asistente no inventa cifras (solo usa el resumen), nunca registra ni cobra (solo guía), y solo navega, señala y
+llena: abre una pantalla, marca una parte de ella (de la lista blanca o de lo que el operador ve, ADR-055) o deja una
+orden, pago, gasto, merma o pedido llenados que el operador guarda; nunca guarda datos por su cuenta (ADR-037, ADR-047,
+ADR-049). Recuerda lo que se le pide (ADR-052). Sin Dashboard disponible responde igual, avisando que no tiene cifras.
 
 El Asistente tiene dos formas (ADR-046): **apartado propio** (pantalla `asistente` en el menú, `#asistente`) y **ventana
 flotante** (botón de la barra), que queda sobre la pantalla actual y sigue abierta al navegar: si sugiere "Ir a Fiados" y

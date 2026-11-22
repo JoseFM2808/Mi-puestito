@@ -78,13 +78,14 @@ flowchart TB
 - **Contrato:** `backend/exportar_openapi.py` → `frontend/src/api/openapi.json`, comparado por `backend/tests/test_contrato.py`
   y `frontend/src/api/contrato.test.ts`.
 
-## 3. Capa de IA (AI-first, agnóstica · ADR-036/037/038)
+## 3. Capa de IA (AI-first, agnóstica · ADR-036/037/038 · LangGraph ADR-057)
 
 ```mermaid
 flowchart LR
     subgraph Hoy["Hoy: nube"]
-        Q[Pregunta + historial] --> Priv[ia/privacidad.py<br/>seudónimos]
-        Priv --> Serv[ia/servicio.py<br/>prompt + guía de la app]
+        Q[Pregunta + historial + pantalla<br/>+ recuerdos · ADR-052/055] --> Priv[ia/privacidad.py<br/>seudónimos]
+        Guias[ia/guias.py<br/>README de cada pantalla · ADR-056] --> Serv
+        Priv --> Serv[ia/servicio.py<br/>grafo LangGraph: preparar → generar → verificar]
         Serv --> Conf[ia/configuracion.py<br/>orden de modelos]
         Conf --> M1[nemotron-3.5-bolt-e4b<br/>sin razonamiento · 1.4 s] -->|falla / borrador / cifra falsa / > 12 s| M2[nemotron-3.5-lightning-30b-a3b<br/>sin razonamiento] -->|falla| M3[gemma-4-31b-it<br/>respaldo]
         M1 & M2 & M3 --> Cif[ia/cifras.py<br/>verificador de montos]
