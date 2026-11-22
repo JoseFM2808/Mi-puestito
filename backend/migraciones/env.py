@@ -26,7 +26,7 @@ def _metadatos_de_todos_los_modulos():
     Al migrar en runtime no se importan modelos: las revisiones son
     operaciones explícitas, y un módulo roto no debe impedir migrar.
     """
-    for modulo in ("ventas", "compras", "inventario", "caja", "gastos"):
+    for modulo in ("ventas", "compras", "inventario", "caja", "gastos", "asistente"):
         importlib.import_module(f"modules.{modulo}.models")
     return Base.metadata
 

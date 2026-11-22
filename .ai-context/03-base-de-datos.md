@@ -229,3 +229,17 @@ En IndexedDB (versión 4): `cajas` (por día) y `gastos` (con su día), para ver
 
 En IndexedDB (versión 5): `analisis` (el último análisis de cada período, para verlo sin red). Análisis no tiene tablas
 en el servidor: solo lee `ventas`, `items_venta`, `gastos` y `productos`.
+
+## memorias_asistente (migración 0008, D-26 en curso)
+
+Lo que el Asistente recuerda del negocio: hechos cortos que el operador le pidió recordar. Vive en la base del
+proyecto; hacia el proveedor de IA viajará seudonimizado (ADR-034). Límite de 20; al pasarlo se consolida en 15.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | entero | PK |
+| `uuid` | texto(36) | único |
+| `texto` | texto(160) | el hecho, con nombres reales (solo en el dispositivo) |
+| `creado_en` | fecha y hora UTC | |
+
+Todavía no la usa ninguna ruta: falta conectarla al Asistente (ver D-26 en 05).

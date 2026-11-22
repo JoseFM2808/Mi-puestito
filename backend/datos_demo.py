@@ -207,6 +207,7 @@ def reiniciar() -> None:
 
     # Registran sus tablas en Base.metadata aunque el módulo aún no se haya importado
     from database import Base, sesion_escritura_para
+    from modules.asistente import models as _asistente  # noqa: F401
     from modules.caja import models as _caja  # noqa: F401
     from modules.compras import models as _compras  # noqa: F401
     from modules.gastos import models as _gastos  # noqa: F401
