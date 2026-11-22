@@ -66,6 +66,31 @@
   }
 }
 
+/* ---- Computadora mediana con el Asistente en ventana: menú + ventana dejaban ~230 px a la
+   pantalla de trabajo y la ventana tapaba parte de ella. Ahí el menú vuelve a ser panel, que se
+   abre con «Menú» de la barra, y la pantalla recupera su ancho ---- */
+@media (min-width: 1000px) and (max-width: 1399px) {
+  :global([data-asistente='ventana']) .menu {
+    position: fixed;
+    height: auto;
+    width: min(21rem, 88vw);
+    z-index: 201;
+    transform: translateX(-105%);
+    visibility: hidden;
+  }
+  :global([data-asistente='ventana']) .menu.abierto {
+    transform: none;
+    visibility: visible;
+    box-shadow: var(--sombra-barra);
+  }
+  :global([data-asistente='ventana']) .fondo {
+    display: block;
+  }
+  :global([data-asistente='ventana']) .cerrar {
+    display: revert;
+  }
+}
+
 .cabecera {
   display: flex;
   flex-direction: column;

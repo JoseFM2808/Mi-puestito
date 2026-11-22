@@ -209,3 +209,45 @@ def test_la_categoria_se_cambia_y_se_quita(h):
     assert r.json()["categoria"] == "Lácteos"  # omitirla no la toca
     r = cliente.patch(f"/api/inventario/productos/{producto}", json={"categoria": "  "}, headers=h)
     assert r.json()["categoria"] is None
+
+
+def test_el_kardex_refleja_ventas_compras_y_mermas_hechas_por_la_api(h):
+    """De punta a punta: los motivos que escriben Ventas, Compras e Inventario son los que lee el kardex."""
+    producto = uuid()
+    cliente.post(
+        "/api/inventario/productos",
+        json={"uuid": producto, "nombre": "Azúcar", "unidad": "kg", "stock_inicial": "10"},
+        headers=h,
+    )
+    prov = cliente.post("/api/compras/proveedores", json={"uuid": uuid(), "nombre": "Sur"}, headers=h).json()
+    orden = cliente.post(
+        "/api/compras/ordenes",
+        json={
+            "uuid": uuid(),
+            "proveedor_uuid": prov["uuid"],
+            "items": [{"uuid": uuid(), "nombre_producto": "Azúcar", "cantidad": "1 saco", "monto": "100.00"}],
+        },
+        headers=h,
+    ).json()["orden"]
+    items = [{"item_uuid": orden["items"][0]["uuid"], "estado": "recibido", "cantidad_stock": "50"}]
+    cliente.post(f"/api/compras/ordenes/{orden['uuid']}/recepcion", json={"items": items}, headers=h)
+    venta = uuid()
+    cliente.post("/api/ventas/", json={"uuid": venta, "tipo": "orden_activa"}, headers=h)
+    for cantidad, monto in (("3", "9.00"), ("1.5", "4.50")):
+        cliente.post(
+            f"/api/ventas/{venta}/items",
+            json={"uuid": uuid(), "nombre_producto": "Azúcar", "monto": monto, "producto_uuid": producto, "cantidad_num": cantidad},
+            headers=h,
+        )
+    # Se quita el segundo producto de la orden: vuelve al stock y no cuenta como vendido
+    detalle = cliente.get(f"/api/ventas/{venta}", headers=h).json()
+    cliente.delete(f"/api/ventas/{venta}/items/{detalle['items'][1]['uuid']}", headers=h)
+    cliente.post(f"/api/ventas/{venta}/cobrar", json={"metodo_pago": "efectivo"}, headers=h)
+    cliente.post("/api/inventario/mermas", json={"uuid": uuid(), "producto_uuid": producto, "cantidad": "2"}, headers=h)
+
+    [azucar] = cliente.get("/api/analisis/kardex", headers=h).json()["productos"]
+    assert (azucar["registrado"], azucar["compras"], azucar["vendido"], azucar["mermas"], azucar["final"]) == (
+        "10.000", "50.000", "3.000", "2.000", "55.000"
+    )
+    stock = next(p for p in cliente.get("/api/inventario/productos", headers=h).json() if p["uuid"] == producto)
+    assert stock["stock_actual"] == azucar["final"]  # cuadra con Inventario

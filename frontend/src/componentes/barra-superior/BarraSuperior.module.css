@@ -115,6 +115,13 @@
   }
 }
 
+/* Con el Asistente en ventana y pantalla mediana el menú es panel (MenuLateral): hace falta «Menú» */
+@media (min-width: 1000px) and (max-width: 1399px) {
+  :global([data-asistente='ventana']) .soloAngosta {
+    display: revert;
+  }
+}
+
 /* En pantalla angosta el selector baja a segunda fila sin pisar los botones */
 @media (max-width: 760px) {
   .fila {

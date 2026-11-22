@@ -40,7 +40,8 @@ export function App() {
   const claseVentana = conVentana ? (asistenteAchicado ? estilos.conHojaAchicada : estilos.conHoja) : ''
 
   return (
-    <div className={`${estilos.marco} ${claseVentana}`}>
+    // data-asistente: con la ventana abierta en una pantalla mediana, el menú pasa a panel (MenuLateral)
+    <div className={`${estilos.marco} ${claseVentana}`} data-asistente={conVentana ? 'ventana' : undefined}>
       <MenuLateral />
       <div className={estilos.contenido}>
         <BarraSuperior />

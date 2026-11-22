@@ -5,6 +5,10 @@
 La navegación de toda la app, siempre a la izquierda (Design-System §6). En pantalla ancha (desde 1000 px) está fija y a
 la vista; en la angosta entra desde la izquierda con el botón **Menú** de la barra superior.
 
+Excepción: entre 1000 y 1399 px, con el Asistente en ventana (`data-asistente="ventana"` en el marco de `App.tsx`), el
+menú vuelve a ser panel y se abre con **Menú**: si no, menú + ventana dejaban ~230 px a la pantalla de trabajo y la
+ventana tapaba parte de ella. Al cerrar la ventana vuelve a quedar fijo.
+
 ## Qué datos maneja
 
 - La pantalla actual y si el panel está abierto (`stores/navegacion.ts`). Las opciones salen de `PANTALLAS`, cada una con
