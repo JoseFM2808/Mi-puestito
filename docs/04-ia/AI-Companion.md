@@ -47,4 +47,6 @@ La orquestación del companion corre sobre LangGraph → [[Orquestacion-IA]]. El
   ("acuérdate que…"), con un tope que lo obliga a consolidar; el operador lo ve y lo olvida en «Lo que recuerdo».
 - Lectura de la pantalla (ADR-055): con cada pregunta viaja lo que el operador tiene a la vista (`data-ai-id`, nombre y
   si un campo está lleno, nunca lo escrito); "¿dónde pongo el monto?" marca ese campo de la orden abierta.
+- Manual en runtime (ADR-056): cuando el operador pide ayuda, el Asistente recibe la tabla "Qué acciones permite" del
+  README de la pantalla de la que habla y de la que tiene abierta, y nombra los botones tal cual.
 - Capacidad 5 (ayuda proactiva): pendiente; exigirá una decisión formal nueva.

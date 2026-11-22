@@ -24,7 +24,7 @@ def modelo(monkeypatch):
     """Modelo falso: guarda lo que recibe y responde lo que el test le indique."""
     recibido: dict = {"respuesta": "ok", "llamadas": []}
 
-    async def falso(mensaje, contexto_json, historial=None, recuerdos=None, en_pantalla=None):
+    async def falso(mensaje, contexto_json, historial=None, recuerdos=None, en_pantalla=None, detalle=""):
         recibido["llamadas"].append(
             {
                 "mensaje": mensaje,
@@ -32,6 +32,7 @@ def modelo(monkeypatch):
                 "historial": historial or [],
                 "recuerdos": recuerdos or [],
                 "en_pantalla": en_pantalla,
+                "detalle": detalle,
             }
         )
         texto = recibido["respuesta"](mensaje) if callable(recibido["respuesta"]) else recibido["respuesta"]
@@ -1322,3 +1323,46 @@ def test_la_pantalla_llega_al_prompt():
     sistema = armar_mensajes("hola", "{}", [], en_pantalla=EnPantalla("ventas", {"ventas.nueva": "botón Nueva orden"}))[0]
     assert "ventas.nueva = botón Nueva orden" in sistema["content"]
     assert "(no se sabe)" in armar_mensajes("hola", "{}", [])[0]["content"]
+
+
+
+# ---- Fase 6: los README de los módulos como contexto en runtime ----
+
+
+def test_si_pide_ayuda_llegan_los_botones_de_su_readme(cliente, cabeceras_demo, modelo):
+    preguntar(cliente, cabeceras_demo, "¿Cómo registro lo que pagó un cliente?", pantalla_actual="ventas")
+    detalle = modelo["llamadas"][0]["detalle"]
+    assert "Fiados:" in detalle and "Registrar un pago → Guardar abono" in detalle
+    assert "Ventas:" in detalle  # la pantalla abierta va después
+    assert detalle.index("Fiados:") < detalle.index("Ventas:")
+
+
+def test_una_pregunta_de_cifras_no_carga_el_manual(cliente, cabeceras_demo, modelo):
+    preguntar(cliente, cabeceras_demo, "¿Cuánto vendí hoy?", pantalla_actual="ventas")
+    assert modelo["llamadas"][0]["detalle"] == ""
+
+
+def test_cada_pantalla_tiene_su_tabla_de_acciones():
+    """Si un README pierde su tabla "Qué acciones permite", el Asistente pierde su manual."""
+    from ia import guias
+
+    for pantalla, modulo in guias.MODULO_DE_PANTALLA.items():
+        assert guias._guia(modulo), f"{modulo}/README.md no tiene filas en 'Qué acciones permite' ({pantalla})"
+
+
+def test_las_filas_se_leen_sin_marcas_ni_referencias():
+    from ia.guias import acciones_de
+
+    readme = (
+        "# X\n\n## Qué acciones permite\n\n| Acción | Botón |\n| --- | --- |\n"
+        "| Pagar | **Ya le pagué** (`x.y`) (D-24) |\n\n## Otra\n| a | b |\n"
+    )
+    assert acciones_de(readme) == ["Pagar: Ya le pagué"]
+
+
+def test_el_detalle_llega_al_prompt():
+    from ia.servicio import armar_mensajes
+
+    sistema = armar_mensajes("hola", "{}", [], detalle="Fiados:\n- Pagar: Registrar un pago")[0]["content"]
+    assert "Botones de esas pantallas" in sistema and "Registrar un pago" in sistema
+    assert "Botones de esas pantallas" not in armar_mensajes("hola", "{}", [])[0]["content"]

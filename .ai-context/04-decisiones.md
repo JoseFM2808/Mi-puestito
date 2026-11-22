@@ -420,3 +420,17 @@
 - **Consecuencias**: el Asistente guía dentro de un formulario abierto. El prompt crece con la pantalla (tope de 40
   líneas). Sigue sin tocar, llenar ni guardar nada por su cuenta: solo señala.
 
+## ADR-056 · El README de cada pantalla es el manual del Asistente en runtime — Aceptada
+
+- **Fecha**: 2026-11-22 (Fase 6: "los MD de módulos como contexto en runtime").
+- **Contexto**: el Asistente citaba los botones desde `GUIA_APP`, un resumen escrito a mano en `ia/servicio.py` que se
+  desactualiza cuando cambia una pantalla. AGENTS.md ya pide que los README de cada módulo se escriban para que una IA
+  los lea.
+- **Decisión**: `ia/guias.py` lee la tabla "Qué acciones permite" de `frontend/src/modules/<módulo>/README.md` y, solo
+  cuando el operador pide ayuda ("¿cómo…?", "¿dónde…?", "¿qué toco?"), agrega al prompt las filas de la pantalla de la
+  que habla y de la que tiene abierta (máximo 2, 1500 caracteres). Una pregunta de cifras no lo carga. El `.exe` lleva
+  los README como datos (`guias/`); si faltan, queda la guía compacta. Un test exige que cada pantalla tenga su tabla.
+- **Consecuencias**: actualizar la tabla de un README actualiza lo que dice el Asistente, sin tocar código. La tabla de
+  "Qué acciones permite" pasa a ser contrato: nombres de botones exactos, sin rutas internas (se limpian `código` y
+  referencias como (D-24)).
+

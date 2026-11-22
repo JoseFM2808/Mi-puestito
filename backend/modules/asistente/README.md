@@ -14,7 +14,9 @@ Una tabla: `memorias_asistente` (lo que recuerda del negocio, D-26, ADR-052). En
 2. Seudonimiza resumen, pregunta, historial y recuerdos (`ia/privacidad.py`, ADR-034): el modelo ve "Cliente 1", nunca
    un nombre. Un cliente o proveedor guardado que se nombre en el texto también recibe código aunque no esté en el
    resumen (`registrar_mencionados`).
-3. Pregunta al modelo (`ia/servicio.py`), en el orden verificado de `ia/configuracion.py` (ADR-036).
+3. Pregunta al modelo (`ia/servicio.py`), en el orden verificado de `ia/configuracion.py` (ADR-036). Con la pregunta
+   van lo que el operador tiene a la vista (`en_pantalla`, ADR-055) y, si pide ayuda, la tabla "Qué acciones permite"
+   del README de esa pantalla (`ia/guias.py`, ADR-056).
 4. Convierte las líneas `ACCION: ir_a <pantalla>` en botones de lista blanca (`ia/acciones.py`, ADR-037), y las de
    llenado en datos para que el operador los confirme: `VENTA`/`PARA` (orden, `ia/borrador.py`), `ABONO`/`GASTO`/`MERMA`
    (`ia/formularios.py`) y `COMPRA`/`PROVEEDOR` (pedido a un proveedor, `ia/pedido.py`). Solo si el operador pidió

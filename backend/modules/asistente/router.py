@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 import seguridad
 from database import obtener_sesion, obtener_sesion_escritura, sesion_escritura_para
 from fechas import dia_peruano
-from ia import borrador, configuracion, formularios, llave_local, memoria, registro
+from ia import borrador, configuracion, formularios, guias, llave_local, memoria, registro
 from ia import pedido as pedido_ia
 from ia.acciones import EnPantalla, accion_por_tema, corregir_destino, marcar_automatica, pide_ir_o_hacer
 from ia.privacidad import ALIAS_SUELTO, Seudonimos, seudonimizar_resumen
@@ -253,9 +253,11 @@ async def preguntar_endpoint(
     historial = [(turno.rol, alias.ocultar_en_texto(turno.texto)) for turno in datos.historial]
     recuerdos = [alias.ocultar_en_texto(r) for r in recordados]
     en_pantalla = _lo_que_ve(datos, alias)
+    # Si pide ayuda, los botones de esa pantalla salen de su README (Fase 6); no llevan datos del negocio
+    detalle = guias.para_la_pregunta(datos.mensaje, datos.pantalla_actual)
 
     try:
-        respuesta = await preguntar(pregunta, contexto, historial, recuerdos, en_pantalla)
+        respuesta = await preguntar(pregunta, contexto, historial, recuerdos, en_pantalla, detalle)
     except AsistenteNoDisponible as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
@@ -264,7 +266,7 @@ async def preguntar_endpoint(
     registro.guardar_intercambio(
         proyecto,
         id_respuesta,
-        mensajes_enviados=armar_mensajes(pregunta, contexto, historial, recuerdos, en_pantalla),
+        mensajes_enviados=armar_mensajes(pregunta, contexto, historial, recuerdos, en_pantalla, detalle),
         respuesta_del_modelo=respuesta.texto,
         modelo=respuesta.modelo,
     )

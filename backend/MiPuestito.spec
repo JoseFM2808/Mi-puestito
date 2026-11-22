@@ -37,6 +37,11 @@ analisis = Analysis(
     datas=[
         (str(WEB), "web"),
         (str(RAIZ / "backend" / "migraciones"), "migraciones"),
+    ]
+    # El README de cada pantalla: el Asistente cita sus botones al ayudar (ia/guias.py, Fase 6)
+    + [
+        (str(readme), f"guias/{readme.parent.name}")
+        for readme in sorted((RAIZ / "frontend" / "src" / "modules").glob("*/README.md"))
     ],
     hiddenimports=[
         # Uvicorn carga estos por nombre; sin declararlos no entran al paquete

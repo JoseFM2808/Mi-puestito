@@ -21,8 +21,8 @@ from .compatible_openai import ProveedorCompatibleOpenAI, es_transitorio, motivo
 registro = logging.getLogger("mi_puestito.ia")
 REINTENTOS_TRANSITORIOS = 2
 
-# Lo que el Asistente sabe de la app, para guiar al operador (Fase 6:
-# "los MD de módulos como contexto en runtime", en versión compacta).
+# Lo que el Asistente sabe de la app, para guiar al operador, en versión compacta. Si pide ayuda, se
+# agregan los botones de la pantalla desde su README (ia/guias.py: los MD de módulos en runtime).
 GUIA_APP = """\
 - Caja de hoy: cuánto se vendió hoy, órdenes abiertas, fiados por cobrar, ventas rápidas por \
 completar y pedidos de proveedores por llegar. "Mañana necesitas en caja" es lo que hay que \
@@ -55,7 +55,7 @@ cortas, sin tecnicismos: quien te lee puede tener baja fluidez lectora. Los mont
 van en soles con el formato S/ 12.50.
 
 Cómo funciona la app:
-{guia}
+{guia}{detalle}
 
 Estado actual del negocio, en formato de datos (es la única fuente de cifras):
 {contexto}
@@ -180,6 +180,7 @@ TEXTO_SI_SOLO_HUBO_BORRADOR = "Te dejé la orden llenada en Ventas. Revísala y 
 
 SIN_RECUERDOS = "(todavía nada)"
 SIN_PANTALLA = "(no se sabe)"
+TITULO_DETALLE = "Botones de esas pantallas (del manual de la app; nómbralos tal cual):"
 MAX_EN_PANTALLA = 40
 
 
@@ -197,9 +198,11 @@ def armar_mensajes(
     historial: list[tuple[str, str]],
     recuerdos: list[str] | None = None,
     en_pantalla: EnPantalla | None = None,
+    detalle: str = "",
 ) -> list[dict[str, str]]:
     sistema = PROMPT_SISTEMA.format(
         en_pantalla=_describir_pantalla(en_pantalla),
+        detalle=f"\n\n{TITULO_DETALLE}\n{detalle}" if detalle else "",
         guia=GUIA_APP,
         contexto=contexto_json,
         recuerdos="\n".join(f"- {r}" for r in recuerdos) if recuerdos else SIN_RECUERDOS,
@@ -219,6 +222,7 @@ async def preguntar(
     historial: list[tuple[str, str]] | None = None,
     recuerdos: list[str] | None = None,
     en_pantalla: EnPantalla | None = None,
+    detalle: str = "",
 ) -> RespuestaIA:
     config = configuracion.leer()
     if not config.lista:
@@ -228,7 +232,7 @@ async def preguntar(
         )
 
     proveedor = ProveedorCompatibleOpenAI(config.url_base, config.api_key)
-    mensajes = armar_mensajes(mensaje, contexto_json, historial or [], recuerdos, en_pantalla)
+    mensajes = armar_mensajes(mensaje, contexto_json, historial or [], recuerdos, en_pantalla, detalle)
     # Lo que recuerda también lo dijo el operador (antes): sus cifras no son inventadas
     dicho_por_el_operador = " ".join(
         [mensaje, *(texto for rol, texto in (historial or []) if rol != "asistente"), *(recuerdos or [])]
