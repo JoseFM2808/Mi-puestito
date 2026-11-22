@@ -25,10 +25,14 @@ export interface FormularioAsistente {
   version: number
 }
 
+/** Quién armó el pedido: el Asistente, o Inventario con lo que se está acabando */
+export type OrigenPedido = 'asistente' | 'inventario'
+
 /** Pedido a un proveedor llenado: Compras lo abre en «Nuevo pedido» y lo quita */
 export interface PedidoAsistente {
   proyecto: string
   pedido: PedidoLlenadoCable
+  origen: OrigenPedido
   version: number
 }
 
@@ -36,9 +40,9 @@ interface EstadoBorrador {
   borrador: BorradorAsistente | null
   formulario: FormularioAsistente | null
   pedido: PedidoAsistente | null
-  ponerPedido: (proyecto: string, pedido: PedidoLlenadoCable) => void
+  ponerPedido: (proyecto: string, pedido: PedidoLlenadoCable, origen?: OrigenPedido) => void
   /** Compras lo toma una vez: abre «Nuevo pedido» llenado y lo quita de aquí */
-  tomarPedido: (proyecto: string) => PedidoLlenadoCable | null
+  tomarPedido: (proyecto: string) => { pedido: PedidoLlenadoCable; origen: OrigenPedido } | null
   ponerFormulario: (proyecto: string, formulario: FormularioLlenadoCable) => void
   /** La pantalla lo toma una vez: lo abre en su formulario de siempre y lo quita de aquí */
   tomarFormulario: (tipo: FormularioLlenadoCable['tipo'], proyecto: string) => FormularioLlenadoCable | null
@@ -50,13 +54,13 @@ export const useBorradorAsistente = create<EstadoBorrador>()((set, get) => ({
   borrador: null,
   formulario: null,
   pedido: null,
-  ponerPedido: (proyecto, pedido) =>
-    set({ pedido: { proyecto, pedido, version: (get().pedido?.version ?? 0) + 1 } }),
+  ponerPedido: (proyecto, pedido, origen = 'asistente') =>
+    set({ pedido: { proyecto, pedido, origen, version: (get().pedido?.version ?? 0) + 1 } }),
   tomarPedido: (proyecto) => {
     const actual = get().pedido
     if (!actual || actual.proyecto !== proyecto) return null
     set({ pedido: null })
-    return actual.pedido
+    return { pedido: actual.pedido, origen: actual.origen }
   },
   ponerFormulario: (proyecto, formulario) =>
     set({ formulario: { proyecto, formulario, version: (get().formulario?.version ?? 0) + 1 } }),

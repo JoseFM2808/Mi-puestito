@@ -14,6 +14,7 @@ import { Aviso, Boton, Campo, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion 
 import { EscanearCodigo } from '../../componentes/escaner/EscanearCodigo'
 import { senalar } from '../../componentes/asistente/senalar'
 import { useBorradorAsistente } from '../../stores/borradorAsistente'
+import { useNavegacion } from '../../stores/navegacion'
 import { aMilesimas, formatearCantidad, leerCantidadEscrita, useInventario } from './almacen'
 import { productoPorNombre } from './nombres'
 import estilos from './Inventario.module.css'
@@ -504,6 +505,23 @@ export function Inventario() {
       (!porVencer || p.vence_pronto),
   )
   const conAviso = productos.filter((p) => p.bajo_minimo || p.descuadre).length
+  const seAcaban = productos.filter((p) => p.bajo_minimo)
+
+  /** Arma un pedido con lo que se acaba y lo abre en Compras: el operador elige el proveedor y los montos */
+  const pedirLoQueSeAcaba = () => {
+    if (!proyecto || seAcaban.length === 0) return
+    useBorradorAsistente
+      .getState()
+      .ponerPedido(
+        proyecto,
+        {
+          proveedor: null,
+          items: seAcaban.map((p) => ({ producto: p.nombre, cantidad: null, monto: null })),
+        },
+        'inventario',
+      )
+    useNavegacion.getState().irA('compras')
+  }
   const cuantosPorVencer = productos.filter((p) => p.vence_pronto).length
 
   return (
@@ -543,6 +561,11 @@ export function Inventario() {
             />
           </div>
           <EscanearCodigo aiId="inventario.escanear-buscar" alLeer={setBusqueda} />
+          {seAcaban.length > 0 && (
+            <Boton aiId="inventario.pedir-lo-que-se-acaba" onClick={pedirLoQueSeAcaba}>
+              {`Pedir lo que se acaba (${seAcaban.length})`}
+            </Boton>
+          )}
           <Boton
             aiId="inventario.solo-poco"
             variante="secundario"

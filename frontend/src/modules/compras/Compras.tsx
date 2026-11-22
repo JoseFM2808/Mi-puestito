@@ -6,7 +6,7 @@ import {
   type PedidoLlenadoCable,
 } from '../../api/contrato'
 import { OperacionesRechazadas } from '../../componentes/sincronizacion/EstadoSincronizacion'
-import { useBorradorAsistente } from '../../stores/borradorAsistente'
+import { useBorradorAsistente, type OrigenPedido } from '../../stores/borradorAsistente'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
 import { estaAtrasado, formatearFechaRelativa } from '../dashboard/formato'
@@ -23,7 +23,7 @@ import { ChecklistRecepcion, NuevoPedido } from './formularios'
 
 type Vista =
   | { tipo: 'lista' }
-  | { tipo: 'nuevo'; llenado?: PedidoLlenadoCable; clave?: number }
+  | { tipo: 'nuevo'; llenado?: PedidoLlenadoCable; origen?: OrigenPedido; clave?: number }
   | { tipo: 'recepcion'; orden: string }
 
 function fechaDe(texto: string): Date {
@@ -75,17 +75,20 @@ export function Compras() {
     if (proyecto) void iniciar(proyecto)
   }, [proyecto, iniciar])
 
-  // El Asistente dejó un pedido llenado: se abre «Nuevo pedido» con sus datos, sin guardar nada
+  // El Asistente (o Inventario, con lo que se acaba) dejó un pedido llenado: se abre «Nuevo pedido»
+  // con sus datos, sin guardar nada
   useEffect(() => {
     if (!proyecto || !pedidoAsistente) return
-    const llenado = useBorradorAsistente.getState().tomarPedido(proyecto)
-    if (llenado) setVista({ tipo: 'nuevo', llenado, clave: Date.now() })
+    const tomado = useBorradorAsistente.getState().tomarPedido(proyecto)
+    if (tomado) setVista({ tipo: 'nuevo', llenado: tomado.pedido, origen: tomado.origen, clave: Date.now() })
   }, [proyecto, pedidoAsistente])
 
   const alVolver = () => setVista({ tipo: 'lista' })
 
   if (vista.tipo === 'nuevo')
-    return <NuevoPedido key={vista.clave} alTerminar={alVolver} llenado={vista.llenado} />
+    return (
+      <NuevoPedido key={vista.clave} alTerminar={alVolver} llenado={vista.llenado} origen={vista.origen} />
+    )
   if (vista.tipo === 'recepcion') {
     const orden = ordenes.find((o) => o.uuid === vista.orden)
     if (orden) return <ChecklistRecepcion orden={orden} alTerminar={alVolver} />

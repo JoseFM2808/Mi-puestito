@@ -11,7 +11,10 @@ import {
   type ProductoFrecuenteCable,
   type ProveedorCable,
 } from '../../api/contrato'
+import type { OrigenPedido } from '../../stores/borradorAsistente'
+import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Campo, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
+import { aMilesimas, formatearCantidad, useInventario } from '../inventario/almacen'
 import { diaPeruano, useCompras, type EntradaRecepcion, type ItemNuevo } from './almacen'
 import estilos from './Compras.module.css'
 
@@ -212,16 +215,32 @@ export function repartirLlenado(llenado?: PedidoLlenadoCable): {
   return { listos, sinMonto }
 }
 
+/** Lo que se está acabando según Inventario y aún no está en el pedido (comparando nombres) */
+export function porAcabarse<T extends { nombre: string; bajo_minimo: boolean }>(
+  productos: T[],
+  yaEnElPedido: string[],
+): T[] {
+  const ya = new Set(yaEnElPedido.map((n) => n.trim().toLowerCase()))
+  return productos.filter((p) => p.bajo_minimo && !ya.has(p.nombre.trim().toLowerCase()))
+}
+
 export function NuevoPedido({
   alTerminar,
   llenado,
+  origen = 'asistente',
 }: {
   alTerminar: () => void
-  /** Lo que llenó el Asistente; el operador lo revisa y lo guarda */
+  /** Lo que llenó el Asistente (o Inventario); el operador lo revisa y lo guarda */
   llenado?: PedidoLlenadoCable
+  origen?: OrigenPedido
 }) {
   const crearPedido = useCompras((estado) => estado.crearPedido)
   const proveedores = useCompras((estado) => estado.proveedores)
+  // Inventario es opcional: si no está o falla, el pedido se arma igual, sin "se te está acabando"
+  const proyecto = useSesion((estado) => estado.proyecto)
+  const productos = useInventario((estado) => estado.productos)
+  const proyectoInventario = useInventario((estado) => estado.proyecto)
+  const iniciarInventario = useInventario((estado) => estado.iniciar)
   const [inicial] = useState(() => repartirLlenado(llenado))
   const [proveedor, setProveedor] = useState<ProveedorCable | null>(() =>
     buscarProveedor(proveedores, llenado?.proveedor ?? null),
@@ -234,6 +253,10 @@ export function NuevoPedido({
   const [monto, setMonto] = useState('')
   const [fecha, setFecha] = useState(diaPeruano(1))
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (proyecto && proyectoInventario !== proyecto) void iniciarInventario(proyecto).catch(() => {})
+  }, [proyecto, proyectoInventario, iniciarInventario])
 
   // Los proveedores pueden terminar de leerse después de abrir el pedido
   useEffect(() => {
@@ -271,6 +294,22 @@ export function NuevoPedido({
   }, [proveedor])
 
   const total = items.reduce((suma, item) => suma + item.centimos, 0)
+  const acabandose = porAcabarse(productos, [
+    ...items.map((i) => i.nombre),
+    ...sinMonto.map((i) => i.producto),
+    nombre,
+  ])
+
+  /** Lleva un producto que se acaba al formulario; si se le suele pedir a este proveedor, con lo de siempre */
+  const pedirLoQueSeAcaba = (producto: (typeof productos)[number]) => {
+    const deSiempre = frecuentes.find(
+      (f) => f.nombre_producto.toLowerCase() === producto.nombre.toLowerCase(),
+    )
+    setNombre(producto.nombre)
+    setCantidad(deSiempre?.cantidad ?? '')
+    setMonto(deSiempre?.monto ?? '')
+    document.getElementById(deSiempre ? 'item-monto' : 'item-cantidad')?.focus()
+  }
   const sugeridos = frecuentes.filter(
     (f) => !items.some((item) => item.nombre.toLowerCase() === f.nombre_producto.toLowerCase()),
   )
@@ -298,7 +337,9 @@ export function NuevoPedido({
       <TituloPagina>Nuevo pedido</TituloPagina>
       {llenado && (
         <Aviso tipo="info" aiId="compras.llenado-asistente">
-          Lo llenó el Asistente: revísalo y toca «Guardar pedido». Aún no se guardó nada.
+          {origen === 'inventario'
+            ? 'Con lo que se te está acabando en Inventario. Elige el proveedor, escribe cuánto cuesta cada cosa y toca «Guardar pedido».'
+            : 'Lo llenó el Asistente: revísalo y toca «Guardar pedido». Aún no se guardó nada.'}
         </Aviso>
       )}
       {!proveedor ? (
@@ -352,6 +393,24 @@ export function NuevoPedido({
                     onClick={() => completar(indice)}
                   >
                     {`${item.producto}${item.cantidad ? ` · ${item.cantidad}` : ''}: escribir el monto`}
+                  </Boton>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {acabandose.length > 0 && (
+            <section data-ai-id="compras.se-acaba">
+              <TituloSeccion>Se te está acabando</TituloSeccion>
+              <div className={estilos.opciones}>
+                {acabandose.map((producto) => (
+                  <Boton
+                    key={producto.uuid}
+                    aiId={`compras.se-acaba-${producto.uuid}`}
+                    variante="secundario"
+                    onClick={() => pedirLoQueSeAcaba(producto)}
+                  >
+                    {`${producto.nombre} (quedan ${formatearCantidad(aMilesimas(producto.stock_actual), producto.unidad)})`}
                   </Boton>
                 ))}
               </div>

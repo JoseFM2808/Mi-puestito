@@ -36,10 +36,12 @@
   historial, todo sin red. Las compras recibidas suman al stock si se dice cuánto ([[Modulo-Compras]]).
 - **Ventas (2026-11-07):** al vender se puede elegir un producto del inventario; la cantidad descuenta el stock y el
   precio sugiere el monto ([[Modulo-Ventas]]).
-- **Pendiente:** alertas de vencimiento, costo desde la última compra, código de barras y sugerencia de pedido por stock
-  bajo.
 
 - **Hecho (2026-11-17, D-22):** costo de la última compra y ganancia por unidad; vencimiento del lote más antiguo con
   aviso en Inventario y en la [[Modulo-Dashboard]]; búsqueda por código de barras (lector USB o Bluetooth).
 - **Hecho (2026-11-22, D-30):** escanear el código con la cámara al buscar, al crear el producto y al venderlo en
   [[Modulo-Ventas]].
+- **Hecho (2026-11-22):** sugerencia de pedido por stock bajo. «Pedir lo que se acaba» abre un pedido en
+  [[Modulo-Compras]] con lo que está bajo el mínimo, y «Nuevo pedido» muestra «Se te está acabando» (con lo que se le
+  suele pedir a ese proveedor, si coincide). Compras funciona igual sin Inventario.
+- **Pendiente:** registro por foto del producto.

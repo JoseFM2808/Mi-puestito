@@ -35,6 +35,14 @@ cada acción cambia la pantalla al instante, se guarda en IndexedDB y se encola;
 - Los `data-ai-id` son `compras.*`. Los de cada pedido llevan su `uuid`: `compras.llego-<uuid>`.
 - El monto "A pagar por lo que llegó" es el `monto_real` del servidor una vez sincronizado.
 
+## Lo que se está acabando
+
+Si Inventario tiene productos bajo su mínimo, «Nuevo pedido» los muestra en **Se te está acabando**
+(`compras.se-acaba`, `compras.se-acaba-<uuid>`): tocar uno lo lleva al formulario y, si se le suele pedir a ese
+proveedor, con la cantidad y el monto de siempre. Desde Inventario, **Pedir lo que se acaba** abre «Nuevo pedido» con
+todos ellos en «Falta cuánto cuesta» (mismo camino que el pedido del Asistente, `origen: 'inventario'`). Inventario es
+opcional: si no está o falla, el pedido se arma igual.
+
 ## Límites conocidos
 
 - El RUC se escribe a mano: la búsqueda en SUNAT necesita un servicio externo que aún no se ha elegido.

@@ -39,6 +39,12 @@ lo confirma.
 - Las ventas descuentan stock solo si el operador elige el producto del inventario al venderlo (`FormularioProducto`);
   con texto libre no se toca el stock.
 
+## Pedir lo que se acaba
+
+**Pedir lo que se acaba (N)** (`inventario.pedir-lo-que-se-acaba`) aparece si hay productos bajo su mínimo: deja un
+pedido con ellos en `stores/borradorAsistente.ts` (`ponerPedido(…, 'inventario')`) y abre Compras, donde el operador
+elige el proveedor y escribe cuánto cuesta cada cosa. Nada se guarda hasta «Guardar pedido».
+
 ## Costo, vencimiento y código de barras (D-22)
 
 - La tarjeta dice cuánto costó en la última compra y cuánto se gana por unidad, y avisa "Vence el …: véndelo primero"

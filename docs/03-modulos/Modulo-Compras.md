@@ -38,5 +38,7 @@ Funciona **sin** [[Modulo-Inventario]]. Cuando el inventario se active, las comp
   por el propio proveedor en la tablet), pedidos con sugerencias de lo frecuente,
   checklist de recepción con `monto_real` y evento `compra.item_recibido` hacia
   [[Modulo-Inventario]]. La Caja proyecta solo lo que falta llegar.
+- **Sugerencias (2026-11-22):** «Nuevo pedido» muestra lo que se está acabando en [[Modulo-Inventario]], y el
+  [[AI-Companion]] puede dejar un pedido llenado (proveedor y productos) que el operador completa y guarda.
 - **Pendiente:** búsqueda de RUC en SUNAT (necesita elegir un servicio externo) y
   costo de los productos desde las compras (Inventario aún no guarda costo).
