@@ -20,7 +20,13 @@ MAX_RECUERDOS = 20
 RECUERDOS_TRAS_CONSOLIDAR = 15
 MAX_TEXTO = 160
 
-_LINEA = re.compile(r"^[ \t]*RECORDAR[ \t]*:[ \t]*(?P<hecho>[^\n]+?)[ \t]*$", re.IGNORECASE | re.MULTILINE)
+# En su propia línea o, como hacen algunos modelos con VENTA y ACCION, pegada al final de una frase
+# (ahí solo en mayúsculas: "para recordar: …" en una frase normal no es una línea de control)
+_LINEA = re.compile(
+    r"(?:^[ \t]*(?i:recordar)|(?<=[.!?])[ \t]+RECORDAR)[ \t]*:[ \t]*(?P<hecho>[^\n]+?)[ \t]*$", re.MULTILINE
+)
+# "1. …", "2) …", "- …": la lista consolidada a veces llega numerada aunque se pida sin numerar
+_VINETA = re.compile(r"^[ \t]*(?:\d{1,2}[.)]|[-•*])[ \t]*")
 
 # Señales de que el operador quiere que algo se recuerde o contó algo que dura
 _PIDE_RECORDAR = re.compile(
@@ -38,7 +44,7 @@ def separar(texto: str) -> tuple[str, list[str]]:
         hecho = linea["hecho"].strip(" .,;:-\"'«»")[:MAX_TEXTO]
         if hecho:
             hechos.append(hecho)
-    limpio = re.sub(r"\n{3,}", "\n\n", _LINEA.sub("", texto)).strip()
+    limpio = re.sub(r"[ \t]+\n", "\n", re.sub(r"\n{3,}", "\n\n", _LINEA.sub("", texto))).strip()
     return limpio, hechos
 
 
@@ -87,7 +93,7 @@ async def consolidar(recuerdos: list[str], proveedor, modelo: str, tiempo_limite
     except Exception as error:  # noqa: BLE001 — sin modelo, se recorta
         registro.warning("No se pudo consolidar la memoria: %s", error)
         return respaldo
-    hechos = [linea.strip(" -•*\t").strip()[:MAX_TEXTO] for linea in texto.splitlines()]
+    hechos = [_VINETA.sub("", linea).strip()[:MAX_TEXTO] for linea in texto.splitlines()]
     hechos = [h for h in hechos if h]
     if not hechos or len(hechos) > RECUERDOS_TRAS_CONSOLIDAR:
         return respaldo

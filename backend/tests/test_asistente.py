@@ -1453,3 +1453,35 @@ def test_una_cifra_que_el_operador_ve_en_pantalla_no_es_inventada(monkeypatch):
     assert con_pantalla.modelo == "m"
     sin_pantalla = asyncio.run(servicio.preguntar("¿cuánto va la orden?", "{}"))
     assert sin_pantalla.modelo == servicio.MODELO_VERIFICADOR
+
+
+@pytest.mark.parametrize(
+    ("texto", "limpio", "hechos"),
+    [
+        ("Listo, lo recordaré. RECORDAR: Cliente 2 paga por Yape", "Listo, lo recordaré.", ["Cliente 2 paga por Yape"]),
+        ("Hola.\nrecordar: los lunes no abro", "Hola.", ["los lunes no abro"]),
+        # En una frase normal, "recordar:" en minúsculas no es una línea de control
+        ("Es bueno para recordar: siempre anota.", "Es bueno para recordar: siempre anota.", []),
+    ],
+)
+def test_la_linea_recordar_se_lee_aunque_venga_pegada(texto, limpio, hechos):
+    from ia.memoria import separar
+
+    assert separar(texto) == (limpio, hechos)
+
+
+def test_la_lista_consolidada_numerada_se_limpia():
+    import asyncio
+
+    from ia import memoria
+
+    class Numera:
+        async def responder(self, *_args, **_kwargs):
+            return "1. Cliente 2 paga por Yape\n2) los lunes no abro\n- vendo menú"
+
+    lista = [f"h{i}" for i in range(memoria.MAX_RECUERDOS + 1)]
+    assert asyncio.run(memoria.consolidar(lista, Numera(), "m", 5)) == [
+        "Cliente 2 paga por Yape",
+        "los lunes no abro",
+        "vendo menú",
+    ]
