@@ -13,6 +13,13 @@
   flex-direction: column;
 }
 
+/* Cada pantalla (main, con max-width y margin auto) ocupa el ancho que hay y no el de su contenido:
+   si no, con letra muy grande un campo de texto (unos 20 caracteres de ancho propio) la ensanchaba más
+   allá del teléfono */
+.contenido > :global(main) {
+  width: 100%;
+}
+
 /* Con el Asistente en hoja abajo (teléfono y tablet de pie), el contenido gana espacio al final:
    todo campo se puede subir por encima de la hoja y llenar mientras se conversa (ADR-047) */
 @media (max-width: 600px) {

@@ -217,6 +217,7 @@
   font-size: var(--tam-nombre);
   font-weight: 700;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .ayudaAcceso {
@@ -228,8 +229,13 @@
 /* Teléfono: dos por fila para que las cifras de la caja no queden muy abajo;
    "Registrar venta", lo más usado, ocupa la fila entera */
 @media (max-width: 600px) {
+  /* minmax(0, …): con 1fr a secas una palabra larga ensancha la columna y la caja se sale */
   .cuadriculaAccesos {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  /* Con letra muy grande dos por fila no caben: uno por fila, que se lee mejor */
+  :global(html[data-letra='muygrande']) .cuadriculaAccesos {
+    grid-template-columns: minmax(0, 1fr);
   }
   .acceso {
     min-height: calc(var(--tactil-min) * 1.6);
