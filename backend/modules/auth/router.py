@@ -4,12 +4,20 @@ No hay registro de cuentas nuevas desde la app: las cuentas de "demo" y del
 negocio real se crean solas en `seguridad.asegurar_usuarios_iniciales()`.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, status
 
 from proyectos import PROYECTOS
-from seguridad import DemasiadosIntentos, crear_token, cuentas_registradas, verificar_credenciales
+from seguridad import (
+    DemasiadosIntentos,
+    crear_token,
+    cuentas_registradas,
+    desde_este_equipo,
+    marcar_pin_anotado,
+    pines_por_mostrar,
+    verificar_credenciales,
+)
 
-from .schemas import CuentaVisible, IngresoEntrada, IngresoSalida
+from .schemas import CuentaVisible, IngresoEntrada, IngresoSalida, PinPorMostrar
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -52,3 +60,36 @@ def cuentas() -> list[CuentaVisible]:
         for usuario, proyecto in cuentas_registradas()
         if proyecto in PROYECTOS
     ]
+
+
+def _origen(request: Request) -> str | None:
+    return request.client.host if request.client else None
+
+
+@router.get("/primer-ingreso", response_model=list[PinPorMostrar])
+def primer_ingreso(request: Request) -> list[PinPorMostrar]:
+    """El PIN generado en el primer arranque, para que el dueño lo anote (D-07).
+
+    Solo a la misma computadora del programa: desde otro dispositivo de la red (o en la nube)
+    la lista sale vacía. Deja de salir cuando el dueño toca «Ya lo anoté» o entra con él.
+    """
+    if not desde_este_equipo(_origen(request)):
+        return []
+    return [
+        PinPorMostrar(
+            nombre_usuario=usuario,
+            nombre_proyecto=PROYECTOS[proyecto].nombre,
+            pin=pin,
+        )
+        for usuario, pin in pines_por_mostrar()
+        for nombre, proyecto in cuentas_registradas()
+        if nombre == usuario and proyecto in PROYECTOS
+    ]
+
+
+@router.post("/primer-ingreso/{nombre_usuario}/anotado", status_code=status.HTTP_204_NO_CONTENT)
+def pin_anotado(nombre_usuario: str, request: Request) -> None:
+    """«Ya lo anoté»: el PIN no se vuelve a mostrar."""
+    if not desde_este_equipo(_origen(request)):
+        raise HTTPException(status_code=403, detail="Solo desde la computadora del programa.")
+    marcar_pin_anotado(nombre_usuario)

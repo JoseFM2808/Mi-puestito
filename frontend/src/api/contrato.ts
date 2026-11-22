@@ -77,6 +77,13 @@ export interface CuentaVisibleCable {
   es_real: boolean
 }
 
+/** PIN generado en el primer arranque; solo llega a la computadora del programa (D-07) */
+export interface PinPorMostrarCable {
+  nombre_usuario: string
+  nombre_proyecto: string
+  pin: string
+}
+
 // ------------------------------------------------------------------ dashboard
 
 interface OrdenActivaResumenCable {
@@ -573,6 +580,7 @@ export const CAMPOS_DEL_CONTRATO = {
   GastosDelDia: camposDe<GastosDelDiaCable>()(['dia', 'gastos', 'total', 'del_puesto', 'del_hogar']),
   IngresoSalida: camposDe<IngresoCable>()(['token', 'proyecto', 'nombre_proyecto', 'es_real']),
   CuentaVisible: camposDe<CuentaVisibleCable>()(['nombre_usuario', 'nombre_proyecto', 'es_real']),
+  PinPorMostrar: camposDe<PinPorMostrarCable>()(['nombre_usuario', 'nombre_proyecto', 'pin']),
   ResumenDashboard: camposDe<ResumenDashboardCable>()([
     'ventas_hoy',
     'ventas_cerradas',

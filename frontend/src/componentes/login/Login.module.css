@@ -33,3 +33,23 @@
   padding-top: var(--esp-2);
   border-top: 1px solid var(--borde);
 }
+
+/* PIN del primer arranque (D-07): grande, para copiarlo sin equivocarse */
+.pinNuevo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  border: 2px solid var(--pendiente);
+}
+
+.pinTitulo {
+  font-size: var(--tam-subtitulo);
+  font-weight: 700;
+}
+
+.pinNumero {
+  font-size: var(--tam-monto);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+}

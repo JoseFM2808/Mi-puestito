@@ -380,3 +380,17 @@
   reiniciar la práctica. Pendiente medir con `ia.evaluar` y la llave en Staging que el modelo use `RECORDAR` solo cuando
   corresponde.
 
+## ADR-053 · El PIN del primer arranque se muestra en la pantalla, solo en la misma computadora — Aceptada
+
+- **Fecha**: 2026-11-22 (D-07).
+- **Contexto**: el PIN generado del negocio real se imprimía una vez en la consola. Si la salida va a un log, el PIN queda
+  en disco; y en el `.exe` la consola es fácil de cerrar sin verlo.
+- **Decisión**: el PIN generado vive solo en memoria; `usuarios.json` guarda el hash y la marca `pin_por_mostrar`.
+  `GET /api/auth/primer-ingreso` lo entrega únicamente a `127.0.0.1`/`::1` en modo local (misma regla que la llave de IA,
+  `seguridad.desde_este_equipo`); la pantalla de ingreso lo muestra grande con «Ya lo anoté». Anotarlo o entrar con él
+  borra la marca. Si el programa se cierra antes, al volver a abrir se genera otro PIN (el anterior nunca se vio). Fuera
+  de `local` no hay pantalla en el equipo: se imprime en la consola del servidor, como antes.
+- **Consecuencias**: el PIN no queda en logs ni en disco en claro; otro dispositivo de la red no lo puede leer. Quien abra
+  el programa en la PC antes que el dueño lo vería: es la misma confianza que ya se da a esa PC (tiene los datos). La
+  pantalla de alta de negocio de D-08 usará el mismo mecanismo.
+

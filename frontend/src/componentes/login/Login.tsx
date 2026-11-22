@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CuentaVisibleCable } from '../../api/contrato'
+import type { CuentaVisibleCable, PinPorMostrarCable } from '../../api/contrato'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Campo, Nota, Tarjeta, TituloPagina } from '../../ui/componentes'
 import estilos from './Login.module.css'
@@ -11,6 +11,10 @@ import estilos from './Login.module.css'
  * Las cuentas vienen del backend (`GET /api/auth/cuentas`): el código del
  * frontend no tiene escrito el nombre de ningún negocio real (repo público).
  * Cada cuenta abre SOLO su propio proyecto — nunca se mezclan.
+ *
+ * Primer arranque (D-07): si el programa generó el PIN de un negocio, aquí se muestra
+ * una vez, solo en la computadora del programa, hasta que el dueño toca «Ya lo anoté»
+ * o entra con él. Nunca se imprime en la consola.
  */
 export function Login() {
   const iniciarSesion = useSesion((estado) => estado.iniciarSesion)
@@ -20,13 +24,26 @@ export function Login() {
   const [sinConexion, setSinConexion] = useState(false)
   const [cuentaAbierta, setCuentaAbierta] = useState<string | null>(null)
   const [pin, setPin] = useState('')
+  const [porAnotar, setPorAnotar] = useState<PinPorMostrarCable[]>([])
 
   useEffect(() => {
     fetch('/api/auth/cuentas')
       .then((respuesta) => respuesta.json() as Promise<CuentaVisibleCable[]>)
       .then(setCuentas)
       .catch(() => setSinConexion(true))
+    // Desde otro dispositivo, o en la nube, la lista llega vacía
+    fetch('/api/auth/primer-ingreso')
+      .then((respuesta) => (respuesta.ok ? (respuesta.json() as Promise<PinPorMostrarCable[]>) : []))
+      .then(setPorAnotar)
+      .catch(() => {})
   }, [])
+
+  const yaLoAnote = (usuario: string) => {
+    setPorAnotar((lista) => lista.filter((p) => p.nombre_usuario !== usuario))
+    void fetch(`/api/auth/primer-ingreso/${encodeURIComponent(usuario)}/anotado`, { method: 'POST' }).catch(
+      () => {},
+    )
+  }
 
   return (
     <main className={estilos.login} data-ai-id="login">
@@ -39,6 +56,29 @@ export function Login() {
         </Aviso>
       )}
       {!cuentas && !sinConexion && <Nota>Cargando…</Nota>}
+
+      {porAnotar.map((nuevo) => (
+        <Tarjeta
+          key={nuevo.nombre_usuario}
+          aiId={`login.pin-nuevo-${nuevo.nombre_usuario}`}
+          className={estilos.pinNuevo}
+        >
+          <p className={estilos.pinTitulo}>Tu PIN para entrar a {nuevo.nombre_proyecto}</p>
+          <p className={estilos.pinNumero} aria-label={`PIN ${nuevo.pin.split('').join(' ')}`}>
+            {nuevo.pin}
+          </p>
+          <Nota>
+            Anótalo en un lugar seguro antes de seguir: es la única vez que se muestra y lo necesitas para ver
+            tus ventas. Solo aparece en esta computadora.
+          </Nota>
+          <Boton
+            aiId={`login.pin-anotado-${nuevo.nombre_usuario}`}
+            onClick={() => yaLoAnote(nuevo.nombre_usuario)}
+          >
+            Ya lo anoté
+          </Boton>
+        </Tarjeta>
+      ))}
 
       <div className={estilos.cuentas}>
         {cuentas?.map((cuenta) => (

@@ -329,7 +329,6 @@ def valorar(datos: ValoracionEntrada, proyecto: str = Depends(proyecto_autentica
 
 # ---------------------------------------------------------------- llave (D-14)
 
-EQUIPO_LOCAL = {"127.0.0.1", "::1"}
 _SOLO_DESDE_EL_EQUIPO = "La llave solo se cambia desde la computadora del programa."
 
 
@@ -349,12 +348,7 @@ def _se_puede_guardar(proveedor: str, request: Request) -> bool:
     nadie debe poder reemplazarla desde otro dispositivo de la red.
     """
     origen = request.client.host if request.client else ""
-    return (
-        seguridad.ENTORNO == "local"
-        and proveedor == "nvidia"
-        and llave_local.disponible()
-        and origen in EQUIPO_LOCAL
-    )
+    return proveedor == "nvidia" and llave_local.disponible() and seguridad.desde_este_equipo(origen)
 
 
 @router.get("/estado", response_model=EstadoAsistente)

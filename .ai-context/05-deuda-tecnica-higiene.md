@@ -7,7 +7,6 @@
 
 | ID | P | Hallazgo | Riesgo | Propuesta | Relación |
 |---|---|---|---|---|---|
-| D-07 | P3 | El PIN generado se imprime una vez en consola | Si stdout se redirige a un log, el PIN queda en disco | Mostrarlo en la UI de primer arranque; `*.log` ya ignorado | ADR-030 |
 | D-08 | P2 | El registro de proyectos (`backend/proyectos.py`) tiene el nombre de un negocio real en código público | Exposición de identidad del cliente; dar de alta un negocio exige una versión nueva | Pantalla de alta de negocio + `proyectos.json` en la carpeta de datos (ignorado). El owner pidió opciones (2026-11-17). Los datos del vendedor incluirán su número de Yape/Plin para el QR | ADR-030 |
 | D-12 | P2 | Falta activar en GitHub *Secret scanning + Push protection* | gitleaks en CI lo detecta, pero después de publicado; push protection lo impide antes | Lo activa el owner en Settings → Code security | ADR-030 |
 | D-15 | P2 | El Asistente necesita internet | Sin red no hay ayuda | **Decidido (owner, 2026-11-17):** modelo local ultraligero (una versión mínima de Gemma o un modelo tipo "colibrí") que corra en una computadora de pocos recursos, servido con Ollama/llama.cpp; luego fine-tuning | ADR-039 |
@@ -68,6 +67,7 @@
 | — | 2026-11-17 | Asistente: "Ir a la Caja" se corrige hacia la pantalla del tema y un pedido de hacer algo sin acción abre la suya | `tests/test_asistente.py`; `ia.evaluar` 30/30 |
 | D-26 | 2026-11-22 | La conversación con el Asistente se guarda en el dispositivo (sobrevive a recargar y actualizar) y el Asistente recuerda lo que se le pide, con tope de 20 que el modelo consolida; panel «Lo que recuerdo» para olvidar (ADR-052). De paso, un cliente que no está en el resumen tampoco viaja con su nombre | `tests/test_asistente.py` (recuerdos, tope, olvidar, seudonimización), `conversacion.test.ts`, `Recuerdos.test.tsx`; Staging con modelo falso: "Acuérdate que la Sra. Rosa siempre paga por Yape" → el modelo recibe "Cliente 3", el panel muestra "Sra. Rosa…", recargar conserva la conversación, sin desborde a 375 px |
 | — | 2026-11-22 | El Asistente llena pedidos a proveedores (`COMPRA`/`PROVEEDOR`): Compras abre «Nuevo pedido» con el proveedor y los productos; los montos que el operador no dijo quedan para él. "Pídele…", "encárgale…" y "haz un pedido" cuentan como pedido de hacer | `tests/test_asistente.py`, `llenado.test.ts`; Staging con modelo falso: "Pídele a Distribuidora Norte 2 sacos de arroz por 180 soles y 1 saco de azúcar" → el modelo ve "Proveedor B", Arroz S/ 180 en el pedido, Azúcar en «Falta cuánto cuesta», guardado con S/ 95 |
+| D-07 | 2026-11-22 | El PIN generado en el primer arranque ya no va a la consola: vive en memoria y la pantalla de ingreso lo muestra una vez, solo en la misma computadora, con «Ya lo anoté» (ADR-053) | `tests/test_primer_ingreso.py` (7 casos: no va a consola ni disco, otro equipo recibe `[]`/`403`, cerrar sin anotarlo genera otro); Staging a 375 px: carpeta nueva → PIN de 6 dígitos en pantalla, «Ya lo anoté» lo esconde y ese PIN entra |
 
 ## 3. Resueltos en la auditoría inicial (2026-09-27, verificados en Staging)
 

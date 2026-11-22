@@ -41,7 +41,9 @@ en `backend/rutas.py`:
 | Linux | `~/.local/share/MiPuestito/` |
 
 Dentro hay un archivo por proyecto (`mi_puestito_demo.db`,
-`mi_puestito_anita.db`), `usuarios.json` (PIN con hash) y `puerto.txt`.
+`mi_puestito_anita.db`), `usuarios.json` (PIN con hash) y `puerto.txt`. El PIN del
+negocio real que se genera en el primer arranque no se imprime: la pantalla de ingreso
+lo muestra una vez, solo en esta computadora (decisión 53).
 El programa muestra esa carpeta al arrancar, para que el vendedor sepa qué
 respaldar. Son datos sensibles (ventas, fiados, clientes): viven solo
 en su computadora.

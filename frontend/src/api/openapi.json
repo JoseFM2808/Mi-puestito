@@ -608,6 +608,18 @@
       "uuid"
     ]
   },
+  "PinPorMostrar": {
+    "required": [
+      "nombre_proyecto",
+      "nombre_usuario",
+      "pin"
+    ],
+    "properties": [
+      "nombre_proyecto",
+      "nombre_usuario",
+      "pin"
+    ]
+  },
   "PreguntaEntrada": {
     "required": [
       "mensaje"

@@ -57,15 +57,74 @@ def _guardar_usuarios(usuarios: dict) -> None:
     ruta_usuarios().write_text(json.dumps(usuarios, indent=2))
 
 
+# PIN generado que la pantalla de ingreso todavía debe mostrar (D-07). Solo en memoria: nunca
+# en disco ni en la consola, que puede ir a un log. En usuarios.json queda solo la marca
+# "pin_por_mostrar"; si el programa se cierra antes de que el dueño lo anote, al volver a abrir
+# se genera otro (el anterior nunca se mostró).
+_pines_por_mostrar: dict[str, str] = {}
+
+EQUIPO_LOCAL = {"127.0.0.1", "::1"}
+
+
+def desde_este_equipo(origen: str | None) -> bool:
+    """La petición viene de la misma computadora del programa (no de otra de la red)."""
+    return ENTORNO == "local" and (origen or "") in EQUIPO_LOCAL
+
+
+def _nuevo_pin_por_mostrar(usuarios: dict, nombre_usuario: str, proyecto: str) -> None:
+    pin = _generar_pin()
+    sal = secrets.token_hex(16)
+    usuarios[nombre_usuario] = {
+        "proyecto": proyecto,
+        "sal": sal,
+        "pin_hash": _hash_pin(pin, sal),
+        "pin_por_mostrar": True,
+    }
+    _pines_por_mostrar[nombre_usuario] = pin
+    # En un servidor no hay pantalla en "esta computadora": ahí la consola es el único camino
+    # (mejor: fijar el PIN con la variable de entorno del negocio)
+    como_verlo = (
+        " Abre Mi Puestito en esta computadora: la pantalla de\n ingreso te muestra el PIN una sola vez.\n"
+        if ENTORNO == "local"
+        else f"   Usuario: {nombre_usuario}   PIN: {pin}\n"
+    )
+    print(
+        "\n"
+        "==========================================================\n"
+        f" Se creó el acceso de {nombre_usuario}.\n"
+        f"{como_verlo}"
+        "==========================================================\n"
+    )
+
+
+def pines_por_mostrar() -> list[tuple[str, str]]:
+    """(usuario, PIN) de las cuentas cuyo PIN generado aún no se anotó."""
+    return sorted(_pines_por_mostrar.items())
+
+
+def marcar_pin_anotado(nombre_usuario: str) -> None:
+    """El dueño ya anotó el PIN (o entró con él): no se vuelve a mostrar."""
+    _pines_por_mostrar.pop(nombre_usuario, None)
+    usuarios = _cargar_usuarios()
+    if usuarios.get(nombre_usuario, {}).pop("pin_por_mostrar", None) is not None:
+        _guardar_usuarios(usuarios)
+
+
 def asegurar_usuarios_iniciales() -> None:
     """Crea las cuentas base la primera vez que arranca el programa.
 
     "demo" siempre con el mismo PIN público. El proyecto real toma su PIN de
-    MI_PUESTITO_ANITA_PIN si está definida; si no, genera una al azar y la
-    imprime una sola vez para que el dueño del negocio la anote.
+    MI_PUESTITO_ANITA_PIN si está definida; si no, genera uno al azar que la
+    pantalla de ingreso muestra una sola vez, solo en esta computadora (D-07).
     """
     usuarios = _cargar_usuarios()
     cambios = False
+
+    # Un PIN que nunca se llegó a mostrar (el programa se cerró antes) se reemplaza por otro
+    for nombre_usuario, datos in list(usuarios.items()):
+        if datos.get("pin_por_mostrar") and nombre_usuario not in _pines_por_mostrar:
+            _nuevo_pin_por_mostrar(usuarios, nombre_usuario, datos["proyecto"])
+            cambios = True
 
     if "demo" not in usuarios:
         sal = secrets.token_hex(16)
@@ -78,21 +137,15 @@ def asegurar_usuarios_iniciales() -> None:
 
     if "anita" not in usuarios:
         pin = os.environ.get("MI_PUESTITO_ANITA_PIN")
-        if not pin:
-            pin = _generar_pin()
-            print(
-                "\n"
-                "==========================================================\n"
-                " Se creó el acceso de Anita. PIN de ingreso (guárdalo):\n"
-                f"   Usuario: anita   PIN: {pin}\n"
-                "==========================================================\n"
-            )
-        sal = secrets.token_hex(16)
-        usuarios["anita"] = {
-            "proyecto": "anita",
-            "sal": sal,
-            "pin_hash": _hash_pin(pin, sal),
-        }
+        if pin:
+            sal = secrets.token_hex(16)
+            usuarios["anita"] = {
+                "proyecto": "anita",
+                "sal": sal,
+                "pin_hash": _hash_pin(pin, sal),
+            }
+        else:
+            _nuevo_pin_por_mostrar(usuarios, "anita", "anita")
         cambios = True
 
     if cambios:
@@ -147,6 +200,8 @@ def verificar_credenciales(nombre_usuario: str, pin: str) -> str | None:
         return None
     with _candado_intentos:
         _intentos.pop(nombre_usuario, None)
+    if usuario.get("pin_por_mostrar"):
+        marcar_pin_anotado(nombre_usuario)  # entró con él: ya lo tiene
     return usuario["proyecto"]
 
 

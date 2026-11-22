@@ -60,6 +60,8 @@ Valores de dominio: `tipo` = `orden_activa` | `fiado` | `venta_rapida`; `estado`
 | GET | `/api/salud` | – | `{estado, modulos_degradados, eventos_con_fallas}` | Responde `ok` aunque haya módulos caídos; el humo del ejecutable exige `modulos_degradados == []` (ADR-029) |
 | POST | `/api/auth/ingresar` | `IngresoEntrada {nombre_usuario, pin}` | `IngresoSalida {token, proyecto, nombre_proyecto, es_real}` | `401` credenciales, `429` espera |
 | GET | `/api/auth/cuentas` | – | `CuentaVisible[] {nombre_usuario, nombre_proyecto, es_real}` | Para la pantalla de ingreso; nunca incluye PIN, hash ni sal |
+| GET | `/api/auth/primer-ingreso` | – | `PinPorMostrar[] {nombre_usuario, nombre_proyecto, pin}` | D-07, ADR-053: el PIN generado en el primer arranque, solo a la misma computadora en modo local (si no, `[]`), hasta que se anota o se entra con él |
+| POST | `/api/auth/primer-ingreso/{usuario}/anotado` | – | `204` | «Ya lo anoté». Desde otro equipo `403` |
 
 ### Dashboard (token)
 
@@ -139,11 +141,14 @@ publica `compra.pagada` y Gastos anota el pago.
 
 | Método | Ruta | Entrada | Respuesta | Notas |
 |---|---|---|---|---|
-| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12), pantalla_actual? (caja\|ventas\|fiados\|compras\|gastos\|inventario\|asistente)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a\|resaltar, pantalla, etiqueta, automatica, apartado}], borrador? {items [{nombre, cantidad, precio?}], para?}, id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta e historial antes de salir al proveedor y restituye los nombres en la respuesta (ADR-034). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
+| POST | `/api/asistente/preguntar` | `PreguntaEntrada {mensaje (1–500), historial? [{rol: operador\|asistente, texto}] (≤ 12), pantalla_actual? (caja\|ventas\|fiados\|compras\|gastos\|inventario\|asistente)}` | `RespuestaSalida {respuesta, acciones [{tipo: ir_a\|resaltar, pantalla, etiqueta, automatica, apartado}], borrador? {items [{nombre, cantidad, precio?}], para?}, formulario? {tipo: abono\|gasto\|merma, …}, pedido? {proveedor?, items [{producto, cantidad?, monto?}]}, recordado [texto], id_respuesta, modelo}` | Responde con el mismo resumen que ve el operador. Seudonimiza resumen, pregunta, historial y recuerdos antes de salir al proveedor (también a todo cliente o proveedor guardado que se nombre) y restituye los nombres en la respuesta (ADR-034, ADR-052). `acciones` solo trae pantallas de la lista blanca (ADR-037). `503` si no hay proveedor configurado |
 | POST | `/api/asistente/valoracion` | `ValoracionEntrada {id_respuesta, util}` | `204` | "Me sirvió" / "No me sirvió". Se guarda solo si el registro está activo (ADR-038) |
 | GET | `/api/asistente/estado` | — | `EstadoAsistente {listo, puede_guardar_llave, llave_guardada}` | Nunca incluye la llave |
 | POST | `/api/asistente/llave` | `LlaveEntrada {llave}` | `EstadoAsistente` | Solo modo local, Windows y desde el mismo equipo (`403`); mal copiada o rechazada → `400`, sin repetirla (ADR-043) |
 | DELETE | `/api/asistente/llave` | — | `EstadoAsistente` | Mismas condiciones |
+| GET | `/api/asistente/recuerdos` | — | `RecuerdoSalida[] {uuid, texto, creado_en}` | Lo que recuerda del negocio, del más viejo al más nuevo (D-26, ADR-052) |
+| DELETE | `/api/asistente/recuerdos/{uuid}` | — | `204` | Olvida uno (idempotente) |
+| DELETE | `/api/asistente/recuerdos` | — | `204` | Olvida todo |
 
 ## 4. Proveedor de IA (salida del backend)
 

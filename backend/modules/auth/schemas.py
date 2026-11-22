@@ -21,3 +21,11 @@ class IngresoSalida(BaseModel):
     proyecto: str
     nombre_proyecto: str
     es_real: bool
+
+
+class PinPorMostrar(BaseModel):
+    """PIN generado en el primer arranque (D-07): solo se entrega a esta misma computadora."""
+
+    nombre_usuario: str
+    nombre_proyecto: str
+    pin: str
