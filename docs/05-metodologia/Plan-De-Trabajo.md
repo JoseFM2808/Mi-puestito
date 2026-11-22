@@ -13,11 +13,12 @@
 | [[#Fase 0 — Demo 1 esqueleto y primera pantalla]] | Que exista algo ejecutable | **Terminada** | 8/8 |
 | [[#Fase 1 — Correcciones antes de los datos reales]] | Arreglar lo que después sale caro | **Terminada** | 10/10 |
 | [[#Fase 2 — Base técnica sostenible]] | Que crecer no duela | **Terminada** | 6/6 |
-| [[#Fase 3 — Módulo Ventas]] | Vender de verdad | En curso | 6/7 |
+| [[#Fase 3 — Módulo Ventas]] | Vender de verdad | Falta el QR (espera D-08) | 6/7 |
 | [[#Fase 4 — Módulo Compras]] | Comprar de verdad | Hecha | 6/6 |
 | [[#Fase 5 — Offline real y sincronización]] | Que funcione sin internet | Hecha | 5/5 |
-| [[#Fase 6 — AI Companion]] | El asistente que guía | En curso | 2/6 |
-| [[#Fase 7 — Módulos de Fase 2 del producto]] | Inventario, Análisis, Gastos | En curso | 0/3 |
+| [[#Fase 6 — AI Companion]] | El asistente que guía | **Terminada** | 6/6 |
+| [[#Fase 7 — Módulos de Fase 2 del producto]] | Inventario, Análisis, Gastos | **Terminada** | 3/3 |
+| [[#Pendiente por decisión del owner]] | Lo que no se puede construir sin elegir | Espera al owner | — |
 
 **Regla de orden:** la Fase 1 va antes que cualquier módulo nuevo. Sus tareas
 son baratas hoy y caras después: tocar el esquema cuando ya hay ventas reales
@@ -159,7 +160,8 @@ Meta: registrar ventas reales. Ver [[Modulo-Ventas]].
 - [x] Registro de venta con descripción manual y búsqueda por nombre
 - [x] Fiado: cliente, deuda derivada y límite de crédito opcional
 - [x] Venta rápida (solo monto) y su formalización posterior
-- [ ] Cierre y pago: efectivo y YAPE/Plin con QR *(cobro hecho; falta el QR, que necesita el número del vendedor)*
+- [ ] Cierre y pago: efectivo y YAPE/Plin con QR *(cobro hecho; falta el QR, que necesita el número del vendedor: llega
+      con la pantalla de alta de negocio de D-08)*
 - [x] Endpoints de escritura con paginación (evitar el N+1 ya detectado)
 - [x] `README.md` del módulo y `data-ai-id` en todo elemento interactivo
 
@@ -195,20 +197,47 @@ Meta: cumplir el pilar offline-first con datos reales. Ver [[Sincronizacion-Offl
 Meta: el asistente integrado. Ver [[AI-Companion]] y [[Orquestacion-IA]].
 
 - [x] Capa de abstracción agnóstica al modelo ([[Conexion-Agnostica]])
-- [ ] Orquestación con LangGraph
-- [ ] Lectura del estado de la UI vía `data-ai-id`
-- [ ] Navegación y llenado de formularios guiado *(navegación sugerida hecha, ADR-037; falta el llenado guiado)*
+- [x] Orquestación con LangGraph *(2026-11-22: grafo preparar → generar → verificar, decisión 57)*
+- [x] Lectura del estado de la UI vía `data-ai-id` *(2026-11-22: señala el campo exacto que el operador tiene a la vista,
+      decisión 55)*
+- [x] Navegación y llenado de formularios guiado *(navega y señala, ADR-047; llena órdenes, pagos, gastos, mermas y
+      pedidos a proveedores que el operador guarda, ADR-049 y D-28)*
 - [x] Explicación de cifras en lenguaje simple
-- [ ] Los MD de módulos como contexto en runtime
+- [x] Los MD de módulos como contexto en runtime *(2026-11-22: la tabla "Qué acciones permite" de cada README, decisión
+      56)*
+
+Además: memoria del Asistente (la conversación sobrevive a una recarga y recuerda lo que se le pide, decisión 52).
+Queda fuera de la lista la **ayuda proactiva** (que el Asistente hable sin que le pregunten): exige una decisión del
+owner (ver abajo).
 
 ---
 
 ## Fase 7 — Módulos de Fase 2 del producto
 
-- [ ] [[Modulo-Inventario]] — stock, vencimientos, precios *(pantalla de stock, conteo, merma y precio hecha, y Ventas
-  ya elige productos; faltan vencimientos y costo)*
-- [x] [[Modulo-Analisis]] — rentabilidad y reportes *(2026-11-17: semana, mes, libre, ganancia por producto)*
+- [x] [[Modulo-Inventario]] — stock, vencimientos, precios *(stock, conteo, merma y precio; vencimientos y costo, D-22;
+  código de barras con lector o cámara, D-30; sugerencia de pedido por stock bajo y categorías, 2026-11-22. Queda el
+  registro por foto)*
+- [x] [[Modulo-Analisis]] — rentabilidad y reportes *(2026-11-17: semana, mes, libre, ganancia por producto;
+  2026-11-22: por categoría y kardex mensual)*
 - [x] [[Modulo-Gastos]] — gastos del puesto y del hogar *(2026-11-17, ADR-051)*
+
+---
+
+## Pendiente por decisión del owner
+
+Lo que queda no se puede construir sin que el owner elija o actúe. Detalle en `.ai-context/05-deuda-tecnica-higiene.md`.
+
+| Tema | Qué falta decidir o hacer | Ref. |
+|---|---|---|
+| Alta de negocio y datos del vendedor | Elegir entre las opciones de la pantalla de alta; trae el número de Yape/Plin para el QR | D-08 |
+| QR de Yape/Plin al cobrar | Depende de D-08 | Fase 3 |
+| Respaldo cifrado con recuperación por Gmail | Crear el proyecto de Google Cloud (OAuth / API de Gmail) | D-23 |
+| Push protection en GitHub | Activarlo en Settings → Code security | D-12 |
+| Modelo local (Asistente sin internet) | Tamaño mínimo aceptable, licencia del modelo y dónde se entrena | D-15, decisión 39 |
+| RUC desde SUNAT | Elegir un servicio externo (pospuesto) | D-21 |
+| Ayuda proactiva del Asistente | Cuándo puede hablar sin que le pregunten | [[AI-Companion]] |
+| Registro de productos por foto | Qué servicio o modelo reconoce la foto | [[Modulo-Inventario]] |
+| Comprobante SUNAT | Fuera del MVP | [[Modulo-Ventas]] |
 
 ---
 

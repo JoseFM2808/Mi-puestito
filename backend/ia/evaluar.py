@@ -73,6 +73,12 @@ class Caso:
     llena: tuple[tuple[str, str, str | None], ...] = ()
     # Formulario que debe llenar (D-28): campos esperados, p. ej. {"tipo": "abono", "monto": "10.00"}
     formulario: dict | None = None
+    # Debe guardar en su memoria algo que contenga esto (D-26); None: no debe guardar nada
+    recuerda: str | None = None
+    # Pedido a proveedor que debe llenar: {"proveedor": "...", "productos": ("arroz",)}
+    pedido: dict | None = None
+    # Lo que el operador tiene a la vista (ADR-055)
+    en_pantalla: tuple[dict, ...] = ()
 
 
 CASOS = [
@@ -195,6 +201,40 @@ CASOS = [
     ),
     # --- Memoria de la conversación
     Caso("memoria", "¿Y cuánto debe esa misma persona?", ("45",), previos=("¿Quién me debe más?",)),
+    # --- Memoria del negocio (D-26, ADR-052): el segundo usa lo que guardó el primero
+    Caso(
+        "recordar algo", "Acuérdate que la Sra. Rosa siempre paga por Yape", recuerda="yape", abre_sola=None
+    ),
+    Caso("usa lo recordado", "¿Cómo me suele pagar la Sra. Rosa?", ("yape",), abre_sola=None),
+    # --- Pedido a un proveedor llenado (Compras)
+    Caso(
+        "llenar un pedido",
+        "Pídele a Distribuidora Norte 2 sacos de arroz por 180 soles",
+        pedido={"proveedor": "Distribuidora Norte", "productos": ("arroz",)},
+        abre_sola=None,
+    ),
+    # --- Señala lo que el operador tiene a la vista (ADR-055)
+    Caso(
+        "señalar un campo",
+        "¿Dónde pongo cuánto le cobro?",
+        apartado="ventas-orden-1.monto",
+        pantalla_actual="ventas",
+        en_pantalla=(
+            {"id": "ventas.nueva", "tipo": "boton", "texto": "Nueva orden"},
+            {"id": "ventas-orden-1.producto", "tipo": "campo", "texto": "Producto", "lleno": True},
+            {"id": "ventas-orden-1.monto", "tipo": "campo", "texto": "Monto en soles", "lleno": False},
+            {"id": "ventas-orden-1.agregar", "tipo": "boton", "texto": "Agregar producto"},
+        ),
+        abre_sola=None,
+    ),
+    # --- Cita los botones del README de la pantalla (ADR-056)
+    Caso(
+        "manual de la pantalla",
+        "¿Cómo anoto lo que me pagó un cliente?",
+        ("registrar un pago",),
+        pantalla="fiados",
+        abre_sola=None,
+    ),
     # --- Honestidad: lo que no está en los datos, se dice
     Caso("ganancia del mes", "¿Cuánto gané este mes?", no_contiene=("reporte",)),
     # Fase 7: la semana y el mes ya tienen cifras (en la demo todo se vendió hoy)
@@ -242,6 +282,21 @@ def revisar(caso: Caso, cuerpo: dict) -> list[str]:
         fallas.append(f"llenó un formulario sin que se lo pidieran: {lleno.get('tipo')}")
     if not caso.llena and llenado:
         fallas.append(f"llenó una orden sin que se la pidieran: {llenado}")
+    recordado = cuerpo.get("recordado") or []
+    if caso.recuerda and not any(caso.recuerda.lower() in r.lower() for r in recordado):
+        fallas.append(f"no recordó «{caso.recuerda}» (guardó {recordado or 'nada'})")
+    elif not caso.recuerda and recordado:
+        fallas.append(f"guardó en su memoria sin que se lo pidieran: {recordado}")
+    pedido = cuerpo.get("pedido") or {}
+    if caso.pedido:
+        productos = " ".join(i["producto"].lower() for i in pedido.get("items", []))
+        if (pedido.get("proveedor") or "").lower() != caso.pedido["proveedor"].lower():
+            fallas.append(f"pedido a {pedido.get('proveedor')!r} (esperaba {caso.pedido['proveedor']!r})")
+        for producto in caso.pedido["productos"]:
+            if producto not in productos:
+                fallas.append(f"el pedido no trae «{producto}» ({productos or 'vacío'})")
+    elif pedido:
+        fallas.append("llenó un pedido sin que se lo pidieran")
     if caso.abre_sola and automaticas != [caso.pantalla]:
         fallas.append(f"no abre {caso.pantalla} sola (abre {automaticas or 'ninguna'})")
     if caso.abre_sola is False and automaticas:
@@ -289,7 +344,12 @@ def evaluar_modelo(cliente, cabeceras: dict, modelo: str | None) -> dict:
         inicio = time.perf_counter()
         r = cliente.post(
             "/api/asistente/preguntar",
-            json={"mensaje": caso.pregunta, "historial": historial, "pantalla_actual": caso.pantalla_actual},
+            json={
+                "mensaje": caso.pregunta,
+                "historial": historial,
+                "pantalla_actual": caso.pantalla_actual,
+                "en_pantalla": list(caso.en_pantalla),
+            },
             headers=cabeceras,
         )
         segundos = time.perf_counter() - inicio

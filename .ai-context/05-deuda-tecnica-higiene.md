@@ -12,6 +12,8 @@
 | D-15 | P2 | El Asistente necesita internet | Sin red no hay ayuda | **Decidido (owner, 2026-11-17):** modelo local ultraligero (una versión mínima de Gemma o un modelo tipo "colibrí") que corra en una computadora de pocos recursos, servido con Ollama/llama.cpp; luego fine-tuning | ADR-039 |
 | D-21 | P3 | El RUC se escribe a mano | Un RUC válido en forma pero inexistente pasa | Búsqueda en SUNAT: requiere elegir un servicio externo. **Pospuesto por el owner (2026-11-17)** | `Modulo-Compras.md` |
 | D-23 | P2 | La copia de respaldo va sin cifrar | Quien tenga el archivo ve clientes, fiados y ventas | Cifrar con una contraseña que elija el vendedor. **Decidido (owner, 2026-11-17):** si la olvida, se le envía un enlace a su Gmail mediante una conexión con Google Cloud. Falta que el owner cree el proyecto de Google Cloud (credenciales OAuth / API de Gmail) | ADR-044 |
+| D-31 | P2 | Lo nuevo del Asistente (recordar, pedidos a proveedores, señalar campos de la pantalla, manual de los README, grafo de LangGraph) solo se probó con un modelo falso | Un modelo real puede no usar bien `RECORDAR`, `COMPRA` o `resaltar <id visible>` | Correr `python -m ia.evaluar` con la llave en Staging (`scripts/staging-con-ia.ps1`): 38 casos, 5 nuevos. Necesita la llave del owner | ADR-052, 055, 056, 057 |
+| D-32 | P2 | El `.exe` con LangGraph (~90 MB) solo se construyó en Linux | Un import que PyInstaller no recoja en Windows dejaría al Asistente en el recorrido simple (no se cae, pero no usa el grafo) | Correr el flujo `Ejecutable Windows` y revisar `/api/salud` y el log. Bloqueado: esta sesión no pudo publicar la rama en GitHub (403) | ADR-057 |
 
 ## 2. Hechos
 
