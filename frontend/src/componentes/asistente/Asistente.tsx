@@ -16,6 +16,7 @@ import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Campo, Nota, TituloPagina } from '../../ui/componentes'
 import estilos from './Asistente.module.css'
 import { useDictado } from './dictado'
+import { leerPantalla } from './leerPantalla'
 import { Recuerdos } from './Recuerdos'
 import { estaALaVista, senalar } from './senalar'
 
@@ -265,6 +266,8 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
         historial,
         // Para que pueda decir "toca este botón" donde el operador está
         pantalla_actual: useNavegacion.getState().pantalla,
+        // Lo que tiene a la vista (Fase 6): puede señalar el campo exacto. Nunca lo escrito en él
+        en_pantalla: leerPantalla(),
       })
       // Pidió registrar una venta: el Asistente la deja llenada en Ventas para que la confirme
       const items = respuesta.borrador?.items ?? []

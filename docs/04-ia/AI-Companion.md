@@ -45,4 +45,6 @@ La orquestación del companion corre sobre LangGraph → [[Orquestacion-IA]]. El
   «Nuevo pedido» se abre con el proveedor y los productos; lo que no tiene monto lo completa el operador.
 - Memoria (D-26, ADR-052): la conversación sobrevive a una recarga y el Asistente recuerda lo que el operador le pide
   ("acuérdate que…"), con un tope que lo obliga a consolidar; el operador lo ve y lo olvida en «Lo que recuerdo».
+- Lectura de la pantalla (ADR-055): con cada pregunta viaja lo que el operador tiene a la vista (`data-ai-id`, nombre y
+  si un campo está lleno, nunca lo escrito); "¿dónde pongo el monto?" marca ese campo de la orden abierta.
 - Capacidad 5 (ayuda proactiva): pendiente; exigirá una decisión formal nueva.

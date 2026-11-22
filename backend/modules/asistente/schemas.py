@@ -17,6 +17,19 @@ class TurnoPrevio(BaseModel):
     texto: Annotated[str, BeforeValidator(lambda valor: str(valor)[:1000])]
 
 
+class ElementoPantalla(BaseModel):
+    """Una parte de lo que el operador ve ahora (Fase 6: lectura de la pantalla vía data-ai-id).
+
+    Solo cómo se llama (el texto del botón o la etiqueta del campo) y si un campo está lleno:
+    nunca lo que se escribió en él.
+    """
+
+    id: Annotated[str, StringConstraints(pattern=r"^[a-z0-9]+(?:[.-][a-z0-9]+)*$", max_length=80)]
+    tipo: Literal["boton", "campo", "zona"]
+    texto: Annotated[str, BeforeValidator(lambda valor: " ".join(str(valor).split())[:80])] = ""
+    lleno: bool | None = None
+
+
 class PreguntaEntrada(BaseModel):
     # Una pregunta del puesto cabe de sobra en 500 caracteres; el tope evita
     # enviar textos enormes (y su costo) al proveedor de IA
@@ -26,6 +39,8 @@ class PreguntaEntrada(BaseModel):
     pantalla_actual: (
         Literal["caja", "ventas", "fiados", "compras", "gastos", "analisis", "inventario", "asistente"] | None
     ) = None
+    # Lo que tiene a la vista, para señalar justo el campo o botón que pregunta (Fase 6)
+    en_pantalla: list[ElementoPantalla] = Field(default_factory=list, max_length=60)
 
 
 class LlaveEntrada(BaseModel):

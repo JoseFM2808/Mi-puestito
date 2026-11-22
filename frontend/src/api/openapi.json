@@ -258,6 +258,18 @@
       "vendido"
     ]
   },
+  "ElementoPantalla": {
+    "required": [
+      "id",
+      "tipo"
+    ],
+    "properties": [
+      "id",
+      "lleno",
+      "texto",
+      "tipo"
+    ]
+  },
   "EstadoAsistente": {
     "required": [
       "listo",
@@ -677,6 +689,7 @@
       "mensaje"
     ],
     "properties": [
+      "en_pantalla",
       "historial",
       "mensaje",
       "pantalla_actual"

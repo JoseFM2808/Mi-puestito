@@ -28,7 +28,7 @@ from database import obtener_sesion, obtener_sesion_escritura, sesion_escritura_
 from fechas import dia_peruano
 from ia import borrador, configuracion, formularios, llave_local, memoria, registro
 from ia import pedido as pedido_ia
-from ia.acciones import accion_por_tema, corregir_destino, marcar_automatica, pide_ir_o_hacer
+from ia.acciones import EnPantalla, accion_por_tema, corregir_destino, marcar_automatica, pide_ir_o_hacer
 from ia.privacidad import ALIAS_SUELTO, Seudonimos, seudonimizar_resumen
 from ia.servicio import AsistenteNoDisponible, armar_mensajes, consolidar_recuerdos, preguntar
 from seguridad import proyecto_autenticado
@@ -208,6 +208,26 @@ async def _recordar(
     return nuevos
 
 
+def _lo_que_ve(datos: PreguntaEntrada, alias: Seudonimos) -> EnPantalla | None:
+    """Las partes de la pantalla abierta, con los nombres de clientes y proveedores en código.
+
+    No se incluye la del propio Asistente: señalar su caja de texto no ayuda a nadie.
+    """
+    if not datos.pantalla_actual or datos.pantalla_actual == "asistente" or not datos.en_pantalla:
+        return None
+    elementos: dict[str, str] = {}
+    for elemento in datos.en_pantalla:
+        if elemento.id.startswith("asistente") or elemento.id in elementos:
+            continue
+        nombre = alias.ocultar_en_texto(elemento.texto) or elemento.id
+        if elemento.tipo == "campo":
+            nombre = f"campo {nombre}" + (" [vacío]" if elemento.lleno is False else "")
+        elif elemento.tipo == "boton":
+            nombre = f"botón {nombre}"
+        elementos[elemento.id] = nombre
+    return EnPantalla(datos.pantalla_actual, elementos)
+
+
 @router.post("/preguntar", response_model=RespuestaSalida)
 async def preguntar_endpoint(
     datos: PreguntaEntrada,
@@ -222,7 +242,9 @@ async def preguntar_endpoint(
     anonimo, alias = seudonimizar_resumen(resumen)
     # Quien se nombra en la pregunta, el historial o un recuerdo también viaja con código (D-26)
     clientes, proveedores = _nombres_guardados(sesion)
-    texto_libre = "\n".join([datos.mensaje, *(t.texto for t in datos.historial), *recordados])
+    del_historial = [t.texto for t in datos.historial]
+    en_la_pantalla = [e.texto for e in datos.en_pantalla]
+    texto_libre = "\n".join([datos.mensaje, *del_historial, *recordados, *en_la_pantalla])
     alias.registrar_mencionados(texto_libre, clientes, proveedores)
     sesion.close()  # no se tiene la base abierta mientras responde el modelo
 
@@ -230,9 +252,10 @@ async def preguntar_endpoint(
     pregunta = alias.ocultar_en_texto(datos.mensaje)
     historial = [(turno.rol, alias.ocultar_en_texto(turno.texto)) for turno in datos.historial]
     recuerdos = [alias.ocultar_en_texto(r) for r in recordados]
+    en_pantalla = _lo_que_ve(datos, alias)
 
     try:
-        respuesta = await preguntar(pregunta, contexto, historial, recuerdos)
+        respuesta = await preguntar(pregunta, contexto, historial, recuerdos, en_pantalla)
     except AsistenteNoDisponible as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
@@ -241,7 +264,7 @@ async def preguntar_endpoint(
     registro.guardar_intercambio(
         proyecto,
         id_respuesta,
-        mensajes_enviados=armar_mensajes(pregunta, contexto, historial, recuerdos),
+        mensajes_enviados=armar_mensajes(pregunta, contexto, historial, recuerdos, en_pantalla),
         respuesta_del_modelo=respuesta.texto,
         modelo=respuesta.modelo,
     )

@@ -14,7 +14,7 @@ import logging
 from dataclasses import dataclass, field
 
 from . import borrador, configuracion, formularios, memoria, pedido
-from .acciones import APARTADOS, PANTALLAS, extraer, texto_si_solo_hubo_accion
+from .acciones import APARTADOS, PANTALLAS, EnPantalla, extraer, texto_si_solo_hubo_accion
 from .cifras import cifras_no_respaldadas
 from .compatible_openai import ProveedorCompatibleOpenAI, es_transitorio, motivo_error
 
@@ -139,7 +139,10 @@ ir_a: la app lleva a la pantalla y marca esa parte. Si solo preguntan una cifra,
 Escribe UNA línea:
 ACCION: resaltar <apartado>
 donde <apartado> es uno de estos (la app lleva a su pantalla y lo marca):
-{apartados}"""
+{apartados}
+o uno de los que el operador ve AHORA en su pantalla (úsalos para "¿dónde pongo…?" o "¿qué toco ahora?" \
+mientras llena algo; [vacío] = campo sin llenar):
+{en_pantalla}"""
 
 MAX_TURNOS_PREVIOS = 6
 SIN_CIFRA_SEGURA = "No tengo esa cifra y prefiero no darte un monto dudoso. Revísala en la Caja de hoy."
@@ -176,6 +179,16 @@ TEXTO_SI_SOLO_HUBO_BORRADOR = "Te dejé la orden llenada en Ventas. Revísala y 
 
 
 SIN_RECUERDOS = "(todavía nada)"
+SIN_PANTALLA = "(no se sabe)"
+MAX_EN_PANTALLA = 40
+
+
+def _describir_pantalla(en_pantalla: EnPantalla | None) -> str:
+    if not en_pantalla or not en_pantalla.elementos:
+        return SIN_PANTALLA
+    return "\n".join(
+        f"{clave} = {nombre}" for clave, nombre in list(en_pantalla.elementos.items())[:MAX_EN_PANTALLA]
+    )
 
 
 def armar_mensajes(
@@ -183,8 +196,10 @@ def armar_mensajes(
     contexto_json: str,
     historial: list[tuple[str, str]],
     recuerdos: list[str] | None = None,
+    en_pantalla: EnPantalla | None = None,
 ) -> list[dict[str, str]]:
     sistema = PROMPT_SISTEMA.format(
+        en_pantalla=_describir_pantalla(en_pantalla),
         guia=GUIA_APP,
         contexto=contexto_json,
         recuerdos="\n".join(f"- {r}" for r in recuerdos) if recuerdos else SIN_RECUERDOS,
@@ -203,6 +218,7 @@ async def preguntar(
     contexto_json: str,
     historial: list[tuple[str, str]] | None = None,
     recuerdos: list[str] | None = None,
+    en_pantalla: EnPantalla | None = None,
 ) -> RespuestaIA:
     config = configuracion.leer()
     if not config.lista:
@@ -212,7 +228,7 @@ async def preguntar(
         )
 
     proveedor = ProveedorCompatibleOpenAI(config.url_base, config.api_key)
-    mensajes = armar_mensajes(mensaje, contexto_json, historial or [], recuerdos)
+    mensajes = armar_mensajes(mensaje, contexto_json, historial or [], recuerdos, en_pantalla)
     # Lo que recuerda también lo dijo el operador (antes): sus cifras no son inventadas
     dicho_por_el_operador = " ".join(
         [mensaje, *(texto for rol, texto in (historial or []) if rol != "asistente"), *(recuerdos or [])]
@@ -241,7 +257,7 @@ async def preguntar(
         sin_para, para = borrador.separar_para(sin_borrador)
         sin_formulario, formulario = formularios.separar(sin_para)
         sin_pedido, pedido_llenado = pedido.separar(sin_formulario)
-        limpio, acciones = extraer(sin_pedido)
+        limpio, acciones = extraer(sin_pedido, en_pantalla)
         # Un monto inventado nunca llega al operador (ADR-042)
         if cifras_no_respaldadas(limpio, contexto_json, dicho_por_el_operador):
             alguna_cifra_rechazada = True

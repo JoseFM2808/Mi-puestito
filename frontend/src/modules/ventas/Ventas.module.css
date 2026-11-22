@@ -1,12 +1,16 @@
 /* Estilos del módulo Ventas (CSS Module: nada se filtra a otros módulos). Solo tokens. */
 
 .pantalla {
+  width: 100%;
   max-width: 1080px;
   margin: 0 auto;
   padding: var(--esp-4) var(--esp-3) var(--esp-5);
   display: flex;
   flex-direction: column;
   gap: var(--esp-3);
+  /* Las columnas se deciden por el espacio que le queda a Ventas, no por el ancho de la ventana:
+     con el menú y el Asistente abiertos al lado, una pantalla ancha deja poco lugar */
+  container-type: inline-size;
 }
 
 .cabecera {
@@ -196,7 +200,7 @@
   padding: var(--esp-5) var(--esp-3);
 }
 
-@media (max-width: 760px) {
+@container (max-width: 760px) {
   /* minmax(0, …): con 1fr a secas, un contenido ancho desborda la pantalla */
   .detalle,
   .filaCampos {

@@ -406,3 +406,17 @@
 - **Consecuencias**: no hay que migrar nada si el owner prefiere otra lista: solo cambia `CATEGORIAS_SUGERIDAS`. Dos
   formas distintas de nombrar lo mismo ("Gaseosas" y "Bebidas") quedan separadas: lo corrige el vendedor.
 
+## ADR-055 · El Asistente lee lo que el operador tiene en pantalla (data-ai-id) — Aceptada
+
+- **Fecha**: 2026-11-22 (Fase 6: "lectura del estado de la UI vía data-ai-id").
+- **Contexto**: el Asistente solo podía señalar los apartados fijos de la lista blanca (ADR-047). Mientras el operador
+  llena una orden ("¿dónde pongo el monto?") no podía marcar el campo, porque los campos de una orden tienen ids que
+  cambian y no se sabía qué formulario estaba abierto.
+- **Decisión**: con cada pregunta, el frontend (`leerPantalla.ts`) manda hasta 60 partes visibles con `data-ai-id`:
+  id, tipo (botón, campo, zona), cómo se llaman y, en un campo, si está lleno. **Nunca lo escrito** (el esquema no tiene
+  dónde ponerlo). Quedan fuera la barra, el menú y el propio Asistente. El servidor valida el formato del id, seudonimiza
+  los textos (ADR-034) y los agrega al prompt; `ACCION: resaltar <id>` acepta la lista blanca **o** un id que el
+  operador tiene a la vista ahora. Nada inventado se señala.
+- **Consecuencias**: el Asistente guía dentro de un formulario abierto. El prompt crece con la pantalla (tope de 40
+  líneas). Sigue sin tocar, llenar ni guardar nada por su cuenta: solo señala.
+

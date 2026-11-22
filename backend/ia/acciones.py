@@ -173,29 +173,43 @@ def texto_si_solo_hubo_accion(acciones: list[dict[str, str]]) -> str:
     línea: se le dice en palabras a dónde mirar."""
     primera = acciones[0]
     if primera["tipo"] == "resaltar":
-        return f"Mira aquí: {APARTADOS[primera['apartado']][1]}."
+        return f"Mira aquí: {primera['etiqueta'].removeprefix('Muéstrame ')}."
     return f"Lo encuentras en {primera['etiqueta'].removeprefix('Ir a ')}."
 
 
-def _resaltar(apartado: str) -> dict[str, str]:
-    pantalla, nombre = APARTADOS[apartado]
+def _resaltar(apartado: str, en_pantalla: "EnPantalla | None" = None) -> dict[str, str]:
+    if apartado in APARTADOS:
+        pantalla, nombre = APARTADOS[apartado]
+    else:  # algo que el operador tiene a la vista ahora (Fase 6: lectura de la pantalla)
+        pantalla, nombre = en_pantalla.pantalla, f"«{en_pantalla.elementos[apartado]}»"
     return {"tipo": "resaltar", "pantalla": pantalla, "etiqueta": f"Muéstrame {nombre}", "apartado": apartado}
 
 
-def extraer(texto: str) -> tuple[str, list[dict[str, str]]]:
+class EnPantalla:
+    """Lo que el operador tiene a la vista ahora: su pantalla y sus partes (data-ai-id → cómo se
+    llaman). El Asistente puede señalar cualquiera de ellas, además de la lista blanca: existen."""
+
+    def __init__(self, pantalla: str, elementos: dict[str, str]) -> None:
+        self.pantalla = pantalla
+        self.elementos = elementos
+
+
+def extraer(texto: str, en_pantalla: EnPantalla | None = None) -> tuple[str, list[dict[str, str]]]:
     """Separa las líneas ACCION del texto y devuelve (texto limpio, acciones válidas).
 
     Una sola acción por pantalla: señalar un apartado ya lleva a su pantalla, así que
-    reemplaza al "Ir a" de esa misma pantalla.
+    reemplaza al "Ir a" de esa misma pantalla. Se puede señalar un apartado de la lista blanca
+    o algo que el operador tiene a la vista ahora (`en_pantalla`); nada inventado.
     """
+    a_la_vista = en_pantalla.elementos if en_pantalla and en_pantalla.pantalla in PANTALLAS else {}
     acciones: list[dict[str, str]] = []
     for coincidencia in _LINEA.finditer(texto):
         tipo = (coincidencia["tipo"] or "ir_a").lower()
         destino = coincidencia["destino"].lower()
         if tipo == "ir_a" and destino in PANTALLAS and all(a["pantalla"] != destino for a in acciones):
             acciones.append({"tipo": "ir_a", "pantalla": destino, "etiqueta": PANTALLAS[destino]})
-        elif tipo == "resaltar" and destino in APARTADOS:
-            nueva = _resaltar(destino)
+        elif tipo == "resaltar" and (destino in APARTADOS or destino in a_la_vista):
+            nueva = _resaltar(destino, en_pantalla)
             previa = next((i for i, a in enumerate(acciones) if a["pantalla"] == nueva["pantalla"]), None)
             if previa is None:
                 acciones.append(nueva)

@@ -15,8 +15,10 @@ Si el operador pide ir o hacer algo, abre la pantalla solo; si pregunta dónde e
   tiene la suya; «Empezar una conversación nueva» la borra también del dispositivo.
 - Lo que el Asistente recuerda del negocio vive en el servidor (`/api/asistente/recuerdos`); `Recuerdos.tsx` lo muestra
   y lo olvida. Bajo una respuesta que guardó algo se lee "Lo voy a recordar: …".
-- Envía los últimos 6 turnos como historial, para que el Asistente recuerde de qué se habla, y la pantalla abierta
-  (`pantalla_actual`), para que diga "toca este botón" donde el operador está.
+- Envía los últimos 6 turnos como historial, para que el Asistente recuerde de qué se habla, la pantalla abierta
+  (`pantalla_actual`), para que diga "toca este botón" donde el operador está, y lo que tiene a la vista
+  (`en_pantalla`, `leerPantalla.ts`, ADR-055): id, tipo y nombre de cada parte con `data-ai-id`, y si un campo está
+  lleno. Nunca lo escrito en él; nunca la barra, el menú ni el propio Asistente. Así puede señalar el campo exacto.
 - En un negocio real muestra un aviso: los nombres de clientes y proveedores se cambian por códigos antes de salir.
 
 ## Qué acciones permite
