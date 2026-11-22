@@ -84,6 +84,7 @@
 | — | 2026-11-22 | `COMPRA`, `PROVEEDOR`, `ABONO`, `GASTO` y `MERMA` pegados al final de una frase no llenaban el formulario y llegaban al operador | `formularios.linea_de_control()` (en su línea, o en mayúsculas tras un punto), usado también por `ia/pedido.py`; `tests/test_asistente.py` |
 | — | 2026-11-22 | `npm audit fix`: dependencias de desarrollo al día (typescript-eslint y otras); producción sigue en 0 vulnerabilidades | Quedan 3 moderadas de desarrollo (glob, minimatch vía `workbox-build`) sin arreglo compatible; `pip-audit` del backend con LangGraph: ninguna conocida |
 | — | 2026-11-22 | Tras 5 PIN errados el servidor pide esperar (`429`, D-04), pero la pantalla decía «Usuario o PIN incorrecto»: la persona seguía probando sin saber que debía esperar. Un error del programa también se veía como PIN errado | `sesion.ts` muestra el motivo del servidor; `sesion.test.ts`; navegador a 375 px: el 6.º intento dice «Espera 30 segundos». Además: axe-core sin problemas de accesibilidad en las 9 pantallas |
+| — | 2026-11-22 | La cola offline tenía una sola vuelta de envío para todos los negocios: al cambiar de negocio a mitad de un envío, el nuevo esperaba hasta 20 s y podía mostrar los pendientes del anterior | Una vuelta por negocio y conteos solo del negocio abierto (`cola.ts`); `cola.test.ts` con control negativo (con el código anterior la prueba falla) |
 
 ## 3. Resueltos en la auditoría inicial (2026-09-27, verificados en Staging)
 

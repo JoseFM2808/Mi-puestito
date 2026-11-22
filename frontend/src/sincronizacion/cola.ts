@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { ErrorApi, SinConexion, pedir } from '../api/cliente'
+import { useSesion } from '../stores/sesion'
 import { baseDe, type Operacion } from './base-local'
 
 /**
@@ -45,14 +46,20 @@ export function alAplicarOperacion(escucha: AlAplicar): () => void {
 
 const enviarPorDefecto: Enviar = (operacion) => pedir(operacion.metodo, operacion.ruta, operacion.cuerpo)
 
-let procesando: Promise<void> | null = null
+// Una vuelta de envío por negocio: al cambiar de negocio, el nuevo no espera a que termine el otro
+const procesando = new Map<string, Promise<void>>()
+
+/** Lo que se muestra es siempre del negocio abierto: una vuelta del anterior no lo pisa. */
+function esElAbierto(proyecto: string): boolean {
+  const abierto = useSesion.getState().proyecto
+  return abierto === null || abierto === proyecto
+}
 
 async function actualizarConteos(proyecto: string): Promise<void> {
   const base = baseDe(proyecto)
-  useSincronizacion.setState({
-    pendientes: await base.operaciones.where('estado').equals('pendiente').count(),
-    rechazadas: await base.operaciones.where('estado').equals('rechazada').toArray(),
-  })
+  const pendientes = await base.operaciones.where('estado').equals('pendiente').count()
+  const rechazadas = await base.operaciones.where('estado').equals('rechazada').toArray()
+  if (esElAbierto(proyecto)) useSincronizacion.setState({ pendientes, rechazadas })
 }
 
 /** Guarda la operación en el dispositivo y dispara su envío. */
@@ -76,10 +83,11 @@ export async function encolar(
 
 /** Envía las pendientes en orden. Una sola ejecución a la vez. */
 export function procesarCola(proyecto: string, enviar: Enviar = enviarPorDefecto): Promise<void> {
-  if (procesando) return procesando
-  procesando = (async () => {
+  const enCurso = procesando.get(proyecto)
+  if (enCurso) return enCurso
+  const vuelta = (async () => {
     const base = baseDe(proyecto)
-    useSincronizacion.setState({ sincronizando: true })
+    if (esElAbierto(proyecto)) useSincronizacion.setState({ sincronizando: true })
     try {
       for (;;) {
         const siguiente = await base.operaciones.where('estado').equals('pendiente').first()
@@ -87,7 +95,7 @@ export function procesarCola(proyecto: string, enviar: Enviar = enviarPorDefecto
         try {
           const respuesta = await enviar(siguiente)
           await base.operaciones.delete(siguiente.id)
-          useSincronizacion.setState({ sinConexion: false })
+          if (esElAbierto(proyecto)) useSincronizacion.setState({ sinConexion: false })
           for (const escucha of escuchas) escucha(siguiente, respuesta)
         } catch (error) {
           if (error instanceof ErrorApi && error.esDefinitivo) {
@@ -95,18 +103,19 @@ export function procesarCola(proyecto: string, enviar: Enviar = enviarPorDefecto
             continue
           }
           await base.operaciones.update(siguiente.id, { intentos: siguiente.intentos + 1 })
-          useSincronizacion.setState({ sinConexion: error instanceof SinConexion })
+          if (esElAbierto(proyecto)) useSincronizacion.setState({ sinConexion: error instanceof SinConexion })
           break // sin red o servidor caído: se reintenta después
         } finally {
           await actualizarConteos(proyecto)
         }
       }
     } finally {
-      useSincronizacion.setState({ sincronizando: false })
-      procesando = null
+      if (esElAbierto(proyecto)) useSincronizacion.setState({ sincronizando: false })
+      procesando.delete(proyecto)
     }
   })()
-  return procesando
+  procesando.set(proyecto, vuelta)
+  return vuelta
 }
 
 /** El operador leyó el rechazo y lo descarta. */
@@ -132,5 +141,5 @@ export function iniciarSincronizacion(proyecto: string, intervaloMs = 20_000): (
 
 /** Espera a que la cola termine su vuelta actual (tests y cierres ordenados). */
 export async function esperarCola(): Promise<void> {
-  while (procesando) await procesando
+  while (procesando.size > 0) await Promise.all(procesando.values())
 }

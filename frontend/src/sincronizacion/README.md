@@ -33,3 +33,6 @@ tablet; se enviarán solos.") y las operaciones rechazadas con **Entendido**.
 
 `data-ai-id`: `sincronizacion.estado`, `sincronizacion.rechazadas`, `sincronizacion.rechazada-<id>.entendido`. El
 Asistente puede explicar qué significa el aviso de conexión; no manipula la cola.
+
+Cada negocio tiene su propia vuelta de envío: al cambiar de negocio, el nuevo envía su cola sin esperar a que termine la
+del anterior, y los conteos («pendientes», «rechazadas») que se muestran son siempre del negocio abierto.

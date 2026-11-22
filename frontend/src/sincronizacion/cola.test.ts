@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ErrorApi, SinConexion } from '../api/cliente'
 import { baseDe, cerrarBases, type Operacion } from './base-local'
+import { useSesion } from '../stores/sesion'
 import { alAplicarOperacion, encolar, esperarCola, procesarCola, useSincronizacion } from './cola'
 
 const PROYECTO = 'prueba'
@@ -101,5 +102,55 @@ describe('cola offline', () => {
     await esperarCola()
     expect(await baseDe('otro').operaciones.count()).toBe(0)
     await baseDe('otro').delete()
+  })
+
+  it('cada negocio envía su cola sin esperar al otro, y los conteos son del abierto', async () => {
+    const OTRO = 'prueba-otro'
+    cerrarBases()
+    await baseDe(OTRO).delete()
+    cerrarBases()
+    let soltarLaPrimera: () => void = () => {}
+    const lenta = () => new Promise<void>((resolver) => (soltarLaPrimera = resolver))
+    // El negocio anterior tiene una operación que tarda en enviarse
+    await baseDe(PROYECTO).operaciones.add({
+      metodo: 'POST',
+      ruta: '/lenta',
+      descripcion: 'lenta',
+      creadaEn: '',
+      estado: 'pendiente',
+      intentos: 0,
+    })
+    const vueltaAnterior = procesarCola(PROYECTO, lenta)
+    // Se cambia de negocio: el nuevo tiene dos pendientes que salen sin esperar
+    useSesion.setState({ proyecto: OTRO })
+    const enviadas: string[] = []
+    for (const ruta of ['/a', '/b']) {
+      await baseDe(OTRO).operaciones.add({
+        metodo: 'POST',
+        ruta,
+        descripcion: ruta,
+        creadaEn: '',
+        estado: 'pendiente',
+        intentos: 0,
+      })
+    }
+    await procesarCola(OTRO, async (op) => void enviadas.push(op.ruta))
+    expect(enviadas).toEqual(['/a', '/b'])
+    expect(useSincronizacion.getState().pendientes).toBe(0)
+    // Cuando termina la del negocio anterior, no pisa los conteos del abierto
+    await baseDe(PROYECTO).operaciones.add({
+      metodo: 'POST',
+      ruta: '/queda',
+      descripcion: 'queda',
+      creadaEn: '',
+      estado: 'rechazada',
+      intentos: 0,
+    })
+    soltarLaPrimera()
+    await vueltaAnterior
+    expect(useSincronizacion.getState().rechazadas).toEqual([])
+    useSesion.setState({ proyecto: null })
+    cerrarBases()
+    await baseDe(OTRO).delete()
   })
 })
