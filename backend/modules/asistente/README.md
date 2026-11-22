@@ -9,7 +9,8 @@ El endpoint del Asistente que guía al operador (`docs/04-ia/AI-Companion.md`). 
 
 Una tabla: `memorias_asistente` (lo que recuerda del negocio, D-26, ADR-052). En cada pregunta:
 
-1. Calcula el resumen de caja del proyecto del token (`modules/dashboard/servicio.py`, importado de forma perezosa: si
+1. Calcula el resumen de caja del proyecto del token (más la semana, el mes, los nombres de los productos y los que
+   están en su mínimo o debajo, sin cantidades) (`modules/dashboard/servicio.py`, importado de forma perezosa: si
    falla, responde sin cifras).
 2. Seudonimiza resumen, pregunta, historial y recuerdos (`ia/privacidad.py`, ADR-034): el modelo ve "Cliente 1", nunca
    un nombre. Un cliente o proveedor guardado que se nombre en el texto también recibe código aunque no esté en el

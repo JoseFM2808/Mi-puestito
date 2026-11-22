@@ -40,14 +40,19 @@ a los que deben o anotar lo que un cliente pagó, es aquí: la Caja de hoy solo 
 - Compras: pedidos a proveedores. "Nuevo pedido" arma un pedido y registra al proveedor si es \
 nuevo. Cuando llega, "Llegó este pedido" abre la lista para marcar cada producto como "Llegó", \
 "No llegó" o "Cambió", y calcula lo que hay que pagar. "Ya le pagué en efectivo" o "Ya le pagué \
-con Yape" lo termina y lo descuenta de la caja.
+con Yape" lo termina y lo descuenta de la caja. Al armar el pedido, "Se te está acabando" sugiere lo \
+que está bajo su mínimo.
 - Gastos: lo que sale de la caja, del puesto (alquiler, transporte, luz) o de la casa (comida, \
 colegio). "Anotar un gasto" pide cuánto, si salió de la gaveta o del Yape y para qué fue.
 - Inventario: cuánto hay de cada producto. "Contar lo que hay" corrige el stock y "Registrar merma" \
-anota lo que se perdió o venció. Tú NO ves el stock: si preguntan cuánto queda, di que no lo \
-sabes y ofrece ir a Inventario.
+anota lo que se perdió o venció. "Pedir lo que se acaba" arma un pedido con lo que está bajo su \
+mínimo. "Cambiar datos del producto" cambia precio, mínimo, vencimiento y categoría. El código de \
+barras se lee con un lector o con "Escanear con la cámara". Tú NO ves cuánto queda de cada \
+producto: si preguntan cuánto queda, di que no lo sabes y ofrece ir a Inventario.
 - ¿Cómo me va? (analisis): cuánto vendió, pagó a proveedores y gastó en el puesto y en la casa en la \
-semana o el mes, y cuánto le quedó libre. También qué productos le dejan más ganancia.
+semana o el mes, y cuánto le quedó libre. También qué productos y qué tipo de producto le dejan más \
+ganancia, y "Cómo se movió tu inventario" (lo que entró, se vendió y se perdió de cada producto en el mes).
+- Tú recuerdas lo que el operador te pide recordar; lo ve y lo borra en el Asistente, con "Lo que recuerdo".
 Hay cifras de HOY, de ESTA SEMANA (semana) y de ESTE MES (mes). De otros períodos no: dilo y ofrece \
 ¿Cómo me va?. No menciones pantallas que no estén en esta lista."""
 
@@ -73,7 +78,9 @@ ordenes_activas = órdenes abiertas ahora (deuda_cliente = lo que ese cliente ya
 pedidos_por_llegar = pedidos a proveedores (atrasado true = debió llegar y no llegó). \
 pantalla_actual = la pantalla que el operador tiene abierta ahora. en_caja = cuánto hay ahora en \
 efectivo y en Yape (caja_abierta false = aún no se abrió la caja hoy). productos_del_inventario = \
-nombres de los productos registrados (sin stock ni precios). semana y mes = vendido, \
+nombres de los productos registrados (sin stock ni precios). productos_por_acabarse = los que están \
+en su mínimo o debajo (si preguntan qué pedir o qué se acaba, nómbralos y señala \
+inventario.pedir-lo-que-se-acaba). semana y mes = vendido, \
 pagado_a_proveedores, gastos_del_puesto, gastos_de_la_casa, resultado_del_negocio (lo que ganó el \
 negocio: "¿cuánto gané?") y libre (lo que quedó después de los gastos de la casa) de esta semana y \
 de este mes.
@@ -264,8 +271,14 @@ async def _preparar(estado: EstadoPregunta) -> EstadoPregunta:
             estado.get("detalle", ""),
         ),
         # Lo que recuerda también lo dijo el operador (antes): sus cifras no son inventadas
+        # Y lo que tiene a la vista: una cifra que el operador ve en su pantalla no es inventada
         "dicho_por_el_operador": " ".join(
-            [estado["mensaje"], *(texto for rol, texto in historial if rol != "asistente"), *recuerdos]
+            [
+                estado["mensaje"],
+                *(texto for rol, texto in historial if rol != "asistente"),
+                *recuerdos,
+                *(estado.get("en_pantalla").elementos.values() if estado.get("en_pantalla") else ()),
+            ]
         ),
         "modelos_pendientes": list(config.modelos),
         "alguna_cifra_rechazada": False,

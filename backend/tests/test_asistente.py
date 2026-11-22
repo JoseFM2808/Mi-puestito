@@ -1422,3 +1422,34 @@ def test_el_grafo_es_de_langgraph():
     flujo = servicio.grafo()
     assert isinstance(flujo, CompiledStateGraph)
     assert set(servicio.NODOS) <= set(flujo.get_graph().nodes)
+
+
+# ---- El Asistente sabe qué se está acabando (sin cantidades) ----
+
+
+def test_el_contexto_trae_lo_que_se_acaba_sin_cantidades(cliente, cabeceras_demo, modelo):
+    preguntar(cliente, cabeceras_demo, "¿Qué tengo que pedir?")
+    contexto = json.loads(modelo["llamadas"][0]["contexto"])
+    # En la demo: Leche Gloria (5 de 6) y Papa amarilla (3 de 5)
+    assert contexto["productos_por_acabarse"] == ["Leche Gloria", "Papa amarilla"]
+
+
+def test_puede_senalar_pedir_lo_que_se_acaba(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Se te acaban la leche y la papa.\nACCION: resaltar inventario.pedir-lo-que-se-acaba"
+    datos = preguntar(cliente, cabeceras_demo, "¿Dónde pido lo que se me acaba?").json()
+    assert datos["acciones"][0]["apartado"] == "inventario.pedir-lo-que-se-acaba"
+    assert datos["acciones"][0]["pantalla"] == "inventario"
+
+
+def test_una_cifra_que_el_operador_ve_en_pantalla_no_es_inventada(monkeypatch):
+    import asyncio
+
+    from ia import servicio
+    from ia.acciones import EnPantalla
+
+    _modelos_que_responden(monkeypatch, {"m": "En la orden tienes S/ 37.40."})
+    vista = EnPantalla("ventas", {"ventas.pestana-1": "botón Orden 1 · S/ 37.40"})
+    con_pantalla = asyncio.run(servicio.preguntar("¿cuánto va la orden?", "{}", en_pantalla=vista))
+    assert con_pantalla.modelo == "m"
+    sin_pantalla = asyncio.run(servicio.preguntar("¿cuánto va la orden?", "{}"))
+    assert sin_pantalla.modelo == servicio.MODELO_VERIFICADOR

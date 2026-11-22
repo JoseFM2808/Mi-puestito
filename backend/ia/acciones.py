@@ -47,6 +47,9 @@ APARTADOS = {
     "gastos.anotar": ("gastos", "el botón Anotar un gasto"),
     "inventario.buscar": ("inventario", "el buscador de productos"),
     "inventario.solo-poco": ("inventario", "el botón de lo que se está acabando"),
+    "inventario.pedir-lo-que-se-acaba": ("inventario", "el botón Pedir lo que se acaba"),
+    "analisis.kardex": ("analisis", "cómo se movió tu inventario"),
+    "analisis.por-dia": ("analisis", "lo que vendiste día por día"),
 }
 
 MAX_ACCIONES = 2

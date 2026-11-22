@@ -119,9 +119,24 @@ def _resumen_del_proyecto(sesion: Session) -> dict:
         sesion.rollback()
     try:
         resumen["productos_del_inventario"] = _nombres_de_productos(sesion)
+        resumen["productos_por_acabarse"] = _por_acabarse(sesion)
     except Exception:  # noqa: BLE001 — sin Inventario, la orden se llena con el nombre que dijo el operador
         sesion.rollback()
     return resumen
+
+
+def _por_acabarse(sesion: Session) -> list[str]:
+    """Nombres de lo que está en su mínimo o debajo (la misma regla que la tarjeta de Inventario), sin
+    cantidades: "¿qué tengo que pedir?" ya tiene respuesta y no hay cifras que el modelo pueda torcer."""
+    from modules.inventario.models import Producto
+
+    consulta = (
+        select(Producto.nombre)
+        .where(Producto.stock_minimo.is_not(None), Producto.stock_actual <= Producto.stock_minimo)
+        .order_by(Producto.nombre)
+        .limit(MAX_PRODUCTOS_EN_CONTEXTO)
+    )
+    return list(sesion.scalars(consulta))
 
 
 MAX_PRODUCTOS_EN_CONTEXTO = 80
