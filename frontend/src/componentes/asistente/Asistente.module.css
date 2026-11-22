@@ -330,3 +330,29 @@
     padding: var(--esp-1) 0 var(--esp-2);
   }
 }
+
+/* ---- Lo que el Asistente recuerda (D-26) ---- */
+.recuerdos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.listaRecuerdos {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+}
+
+.recuerdo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-1) var(--esp-2);
+  padding: var(--esp-1) 0;
+  border-bottom: 1px solid var(--borde);
+  font-size: var(--tam-subtitulo);
+  overflow-wrap: anywhere;
+}

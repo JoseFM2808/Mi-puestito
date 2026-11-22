@@ -745,6 +745,18 @@
       "ocurrido_en"
     ]
   },
+  "RecuerdoSalida": {
+    "required": [
+      "creado_en",
+      "texto",
+      "uuid"
+    ],
+    "properties": [
+      "creado_en",
+      "texto",
+      "uuid"
+    ]
+  },
   "RespuestaSalida": {
     "required": [
       "id_respuesta",
@@ -757,6 +769,7 @@
       "formulario",
       "id_respuesta",
       "modelo",
+      "recordado",
       "respuesta"
     ]
   },

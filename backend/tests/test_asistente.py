@@ -24,13 +24,16 @@ def modelo(monkeypatch):
     """Modelo falso: guarda lo que recibe y responde lo que el test le indique."""
     recibido: dict = {"respuesta": "ok", "llamadas": []}
 
-    async def falso(mensaje, contexto_json, historial=None):
-        recibido["llamadas"].append({"mensaje": mensaje, "contexto": contexto_json, "historial": historial or []})
+    async def falso(mensaje, contexto_json, historial=None, recuerdos=None):
+        recibido["llamadas"].append(
+            {"mensaje": mensaje, "contexto": contexto_json, "historial": historial or [], "recuerdos": recuerdos or []}
+        )
         texto = recibido["respuesta"](mensaje) if callable(recibido["respuesta"]) else recibido["respuesta"]
-        from ia import borrador, formularios
+        from ia import borrador, formularios, memoria
         from ia.acciones import extraer
 
-        sin_borrador, items = borrador.separar(texto)
+        sin_recuerdos, propuestos = memoria.separar(texto)
+        sin_borrador, items = borrador.separar(sin_recuerdos)
         sin_para, para = borrador.separar_para(sin_borrador)
         sin_formulario, formulario = formularios.separar(sin_para)
         limpio, acciones = extraer(sin_formulario)
@@ -41,6 +44,7 @@ def modelo(monkeypatch):
             borrador=items,
             para=para,
             formulario=formulario,
+            recuerdos=propuestos,
         )
 
     monkeypatch.setattr(router_asistente, "preguntar", falso)
@@ -1013,3 +1017,160 @@ def test_un_gasto_en_otros_se_clasifica_por_lo_que_dijo_el_operador(pedido, cate
 
     formulario = {"tipo": "gasto", "monto": None, "categoria": "otros", "medio": "efectivo"}
     assert validar(formulario, pedido)["categoria"] == categoria
+
+
+# ---- D-26: lo que el Asistente recuerda del negocio ----
+
+
+def _recuerdos(cliente, cabeceras):
+    return [r["texto"] for r in cliente.get("/api/asistente/recuerdos", headers=cabeceras).json()]
+
+
+def test_recuerda_lo_que_se_le_pide_con_el_nombre_real(cliente, cabeceras_demo, modelo):
+    # El modelo ve el código de la clienta y escribe el recuerdo con ese código
+    def responder(mensaje):
+        codigo = mensaje.split("que ")[1].split(" siempre")[0]
+        return f"Listo, lo recordaré.\nRECORDAR: {codigo} paga por Yape"
+
+    modelo["respuesta"] = responder
+    datos = preguntar(cliente, cabeceras_demo, "Acuérdate que Sra. Rosa siempre paga por Yape").json()
+    assert datos["recordado"] == ["Sra. Rosa paga por Yape"]
+    assert "RECORDAR" not in datos["respuesta"]
+    assert _recuerdos(cliente, cabeceras_demo) == ["Sra. Rosa paga por Yape"]
+    assert "Rosa" not in modelo["llamadas"][0]["mensaje"]
+
+
+def test_lo_recordado_viaja_seudonimizado_en_la_siguiente_pregunta(cliente, cabeceras_demo, modelo):
+    from database import sesion_para
+    from modules.asistente.models import MemoriaAsistente
+
+    with sesion_para("demo") as sesion:
+        sesion.add(MemoriaAsistente(texto="Sra. Rosa paga por Yape"))
+        sesion.commit()
+    preguntar(cliente, cabeceras_demo, "hola")
+    recuerdos = modelo["llamadas"][0]["recuerdos"]
+    assert len(recuerdos) == 1 and "Rosa" not in recuerdos[0] and "paga por Yape" in recuerdos[0]
+
+
+def test_un_cliente_que_no_esta_en_el_resumen_tampoco_viaja_con_su_nombre(cliente, cabeceras_demo, modelo):
+    """Antes de D-26 solo se ocultaban los nombres del resumen (órdenes abiertas y los que más deben)."""
+    from database import sesion_para
+    from modules.ventas.models import Cliente
+
+    with sesion_para("demo") as sesion:
+        sesion.add(Cliente(nombre="Sra. Hermelinda Quispe"))
+        sesion.commit()
+    preguntar(cliente, cabeceras_demo, "¿La señora Hermelinda Quispe me debe algo?")
+    assert "Hermelinda" not in modelo["llamadas"][0]["mensaje"]
+
+
+def test_una_pregunta_de_cifras_no_deja_recuerdos(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Vendiste S/ 485.50.\nRECORDAR: el operador vendió mucho hoy"
+    datos = preguntar(cliente, cabeceras_demo, "¿Cuánto vendí hoy?").json()
+    assert datos["recordado"] == []
+    assert "RECORDAR" not in datos["respuesta"]
+    assert _recuerdos(cliente, cabeceras_demo) == []
+
+
+def test_no_repite_ni_guarda_codigos_sueltos(cliente, cabeceras_demo, modelo):
+    modelo["respuesta"] = "Listo.\nRECORDAR: Los sábados vendo menú\nRECORDAR: Cliente 99 paga tarde"
+    preguntar(cliente, cabeceras_demo, "Recuerda que los sábados vendo menú")
+    modelo["respuesta"] = "Listo.\nRECORDAR: los sábados vendo menú."
+    datos = preguntar(cliente, cabeceras_demo, "Recuerda que los sábados vendo menú").json()
+    assert datos["recordado"] == []
+    assert _recuerdos(cliente, cabeceras_demo) == ["Los sábados vendo menú"]
+
+
+def test_si_solo_escribe_el_recuerdo_el_operador_lee_una_frase(monkeypatch):
+    import asyncio
+
+    from ia import configuracion, servicio
+
+    class Falso:
+        def __init__(self, *_):
+            pass
+
+        async def responder(self, *_args, **_kwargs):
+            return "RECORDAR: los lunes no abro"
+
+    monkeypatch.setattr(servicio, "ProveedorCompatibleOpenAI", Falso)
+    monkeypatch.setattr(
+        configuracion, "leer", lambda: configuracion.ConfiguracionIA("nvidia", "x", "llave", ("m",), 5.0, "")
+    )
+    respuesta = asyncio.run(servicio.preguntar("recuerda que los lunes no abro", "{}"))
+    assert respuesta.texto == servicio.TEXTO_SI_SOLO_HUBO_RECUERDO
+    assert respuesta.recuerdos == ["los lunes no abro"]
+
+
+def test_pasado_el_tope_se_consolida_y_nunca_crece_sin_limite(cliente, cabeceras_demo, modelo, monkeypatch):
+    from database import sesion_para
+    from ia import memoria
+    from modules.asistente.models import MemoriaAsistente
+
+    with sesion_para("demo") as sesion:
+        sesion.add_all(MemoriaAsistente(texto=f"hecho número {i}") for i in range(memoria.MAX_RECUERDOS))
+        sesion.commit()
+    recibidos = {}
+
+    async def consolidar(recuerdos):
+        recibidos["lista"] = recuerdos
+        return ["lo importante", recuerdos[-1]]
+
+    monkeypatch.setattr(router_asistente, "consolidar_recuerdos", consolidar)
+    modelo["respuesta"] = "Listo.\nRECORDAR: el proveedor de pan llega los martes"
+    datos = preguntar(cliente, cabeceras_demo, "Acuérdate que el pan llega los martes").json()
+    assert datos["recordado"] == ["el proveedor de pan llega los martes"]
+    assert len(recibidos["lista"]) == memoria.MAX_RECUERDOS + 1
+    assert _recuerdos(cliente, cabeceras_demo) == ["lo importante", "el proveedor de pan llega los martes"]
+
+
+def test_sin_modelo_la_consolidacion_deja_los_mas_nuevos(monkeypatch):
+    import asyncio
+
+    from ia import configuracion, memoria, servicio
+
+    monkeypatch.setattr(configuracion, "leer", lambda: configuracion.ConfiguracionIA("nvidia", "x", "", (), 5.0, ""))
+    lista = [f"h{i}" for i in range(memoria.MAX_RECUERDOS + 1)]
+    assert asyncio.run(servicio.consolidar_recuerdos(lista)) == lista[-memoria.RECUERDOS_TRAS_CONSOLIDAR :]
+
+
+def test_el_operador_olvida_uno_o_todo(cliente, cabeceras_demo, cabeceras_anita):
+    from database import sesion_para
+    from modules.asistente.models import MemoriaAsistente
+
+    with sesion_para("demo") as sesion:
+        sesion.add_all([MemoriaAsistente(texto="uno"), MemoriaAsistente(texto="dos")])
+        sesion.commit()
+    # Cada negocio tiene su memoria: Anita no ve lo de demo
+    assert _recuerdos(cliente, cabeceras_anita) == []
+    primero = cliente.get("/api/asistente/recuerdos", headers=cabeceras_demo).json()[0]
+    assert cliente.delete(f"/api/asistente/recuerdos/{primero['uuid']}", headers=cabeceras_demo).status_code == 204
+    assert cliente.delete(f"/api/asistente/recuerdos/{primero['uuid']}", headers=cabeceras_demo).status_code == 204
+    assert _recuerdos(cliente, cabeceras_demo) == ["dos"]
+    assert cliente.delete("/api/asistente/recuerdos", headers=cabeceras_demo).status_code == 204
+    assert _recuerdos(cliente, cabeceras_demo) == []
+    assert cliente.get("/api/asistente/recuerdos").status_code == 401
+
+
+def test_las_cifras_de_un_recuerdo_no_cuentan_como_inventadas(monkeypatch):
+    import asyncio
+
+    from ia import configuracion, servicio
+
+    class Falso:
+        def __init__(self, *_):
+            pass
+
+        async def responder(self, *_args, **_kwargs):
+            return "Tu alquiler es S/ 300.00 al mes."
+
+    monkeypatch.setattr(servicio, "ProveedorCompatibleOpenAI", Falso)
+    monkeypatch.setattr(
+        configuracion, "leer", lambda: configuracion.ConfiguracionIA("nvidia", "x", "llave", ("m",), 5.0, "")
+    )
+    respuesta = asyncio.run(
+        servicio.preguntar("¿cuánto es mi alquiler?", "{}", recuerdos=["el alquiler es 300 soles cada mes"])
+    )
+    assert respuesta.texto == "Tu alquiler es S/ 300.00 al mes."
+    sin_recuerdo = asyncio.run(servicio.preguntar("¿cuánto es mi alquiler?", "{}"))
+    assert sin_recuerdo.modelo == servicio.MODELO_VERIFICADOR

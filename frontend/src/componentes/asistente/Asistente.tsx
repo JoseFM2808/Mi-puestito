@@ -16,6 +16,7 @@ import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Campo, Nota, TituloPagina } from '../../ui/componentes'
 import estilos from './Asistente.module.css'
 import { useDictado } from './dictado'
+import { Recuerdos } from './Recuerdos'
 import { estaALaVista, senalar } from './senalar'
 
 /**
@@ -36,6 +37,10 @@ import { estaALaVista, senalar } from './senalar'
  * del inventario que nombra son enlaces a su tarjeta. "Me sirvió" / "No me
  * sirvió" ayuda a mejorar un futuro modelo local (ADR-038). Privacidad (ADR-034): el backend
  * cambia los nombres de clientes y proveedores por códigos antes de enviar la pregunta.
+ *
+ * Memoria (D-26, ADR-052): la conversación se guarda en el dispositivo y sobrevive a una recarga;
+ * lo que el operador le pide recordar queda en la computadora del negocio, y el apartado muestra
+ * «Lo que recuerdo» para verlo y olvidarlo.
  */
 
 const TURNOS_DE_MEMORIA = 6
@@ -281,6 +286,7 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
         acciones: items.length > 0 || formulario ? [] : respuesta.acciones,
         idRespuesta: respuesta.id_respuesta,
         conBorrador: items.length > 0,
+        recordado: respuesta.recordado.length > 0 ? respuesta.recordado : undefined,
         hecho: formulario
           ? `Lo dejé llenado en ${nombreDe(PANTALLA_DEL_FORMULARIO[formulario.tipo])}. Revísalo y toca «${BOTON_DEL_FORMULARIO[formulario.tipo]}»: hasta entonces no se guarda nada.`
           : items.length > 0
@@ -332,6 +338,12 @@ function Conversacion({ prefijo }: { prefijo: 'asistente' | 'asistente-ventana' 
               <TextoConProductos texto={mensaje.texto} prefijo={prefijo} indice={indice} />
             </p>
             {mensaje.hecho && <Nota>{mensaje.hecho}</Nota>}
+            {mensaje.recordado && (
+              <Nota>
+                Lo voy a recordar: {mensaje.recordado.join('; ')}. Puedes verlo u olvidarlo en «Lo que
+                recuerdo».
+              </Nota>
+            )}
             {mensaje.conBorrador && borradorPendiente?.proyecto === proyecto && (
               <Boton aiId={`${prefijo}.ver-borrador-${indice}`} variante="secundario" onClick={verBorrador}>
                 Revisar la orden por guardar
@@ -463,6 +475,7 @@ export function Asistente() {
   const asistenteAVentana = useNavegacion((estado) => estado.asistenteAVentana)
   const { mensajes, enviando, empezarDeNuevo } = useConversacion()
   const [estado, setEstado] = useEstadoAsistente()
+  const [verRecuerdos, setVerRecuerdos] = useState(false)
 
   const quitarLlave = () => {
     void pedir<EstadoAsistenteCable>('DELETE', '/api/asistente/llave')
@@ -472,7 +485,7 @@ export function Asistente() {
 
   return (
     <main className={estilos.pantalla} data-ai-id="asistente" aria-label="Asistente">
-      <TituloPagina ayuda="Escríbele como le hablarías a una persona. Te responde con las cifras de tu caja y te dice dónde hacer cada cosa; nunca registra nada por ti.">
+      <TituloPagina ayuda="Escríbele como le hablarías a una persona. Te responde con las cifras de tu caja y te dice dónde hacer cada cosa; nunca registra nada por ti. Si le dices «acuérdate que…», lo recuerda.">
         Asistente
       </TituloPagina>
 
@@ -490,9 +503,18 @@ export function Asistente() {
               los ve.
             </Aviso>
           )}
-          <Conversacion prefijo="asistente" />
+          {verRecuerdos ? (
+            <Recuerdos alCerrar={() => setVerRecuerdos(false)} />
+          ) : (
+            <Conversacion prefijo="asistente" />
+          )}
           <div className={estilos.pie}>
-            {mensajes.length > 1 && (
+            {!verRecuerdos && (
+              <Boton aiId="asistente.ver-recuerdos" variante="discreto" onClick={() => setVerRecuerdos(true)}>
+                Lo que recuerdo
+              </Boton>
+            )}
+            {mensajes.length > 1 && !verRecuerdos && (
               <Boton
                 aiId="asistente.empezar-de-nuevo"
                 variante="discreto"

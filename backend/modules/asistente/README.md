@@ -7,20 +7,27 @@ El endpoint del Asistente que guía al operador (`docs/04-ia/AI-Companion.md`). 
 
 ## Qué datos maneja
 
-No tiene tablas. En cada pregunta:
+Una tabla: `memorias_asistente` (lo que recuerda del negocio, D-26, ADR-052). En cada pregunta:
 
 1. Calcula el resumen de caja del proyecto del token (`modules/dashboard/servicio.py`, importado de forma perezosa: si
    falla, responde sin cifras).
-2. Seudonimiza resumen, pregunta e historial (`ia/privacidad.py`, ADR-034): el modelo ve "Cliente 1", nunca un nombre.
+2. Seudonimiza resumen, pregunta, historial y recuerdos (`ia/privacidad.py`, ADR-034): el modelo ve "Cliente 1", nunca
+   un nombre. Un cliente o proveedor guardado que se nombre en el texto también recibe código aunque no esté en el
+   resumen (`registrar_mencionados`).
 3. Pregunta al modelo (`ia/servicio.py`), en el orden verificado de `ia/configuracion.py` (ADR-036).
 4. Convierte las líneas `ACCION: ir_a <pantalla>` en botones de lista blanca (`ia/acciones.py`, ADR-037).
-5. Si el registro está activo, guarda el intercambio seudonimizado para un futuro fine-tuning (`ia/registro.py`, ADR-038).
+5. Si el operador pidió recordar algo (`ia/memoria.py`), guarda las líneas `RECORDAR:` con el nombre real; pasado el
+   tope de 20, el modelo consolida la lista en 15 (si falla, quedan los más nuevos).
+6. Si el registro está activo, guarda el intercambio seudonimizado para un futuro fine-tuning (`ia/registro.py`, ADR-038).
 
 ## Qué acciones permite
 
 | Endpoint | Acción |
 |---|---|
-| `POST /api/asistente/preguntar` | `{mensaje, historial?}` → `{respuesta, acciones, id_respuesta, modelo}`; `503` si no hay proveedor |
+| `POST /api/asistente/preguntar` | `{mensaje, historial?, pantalla_actual?}` → `{respuesta, acciones, borrador, formulario, recordado, id_respuesta, modelo}`; `503` si no hay proveedor |
+| `GET /api/asistente/recuerdos` | Lo que recuerda, del más viejo al más nuevo |
+| `DELETE /api/asistente/recuerdos/{uuid}` | Olvida uno (`204`, idempotente) |
+| `DELETE /api/asistente/recuerdos` | Olvida todo (`204`) |
 | `POST /api/asistente/valoracion` | `{id_respuesta, util}` → `204` ("Me sirvió" / "No me sirvió") |
 
 ## Configuración

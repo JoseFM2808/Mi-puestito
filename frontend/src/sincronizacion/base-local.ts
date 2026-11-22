@@ -11,6 +11,7 @@ import type {
   VentaCable,
 } from '../api/contrato'
 import type { MetodoHttp } from '../api/cliente'
+import type { MensajeAsistente } from '../stores/conversacion'
 
 /**
  * Base local del dispositivo (IndexedDB vía Dexie, AGENTS.md).
@@ -48,6 +49,8 @@ export class BaseLocal extends Dexie {
   gastos!: Table<GastoCable & { dia: string }, string>
   /** El último análisis de cada período, para verlo sin red (Fase 7) */
   analisis!: Table<{ periodo: string; datos: AnalisisCable; guardadoEn: string }, string>
+  /** La conversación con el Asistente, para que no se pierda al recargar o actualizar la app (D-26) */
+  conversaciones!: Table<{ clave: string; mensajes: MensajeAsistente[]; guardadaEn: string }, string>
 
   constructor(proyecto: string) {
     super(`mi-puestito-${proyecto}`)
@@ -64,6 +67,7 @@ export class BaseLocal extends Dexie {
     this.version(3).stores({ productos: 'uuid, nombre' })
     this.version(4).stores({ cajas: 'dia', gastos: 'uuid, dia' })
     this.version(5).stores({ analisis: 'periodo' })
+    this.version(6).stores({ conversaciones: 'clave' })
   }
 }
 

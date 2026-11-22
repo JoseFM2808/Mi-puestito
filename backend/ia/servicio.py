@@ -13,7 +13,7 @@ cualquier API compatible con OpenAI a través de `compatible_openai.py`.
 import logging
 from dataclasses import dataclass, field
 
-from . import borrador, configuracion, formularios
+from . import borrador, configuracion, formularios, memoria
 from .acciones import APARTADOS, PANTALLAS, extraer, texto_si_solo_hubo_accion
 from .cifras import cifras_no_respaldadas
 from .compatible_openai import ProveedorCompatibleOpenAI, es_transitorio, motivo_error
@@ -59,6 +59,10 @@ Cómo funciona la app:
 
 Estado actual del negocio, en formato de datos (es la única fuente de cifras):
 {contexto}
+
+Lo que recuerdas de este negocio porque el operador te lo contó antes (úsalo para atenderlo mejor; \
+no son cifras de hoy):
+{recuerdos}
 
 Qué significa cada dato: hoy = la fecha de hoy. ventas_hoy = lo cobrado hoy. ventas_cerradas = \
 cuántas ventas se cobraron hoy. proyeccion_manana = lo que hay que pagar mañana. fiados_por_cobrar \
@@ -109,6 +113,11 @@ Dile que lo revise y toque «Guardar». En ese caso no agregues ACCION.
 3 frases, y ofrece hacerlo por él. Ejemplo para una venta: toca «Nueva orden», agrega lo que \
 lleva y toca «Cobrar en efectivo», «Cobrar con Yape o Plin» o «Fiar a un cliente»; o dime qué \
 lleva y te lleno la orden.
+- Si el operador te pide que recuerdes algo, o te cuenta algo de su negocio que dura (cómo paga un \
+cliente, qué día llega un proveedor, qué vende los sábados), agrega al final UNA línea:
+RECORDAR: <el hecho en pocas palabras, con los códigos de clientes y proveedores>
+Ejemplo: "acuérdate que Cliente 2 siempre paga por Yape" → RECORDAR: Cliente 2 paga por Yape
+No recuerdes lo que solo pasó hoy ni cifras del día. Dile en una frase que lo vas a recordar.
 - Responde SIEMPRE con al menos una frase. La línea ACCION va al final, nunca sola.
 - Si conviene que el operador vaya a una pantalla, agrega al final UNA línea exacta:
 ACCION: ir_a <pantalla>
@@ -144,20 +153,30 @@ class RespuestaIA:
     para: str | None = None
     # Un pago de fiado, un gasto o una merma llenados para que el operador los confirme (D-28)
     formulario: dict | None = None
+    # Hechos que el modelo propone recordar (D-26); el router decide si se guardan
+    recuerdos: list[str] = field(default_factory=list)
 
 
 TEXTO_SI_SOLO_HUBO_FORMULARIO = (
     "Te lo dejé llenado. Revísalo y toca «Guardar»: hasta entonces no se guarda nada."
 )
+TEXTO_SI_SOLO_HUBO_RECUERDO = "Listo, lo voy a recordar."
 TEXTO_SI_SOLO_HUBO_BORRADOR = "Te dejé la orden llenada en Ventas. Revísala y toca «Guardar orden»."
 
 
+SIN_RECUERDOS = "(todavía nada)"
+
+
 def armar_mensajes(
-    mensaje: str, contexto_json: str, historial: list[tuple[str, str]]
+    mensaje: str,
+    contexto_json: str,
+    historial: list[tuple[str, str]],
+    recuerdos: list[str] | None = None,
 ) -> list[dict[str, str]]:
     sistema = PROMPT_SISTEMA.format(
         guia=GUIA_APP,
         contexto=contexto_json,
+        recuerdos="\n".join(f"- {r}" for r in recuerdos) if recuerdos else SIN_RECUERDOS,
         pantallas=", ".join(PANTALLAS),
         apartados="\n".join(f"{clave} = {nombre} ({donde})" for clave, (donde, nombre) in APARTADOS.items()),
     )
@@ -169,7 +188,10 @@ def armar_mensajes(
 
 
 async def preguntar(
-    mensaje: str, contexto_json: str, historial: list[tuple[str, str]] | None = None
+    mensaje: str,
+    contexto_json: str,
+    historial: list[tuple[str, str]] | None = None,
+    recuerdos: list[str] | None = None,
 ) -> RespuestaIA:
     config = configuracion.leer()
     if not config.lista:
@@ -179,9 +201,10 @@ async def preguntar(
         )
 
     proveedor = ProveedorCompatibleOpenAI(config.url_base, config.api_key)
-    mensajes = armar_mensajes(mensaje, contexto_json, historial or [])
+    mensajes = armar_mensajes(mensaje, contexto_json, historial or [], recuerdos)
+    # Lo que recuerda también lo dijo el operador (antes): sus cifras no son inventadas
     dicho_por_el_operador = " ".join(
-        [mensaje, *(texto for rol, texto in (historial or []) if rol != "asistente")]
+        [mensaje, *(texto for rol, texto in (historial or []) if rol != "asistente"), *(recuerdos or [])]
     )
 
     ultimo_error: Exception | None = None
@@ -201,8 +224,9 @@ async def preguntar(
                     break
         if texto is None:
             continue
-        # Primero las líneas VENTA (borrador, ADR-049) y luego las ACCION
-        sin_borrador, items = borrador.separar(texto)
+        # Primero lo que propone recordar (D-26), luego las líneas VENTA (ADR-049) y al final las ACCION
+        sin_recuerdos, recuerdos_propuestos = memoria.separar(texto)
+        sin_borrador, items = borrador.separar(sin_recuerdos)
         sin_para, para = borrador.separar_para(sin_borrador)
         sin_formulario, formulario = formularios.separar(sin_para)
         limpio, acciones = extraer(sin_formulario)
@@ -211,6 +235,8 @@ async def preguntar(
             alguna_cifra_rechazada = True
             registro.warning("Respuesta de %s descartada: monto sin respaldo en los datos", modelo)
             continue
+        if not limpio and recuerdos_propuestos and not (items or formulario or acciones):
+            limpio = TEXTO_SI_SOLO_HUBO_RECUERDO
         if not limpio and (items or formulario):
             limpio = TEXTO_SI_SOLO_HUBO_BORRADOR if items else TEXTO_SI_SOLO_HUBO_FORMULARIO
         elif not limpio and acciones:
@@ -222,6 +248,7 @@ async def preguntar(
             borrador=items,
             para=para if items else None,
             formulario=formulario,
+            recuerdos=recuerdos_propuestos,
         )
 
     if alguna_cifra_rechazada:
@@ -235,3 +262,12 @@ async def preguntar(
     raise AsistenteNoDisponible(
         "El Asistente no pudo responder ahora mismo. Intenta de nuevo en un momento."
     ) from ultimo_error
+
+
+async def consolidar_recuerdos(recuerdos: list[str]) -> list[str]:
+    """Pasado el límite, el modelo repiensa qué conservar (D-26). Sin modelo, quedan los más nuevos."""
+    config = configuracion.leer()
+    if not config.lista or not config.modelos:
+        return recuerdos[-memoria.RECUERDOS_TRAS_CONSOLIDAR :]
+    proveedor = ProveedorCompatibleOpenAI(config.url_base, config.api_key)
+    return await memoria.consolidar(recuerdos, proveedor, config.modelos[0], config.tiempo_limite)

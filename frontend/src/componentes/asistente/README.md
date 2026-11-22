@@ -10,8 +10,11 @@ Si el operador pide ir o hacer algo, abre la pantalla solo; si pregunta dónde e
 
 ## Qué datos maneja
 
-- La conversación vive en `stores/conversacion.ts`: no se pierde al cambiar de pantalla, se borra al cerrar la app o al
-  cambiar de negocio, y nunca se guarda en el dispositivo.
+- La conversación vive en `stores/conversacion.ts` y se guarda en la base local del negocio (IndexedDB, D-26): no se
+  pierde al cambiar de pantalla ni al recargar o actualizar la app. Se guardan los últimos 40 mensajes; cada negocio
+  tiene la suya; «Empezar una conversación nueva» la borra también del dispositivo.
+- Lo que el Asistente recuerda del negocio vive en el servidor (`/api/asistente/recuerdos`); `Recuerdos.tsx` lo muestra
+  y lo olvida. Bajo una respuesta que guardó algo se lee "Lo voy a recordar: …".
 - Envía los últimos 6 turnos como historial, para que el Asistente recuerde de qué se habla, y la pantalla abierta
   (`pantalla_actual`), para que diga "toca este botón" donde el operador está.
 - En un negocio real muestra un aviso: los nombres de clientes y proveedores se cambian por códigos antes de salir.
@@ -30,6 +33,8 @@ Si el operador pide ir o hacer algo, abre la pantalla solo; si pregunta dónde e
 | Ver un producto que se nombra              | Tocar su nombre subrayado: lleva a su tarjeta en Inventario                      |
 | Ir a la orden que llenó                    | **Revisar la orden por guardar**                                                 |
 | Valorar una respuesta                      | **Me sirvió** / **No me sirvió** (ayuda a entrenar un modelo local, ADR-038)     |
+| Ver lo que recuerda                        | **Lo que recuerdo** (apartado) → **Volver a la conversación**                    |
+| Olvidar un recuerdo o todos                | **Olvidar esto** / **Olvidar todo** → **Sí, olvidar todo**                       |
 
 Sin internet dice que necesita conexión y que lo demás de la app sigue funcionando.
 
@@ -37,7 +42,9 @@ Sin internet dice que necesita conexión y que lo demás de la app sigue funcion
 
 Es la cara de la IA. `data-ai-id`: `asistente`, `asistente.privacidad`, `asistente.conversacion`, `asistente.pregunta`,
 `asistente.enviar`, `asistente.sugerencia-<n>`, `asistente.empezar-de-nuevo`, `asistente.accion-<n>-<pantalla>`,
-`asistente.sirvio-<n>`, `asistente.no-sirvio-<n>`, `asistente.a-ventana`.
+`asistente.sirvio-<n>`, `asistente.no-sirvio-<n>`, `asistente.a-ventana`, `asistente.ver-recuerdos`,
+`asistente.recuerdos`, `asistente.olvidar-<uuid>`, `asistente.olvidar-todo`, `asistente.confirmar-olvidar-todo`,
+`asistente.cancelar-olvidar-todo`, `asistente.cerrar-recuerdos`.
 
 Lo que hace solo (ADR-047): con una acción `automatica` abre la pantalla (`llevarConAsistente`) y, si es `resaltar`,
 marca el `data-ai-id` indicado con `senalar.ts` (atributo `data-resaltado`, estilo en `estilos-base.css`). Debajo de la

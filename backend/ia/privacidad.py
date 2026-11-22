@@ -30,6 +30,19 @@ def _formas_de(nombre: str) -> list[str]:
     return [nombre, *(f"{forma} {partes[1]}" for forma in grupo)]
 
 
+def _patron(forma: str) -> str:
+    """La forma como palabra entera, con cualquier cantidad de espacios entre sus partes."""
+    return r"(?<!\w)" + r"\s+".join(re.escape(p) for p in forma.split()) + r"(?!\w)"
+
+
+def _aparece(forma: str, texto: str) -> bool:
+    return bool(re.search(_patron(forma), texto, flags=re.IGNORECASE))
+
+
+# Lo que queda de un alias que no se pudo devolver a su nombre real
+ALIAS_SUELTO = re.compile(r"\b(?:Cliente \d+|Proveedor [A-Z]\d*)\b")
+
+
 class Seudonimos:
     def __init__(self) -> None:
         self._alias: dict[str, str] = {}  # nombre real → alias
@@ -52,6 +65,20 @@ class Seudonimos:
             self._alias[nombre] = f"Proveedor {letra}{vuelta or ''}"
         return self._alias[nombre]
 
+    def registrar_mencionados(self, texto: str, clientes: list[str], proveedores: list[str]) -> None:
+        """Da alias a los clientes y proveedores guardados que aparecen en `texto`.
+
+        El resumen solo trae a quien tiene una orden abierta o está entre los que más deben. Un
+        recuerdo ("la Sra. Lucía paga los viernes") o una pregunta pueden nombrar a cualquier otro:
+        sin esto, ese nombre viajaría tal cual al proveedor de IA (D-26).
+        """
+        candidatos = [*((c, self.cliente) for c in clientes), *((p, self.proveedor) for p in proveedores)]
+        for nombre, dar_alias in candidatos:
+            if nombre in self._alias or not nombre.strip():
+                continue
+            if any(_aparece(forma, texto) for forma in _formas_de(nombre)):
+                dar_alias(nombre)
+
     def ocultar_en_texto(self, texto: str) -> str:
         """Reemplaza en texto libre (la pregunta) cada nombre conocido por su alias.
 
@@ -63,8 +90,7 @@ class Seudonimos:
         variantes = [(forma, alias) for real, alias in self._alias.items() for forma in _formas_de(real)]
         # Primero las formas largas: "Sra. Flora Quispe" antes que "Flora"
         for forma, alias in sorted(variantes, key=lambda par: len(par[0]), reverse=True):
-            patron = r"(?<!\w)" + r"\s+".join(re.escape(p) for p in forma.split()) + r"(?!\w)"
-            texto = re.sub(patron, alias, texto, flags=re.IGNORECASE)
+            texto = re.sub(_patron(forma), alias, texto, flags=re.IGNORECASE)
         return texto
 
     def reidentificar(self, texto: str) -> str:

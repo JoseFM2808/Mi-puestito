@@ -1,5 +1,6 @@
 """Esquemas del Asistente."""
 
+from datetime import datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, Field, StringConstraints
@@ -90,6 +91,8 @@ class RespuestaSalida(BaseModel):
     acciones: list[AccionSugerida] = []
     borrador: BorradorVenta | None = None
     formulario: FormularioLlenado | None = None
+    # Lo que se guardó en su memoria con esta respuesta (D-26), para decírselo al operador
+    recordado: list[str] = []
     # Para valorar la respuesta ("Me sirvió" / "No me sirvió")
     id_respuesta: str
     modelo: str
@@ -98,3 +101,13 @@ class RespuestaSalida(BaseModel):
 class ValoracionEntrada(BaseModel):
     id_respuesta: Annotated[str, StringConstraints(pattern=r"^[0-9a-fA-F-]{36}$")]
     util: bool
+
+
+class RecuerdoSalida(BaseModel):
+    """Un hecho que el Asistente recuerda del negocio (D-26). El operador lo puede olvidar."""
+
+    model_config = {"from_attributes": True}
+
+    uuid: str
+    texto: str
+    creado_en: datetime

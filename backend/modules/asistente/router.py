@@ -10,24 +10,38 @@
 - Puede LLENAR una orden (`borrador`) que el operador revisa y guarda (ADR-049); nunca la guarda.
 - No depende del router del Dashboard (D-06): usa su servicio de cálculo y,
   si no está disponible, responde igual pero sin cifras.
+- Recuerda lo que el operador le pide recordar (D-26, ADR-052): hechos cortos en la base del
+  proyecto, con un tope; el operador los ve y los olvida desde la pantalla.
 """
 
 import json
+import logging
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 import seguridad
-from database import obtener_sesion
+from database import obtener_sesion, obtener_sesion_escritura, sesion_escritura_para
 from fechas import dia_peruano
-from ia import borrador, configuracion, formularios, llave_local, registro
+from ia import borrador, configuracion, formularios, llave_local, memoria, registro
 from ia.acciones import accion_por_tema, corregir_destino, marcar_automatica, pide_ir_o_hacer
-from ia.privacidad import seudonimizar_resumen
-from ia.servicio import AsistenteNoDisponible, armar_mensajes, preguntar
+from ia.privacidad import ALIAS_SUELTO, Seudonimos, seudonimizar_resumen
+from ia.servicio import AsistenteNoDisponible, armar_mensajes, consolidar_recuerdos, preguntar
 from seguridad import proyecto_autenticado
 
-from .schemas import EstadoAsistente, LlaveEntrada, PreguntaEntrada, RespuestaSalida, ValoracionEntrada
+from .models import MemoriaAsistente
+from .schemas import (
+    EstadoAsistente,
+    LlaveEntrada,
+    PreguntaEntrada,
+    RecuerdoSalida,
+    RespuestaSalida,
+    ValoracionEntrada,
+)
+
+bitacora = logging.getLogger("mi_puestito.ia")
 
 router = APIRouter(prefix="/api/asistente", tags=["asistente"])
 
@@ -123,6 +137,75 @@ def _nombres_de_productos(sesion: Session) -> list[str]:
     )
 
 
+def _nombres_guardados(sesion: Session) -> tuple[list[str], list[str]]:
+    """Todos los clientes y proveedores, para reconocerlos en texto libre. Sin el módulo, ninguno."""
+    clientes: list[str] = []
+    proveedores: list[str] = []
+    try:
+        from modules.ventas.models import Cliente
+
+        clientes = list(sesion.scalars(select(Cliente.nombre)))
+    except Exception:  # noqa: BLE001 — sin Ventas, solo los nombres del resumen
+        sesion.rollback()
+    try:
+        from modules.compras.models import Proveedor
+
+        proveedores = list(sesion.scalars(select(Proveedor.nombre)))
+    except Exception:  # noqa: BLE001 — sin Compras, solo los nombres del resumen
+        sesion.rollback()
+    return clientes, proveedores
+
+
+def _recuerdos(sesion: Session) -> list[MemoriaAsistente]:
+    """Lo que recuerda, del más viejo al más nuevo. Si la tabla falla, atiende sin memoria."""
+    try:
+        orden = (MemoriaAsistente.creado_en, MemoriaAsistente.id)
+        return list(sesion.scalars(select(MemoriaAsistente).order_by(*orden)))
+    except Exception:  # noqa: BLE001
+        sesion.rollback()
+        return []
+
+
+MAX_RECUERDOS_POR_RESPUESTA = 3
+
+
+async def _recordar(
+    proyecto: str, propuestos: list[str], existentes: list[str], alias: Seudonimos
+) -> list[str]:
+    """Guarda lo nuevo que el operador pidió recordar y, pasado el tope, consolida (D-26).
+
+    El modelo escribe con códigos ("Cliente 2 paga por Yape"): se guarda con el nombre real, en la
+    computadora del vendedor. Un hecho que conserva un código suelto no se entiende después y se
+    descarta. Devuelve lo que se guardó, para decírselo al operador.
+    """
+    reales = [alias.reidentificar(hecho) for hecho in propuestos[:MAX_RECUERDOS_POR_RESPUESTA]]
+    nuevos = memoria.sin_repetidos(existentes, [h for h in reales if not ALIAS_SUELTO.search(h)])
+    if not nuevos:
+        return []
+    todos = [*existentes, *nuevos]
+    sesion = sesion_escritura_para(proyecto)
+    try:
+        if len(todos) > memoria.MAX_RECUERDOS:
+            # El modelo repiensa la lista sin ver nombres reales; si falla, quedan los más nuevos
+            anonimos = await consolidar_recuerdos([alias.ocultar_en_texto(r) for r in todos])
+            conservados = [alias.reidentificar(r) for r in anonimos]
+            conservados = [r for r in conservados if not ALIAS_SUELTO.search(r)] or todos[
+                -memoria.RECUERDOS_TRAS_CONSOLIDAR :
+            ]
+            sesion.execute(delete(MemoriaAsistente))
+            sesion.add_all(MemoriaAsistente(texto=texto[: memoria.MAX_TEXTO]) for texto in conservados)
+        else:
+            sesion.add_all(MemoriaAsistente(texto=texto) for texto in nuevos)
+        sesion.commit()
+    except Exception as error:  # noqa: BLE001 — no recordar no impide responder
+        sesion.rollback()
+        bitacora.warning("No se pudo guardar lo que el Asistente debía recordar: %s", error)
+        return []
+    finally:
+        sesion.close()
+    return nuevos
+
+
 @router.post("/preguntar", response_model=RespuestaSalida)
 async def preguntar_endpoint(
     datos: PreguntaEntrada,
@@ -133,13 +216,21 @@ async def preguntar_endpoint(
     resumen = _resumen_del_proyecto(sesion)
     if datos.pantalla_actual:
         resumen["pantalla_actual"] = datos.pantalla_actual
+    recordados = [r.texto for r in _recuerdos(sesion)]
     anonimo, alias = seudonimizar_resumen(resumen)
+    # Quien se nombra en la pregunta, el historial o un recuerdo también viaja con código (D-26)
+    clientes, proveedores = _nombres_guardados(sesion)
+    texto_libre = "\n".join([datos.mensaje, *(t.texto for t in datos.historial), *recordados])
+    alias.registrar_mencionados(texto_libre, clientes, proveedores)
+    sesion.close()  # no se tiene la base abierta mientras responde el modelo
+
     contexto = json.dumps(anonimo, ensure_ascii=False)
     pregunta = alias.ocultar_en_texto(datos.mensaje)
     historial = [(turno.rol, alias.ocultar_en_texto(turno.texto)) for turno in datos.historial]
+    recuerdos = [alias.ocultar_en_texto(r) for r in recordados]
 
     try:
-        respuesta = await preguntar(pregunta, contexto, historial)
+        respuesta = await preguntar(pregunta, contexto, historial, recuerdos)
     except AsistenteNoDisponible as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
@@ -148,10 +239,14 @@ async def preguntar_endpoint(
     registro.guardar_intercambio(
         proyecto,
         id_respuesta,
-        mensajes_enviados=armar_mensajes(pregunta, contexto, historial),
+        mensajes_enviados=armar_mensajes(pregunta, contexto, historial, recuerdos),
         respuesta_del_modelo=respuesta.texto,
         modelo=respuesta.modelo,
     )
+    # Solo se recuerda si el operador lo pidió o contó algo que dura: una pregunta de cifras no deja nada
+    recordado = []
+    if respuesta.recuerdos and memoria.pide_recordar(datos.mensaje):
+        recordado = await _recordar(proyecto, respuesta.recuerdos, recordados, alias)
     # Orden llenada (ADR-049): solo si el operador pidió registrar (ahora, o en su mensaje anterior:
     # "regístrala por mí"), y solo con precios que él dijo
     del_operador = [t.texto for t in datos.historial if t.rol == "operador"]
@@ -186,9 +281,33 @@ async def preguntar_endpoint(
             else None
         ),
         formulario=formulario,
+        recordado=recordado,
         id_respuesta=id_respuesta,
         modelo=respuesta.modelo,
     )
+
+
+# ---------------------------------------------------------------- lo que recuerda (D-26)
+
+
+@router.get("/recuerdos", response_model=list[RecuerdoSalida])
+def ver_recuerdos(sesion: Session = Depends(obtener_sesion)) -> list[MemoriaAsistente]:
+    """Lo que el Asistente recuerda de este negocio, del más viejo al más nuevo."""
+    return _recuerdos(sesion)
+
+
+@router.delete("/recuerdos/{uuid}", status_code=status.HTTP_204_NO_CONTENT)
+def olvidar(uuid: str, sesion: Session = Depends(obtener_sesion_escritura)) -> None:
+    """Olvida un recuerdo (idempotente: olvidar dos veces no es un error)."""
+    sesion.execute(delete(MemoriaAsistente).where(MemoriaAsistente.uuid == uuid))
+    sesion.commit()
+
+
+@router.delete("/recuerdos", status_code=status.HTTP_204_NO_CONTENT)
+def olvidar_todo(sesion: Session = Depends(obtener_sesion_escritura)) -> None:
+    """Olvida todo lo que recordaba de este negocio."""
+    sesion.execute(delete(MemoriaAsistente))
+    sesion.commit()
 
 
 @router.post("/valoracion", status_code=status.HTTP_204_NO_CONTENT)
@@ -228,9 +347,7 @@ def _se_puede_guardar(proveedor: str, request: Request) -> bool:
 
 
 @router.get("/estado", response_model=EstadoAsistente)
-def estado_del_asistente(
-    request: Request, _proyecto: str = Depends(proyecto_autenticado)
-) -> EstadoAsistente:
+def estado_del_asistente(request: Request, _proyecto: str = Depends(proyecto_autenticado)) -> EstadoAsistente:
     """Si el Asistente puede responder, para saber si hay que pedir la llave."""
     return _estado(request)
 

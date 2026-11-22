@@ -351,3 +351,32 @@
 - **Consecuencias**: la caja dice cuánto hay de verdad en la gaveta y en el Yape; un egreso a proveedor ya no queda
   fuera. Análisis (Fase 7) podrá separar la rentabilidad del negocio de los gastos de la casa con estos datos. Ventas,
   Compras y Gastos siguen sin claves foráneas entre sí. Migración 0006. `ia.evaluar` 30/30 con el caso de gastos.
+
+## ADR-052 · Memoria del Asistente: conversación en el dispositivo y recuerdos con tope — Aceptada
+
+- **Fecha**: 2026-11-22 (decisión del owner del 2026-11-17, D-26).
+- **Contexto**: la conversación vivía solo en memoria y se perdía al recargar o actualizar la app a mitad de una tarea.
+  El owner pidió además una memoria "como en los asistentes grandes": que se alimente de lo que cuenta el usuario, con un
+  límite que obligue a repensar qué conservar.
+- **Decisión**:
+  1. **Conversación** en IndexedDB del negocio (`conversaciones`, versión 6 de la base local): los últimos 40 mensajes,
+     con el saludo; «Empezar una conversación nueva» también la borra del dispositivo. Al servidor sigue viajando solo el
+     historial corto de siempre (6 turnos).
+  2. **Recuerdos** en la base del proyecto (`memorias_asistente`, migración 0008): hechos cortos (≤ 160 caracteres). El
+     modelo propone uno con `RECORDAR: <hecho>`; se guarda solo si el operador pidió recordar o contó algo que dura
+     (regla fija `ia/memoria.pide_recordar`, no el modelo). Sin repetidos, máximo 3 por respuesta.
+  3. **Tope**: pasado `MAX_RECUERDOS` (20) el modelo reescribe la lista en 15 (une, quita lo viejo o contradicho). Si
+     falla o responde de más, quedan los 15 más nuevos: nunca crece sin límite.
+  4. **Privacidad (ADR-034)**: el modelo escribe con códigos y se guarda con el nombre real, en la computadora del
+     vendedor; hacia el proveedor los recuerdos viajan seudonimizados. Además, cualquier cliente o proveedor guardado
+     que se nombre en la pregunta, el historial o un recuerdo recibe código aunque no esté en el resumen (antes solo se
+     ocultaban los del resumen). Un recuerdo con un código suelto no se guarda.
+  5. **Control del operador**: `GET /api/asistente/recuerdos`, `DELETE /api/asistente/recuerdos/{uuid}` y
+     `DELETE /api/asistente/recuerdos`; panel «Lo que recuerdo» en el apartado del Asistente. Bajo la respuesta se dice
+     "Lo voy a recordar: …".
+  6. Las cifras de un recuerdo cuentan como dichas por el operador para el verificador (ADR-042).
+- **Consecuencias**: la conversación sobrevive a una recarga y el Asistente atiende con contexto del negocio. El prompt
+  crece con la lista (tope de 20 líneas cortas). Los recuerdos entran en el respaldo (están en la base) y se borran al
+  reiniciar la práctica. Pendiente medir con `ia.evaluar` y la llave en Staging que el modelo use `RECORDAR` solo cuando
+  corresponde.
+

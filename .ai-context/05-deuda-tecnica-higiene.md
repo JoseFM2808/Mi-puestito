@@ -1,6 +1,6 @@
 # 05 · Deuda técnica e higiene del repositorio
 
-> Última revisión: 2026-11-01 · rama `chore/auditoria-arquitectura-higiene`.
+> Última revisión: 2026-11-22 · rama `claude/loving-albattani-qxwm6d`.
 > Prioridad: **P1** antes de usar el negocio real · **P2** antes de la nube · **P3** mejora continua.
 
 ## 1. Pendientes
@@ -14,7 +14,6 @@
 | D-21 | P3 | El RUC se escribe a mano | Un RUC válido en forma pero inexistente pasa | Búsqueda en SUNAT: requiere elegir un servicio externo. **Pospuesto por el owner (2026-11-17)** | `Modulo-Compras.md` |
 | D-30 | P3 | El código de barras se lee con un lector o se escribe | Sin lector, hay que tipear el código | Escanear con la cámara (`BarcodeDetector`, Chrome en Android) en el buscador y al crear el producto | D-22 |
 | D-23 | P2 | La copia de respaldo va sin cifrar | Quien tenga el archivo ve clientes, fiados y ventas | Cifrar con una contraseña que elija el vendedor. **Decidido (owner, 2026-11-17):** si la olvida, se le envía un enlace a su Gmail mediante una conexión con Google Cloud. Falta que el owner cree el proyecto de Google Cloud (credenciales OAuth / API de Gmail) | ADR-044 |
-| D-26 | P3 | La conversación con el Asistente se borra al recargar o al actualizar la app | Se pierde el hilo si la app se recarga a mitad de una tarea | **Decidido (owner, 2026-11-17):** la conversación se guarda y, como en los asistentes grandes, hay una memoria que se alimenta de los datos del usuario, con un límite que obliga a repensar qué conservar para mejorar con el tiempo. En desarrollo: hecho el modelo `memorias_asistente` (migración 0008) y las reglas de `ia/memoria.py`; falta conectarlo al Asistente, la persistencia en el dispositivo, el panel "Lo que el Asistente recuerda" y el ADR-052 | ADR-046 |
 
 ## 2. Hechos
 
@@ -67,6 +66,7 @@
 | — | 2026-11-17 | Módulo Gastos (Fase 7): del puesto o de la casa, por medio de pago, offline | `almacen.test.ts`; navegador |
 | D-10 | 2026-11-17 | El TestClient usa `httpx2`; el aviso de Starlette ahora es error | Control negativo: sin `httpx2` los tests no arrancan |
 | — | 2026-11-17 | Asistente: "Ir a la Caja" se corrige hacia la pantalla del tema y un pedido de hacer algo sin acción abre la suya | `tests/test_asistente.py`; `ia.evaluar` 30/30 |
+| D-26 | 2026-11-22 | La conversación con el Asistente se guarda en el dispositivo (sobrevive a recargar y actualizar) y el Asistente recuerda lo que se le pide, con tope de 20 que el modelo consolida; panel «Lo que recuerdo» para olvidar (ADR-052). De paso, un cliente que no está en el resumen tampoco viaja con su nombre | `tests/test_asistente.py` (recuerdos, tope, olvidar, seudonimización), `conversacion.test.ts`, `Recuerdos.test.tsx`; Staging con modelo falso: "Acuérdate que la Sra. Rosa siempre paga por Yape" → el modelo recibe "Cliente 3", el panel muestra "Sra. Rosa…", recargar conserva la conversación, sin desborde a 375 px |
 
 ## 3. Resueltos en la auditoría inicial (2026-09-27, verificados en Staging)
 

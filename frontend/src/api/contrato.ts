@@ -331,8 +331,17 @@ export interface RespuestaAsistenteCable {
   acciones: AccionSugeridaCable[]
   borrador: BorradorVentaCable | null
   formulario: FormularioLlenadoCable | null
+  /** Lo que guardó en su memoria con esta respuesta (D-26) */
+  recordado: string[]
   id_respuesta: string
   modelo: string
+}
+
+/** Un hecho que el Asistente recuerda del negocio; el operador lo puede olvidar (D-26) */
+export interface RecuerdoCable {
+  uuid: string
+  texto: string
+  creado_en: string
 }
 
 // ------------------------------------------------------------------ listas exactas de campos
@@ -656,9 +665,11 @@ export const CAMPOS_DEL_CONTRATO = {
     'acciones',
     'borrador',
     'formulario',
+    'recordado',
     'id_respuesta',
     'modelo',
   ]),
+  RecuerdoSalida: camposDe<RecuerdoCable>()(['uuid', 'texto', 'creado_en']),
   BorradorVenta: camposDe<BorradorVentaCable>()(['items', 'para']),
   ItemBorrador: camposDe<ItemBorradorCable>()(['nombre', 'cantidad', 'precio']),
   FormularioLlenado: camposDe<FormularioLlenadoCable>()([
