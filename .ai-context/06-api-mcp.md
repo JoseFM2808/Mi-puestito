@@ -197,6 +197,7 @@ Fiados, Gastos o Inventario sin guardarlo.
 
 | Método | Ruta | Respuesta | Notas |
 |---|---|---|---|
-| GET | `/api/analisis?periodo=semana\|mes\|mes_pasado` | `AnalisisDelPeriodo {periodo, desde, hasta, vendido, ventas, pagado_a_proveedores, gastos_del_puesto, gastos_de_la_casa, resultado_del_negocio, libre, fiados_por_cobrar, por_dia [{dia, vendido, gastado}], mejores_productos [{nombre, vendido, ganancia_estimada}], no_disponibles}` | Solo lectura; un período desconocido da `422` |
+| GET | `/api/analisis?periodo=semana\|mes\|mes_pasado` | `AnalisisDelPeriodo {periodo, desde, hasta, vendido, ventas, pagado_a_proveedores, gastos_del_puesto, gastos_de_la_casa, resultado_del_negocio, libre, fiados_por_cobrar, por_dia [{dia, vendido, gastado}], mejores_productos [{nombre, vendido, ganancia_estimada}], por_categoria [{categoria, vendido, ganancia_estimada}], no_disponibles}` | Solo lectura; un período desconocido da `422` |
+| GET | `/api/analisis/kardex?mes=YYYY-MM` | `KardexDelMes {mes, desde, hasta, productos [{nombre, unidad, inicial, registrado, compras, vendido, mermas, ajustes, final}], no_disponibles}` | Kardex mensual del inventario (sin `mes`: el actual, hasta hoy). Un mes futuro o mal escrito da `422` |
 
 El contexto del Asistente suma `semana` y `mes` con esas cifras; `pantalla_actual` acepta `analisis`.

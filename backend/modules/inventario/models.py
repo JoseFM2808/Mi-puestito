@@ -62,6 +62,9 @@ class Producto(Base):
     costo_ultimo: Mapped[Decimal | None] = mapped_column(Dinero)
     # Cuándo vence lo más antiguo que queda: el lote que hay que vender primero (D-22)
     vence_el: Mapped[date | None] = mapped_column(Date)
+    # Qué tipo de producto es ("Abarrotes", "Lácteos"…), a elección del vendedor: el Análisis
+    # agrupa la ganancia por categoría. Texto libre, con la primera letra en mayúscula
+    categoria: Mapped[str | None] = mapped_column(String(40))
     creado_en: Mapped[datetime] = mapped_column(FechaHoraUTC, default=ahora_utc)
     actualizado_en: Mapped[datetime] = mapped_column(
         FechaHoraUTC, default=ahora_utc, onupdate=ahora_utc

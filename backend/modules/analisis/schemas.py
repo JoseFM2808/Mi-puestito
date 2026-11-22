@@ -22,6 +22,14 @@ class GananciaPorProducto(BaseModel):
     ganancia_estimada: Decimal
 
 
+class GananciaPorCategoria(BaseModel):
+    """La misma cuenta que por producto, sumada por categoría ("Sin categoría" si no tiene)."""
+
+    categoria: str
+    vendido: Decimal
+    ganancia_estimada: Decimal
+
+
 class AnalisisDelPeriodo(BaseModel):
     periodo: Periodo
     desde: date
@@ -39,5 +47,30 @@ class AnalisisDelPeriodo(BaseModel):
     fiados_por_cobrar: Decimal
     por_dia: list[DiaDelPeriodo]
     mejores_productos: list[GananciaPorProducto]
+    por_categoria: list[GananciaPorCategoria] = []
     # Partes que no se pudieron calcular: el análisis las dice con palabras
+    no_disponibles: list[str] = []
+
+
+class KardexProducto(BaseModel):
+    """Cómo se movió un producto en el mes, en su unidad (kg, litro o unidades)."""
+
+    nombre: str
+    unidad: str
+    inicial: Decimal  # lo que había al empezar el mes
+    registrado: Decimal  # + lo que había al registrar el producto, si se registró en el mes
+    compras: Decimal  # + pedidos recibidos
+    vendido: Decimal  # − ventas (ya descontado lo que se quitó de una orden)
+    mermas: Decimal  # − vencido, dañado, regalado
+    ajustes: Decimal  # ± conteos
+    final: Decimal  # inicial + registrado + compras − vendido − mermas + ajustes
+
+
+class KardexDelMes(BaseModel):
+    """Kardex mensual del inventario (Modulo-Analisis): entradas y salidas de cada producto."""
+
+    mes: str  # "2026-11"
+    desde: date
+    hasta: date
+    productos: list[KardexProducto]
     no_disponibles: list[str] = []

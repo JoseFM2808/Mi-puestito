@@ -1,7 +1,7 @@
 # 03 · Base de datos
 
 > Modelo entidad-relación y diccionario de datos. Última revisión: 2026-11-01.
-> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0007).
+> Fuente de verdad del esquema: `backend/modules/*/models.py`; historial en `backend/migraciones/versions/` (0001–0009).
 > Un archivo SQLite **por proyecto** (`mi_puestito_demo.db`, `mi_puestito_<real>.db`), mismo esquema en cada uno.
 > `backend/tests/test_migraciones.py` falla si un modelo cambia sin su migración.
 
@@ -110,6 +110,7 @@ erDiagram
         bool tiene_vencimiento
         int costo_ultimo "céntimos, última compra"
         date vence_el "lote que vence primero"
+        string categoria "nullable; Abarrotes, Lácteos…"
         datetime creado_en
         datetime actualizado_en
     }
@@ -155,10 +156,10 @@ erDiagram
 
 | Qué | Dónde | Contenido | Protección |
 |---|---|---|---|
-| Usuarios | `usuarios.json` en la carpeta de datos | `{usuario: {proyecto, sal, pin_hash}}` | `.gitignore` + `test_higiene_repo.py` |
+| Usuarios | `usuarios.json` en la carpeta de datos | `{usuario: {proyecto, sal, pin_hash, pin_por_mostrar?}}`. El PIN generado nunca se guarda en claro (ADR-053) | `.gitignore` + `test_higiene_repo.py` |
 | Orden de modelos de IA | `ia_modelos.json` en la carpeta de datos | Nombres de modelos, latencias, fecha. **Nunca la llave** | Se regenera con `python -m ia.verificar` |
 | Registro para fine-tuning | `ia_registro_<proyecto>.jsonl` en la carpeta de datos | Intercambios en formato chat, seudonimizados, y valoraciones (ADR-038) | Opt-in; `*.jsonl` ignorado y vigilado |
-| Cola offline | IndexedDB `mi-puestito-<proyecto>` en el navegador | `operaciones`, `ventasAbiertas`, `clientes`, `instantaneas`, `ordenesCompra`, `proveedores`, `productos` | Por proyecto; vive en el dispositivo |
+| Cola offline | IndexedDB `mi-puestito-<proyecto>` en el navegador | `operaciones`, `ventasAbiertas`, `clientes`, `instantaneas`, `ordenesCompra`, `proveedores`, `productos`, `cajas`, `gastos`, `analisis`, `conversaciones` | Por proyecto; vive en el dispositivo |
 | Secreto de sesión | `sesion.key` en la carpeta de datos | Firma los tokens en modo local | `*.key` en `.gitignore` y en el test de higiene |
 | Llave de IA | `ia_llave.dpapi` en la carpeta de datos | Cifrada con DPAPI, ligada a la cuenta de Windows (ADR-043) | `*.dpapi` en `.gitignore` y en el test de higiene |
 | Copias automáticas | `respaldos/antes-de-restaurar-<proyecto>-<momento>.db` en la carpeta de datos | Lo que había antes de cada restauración (ADR-044) | `*.db` y `respaldos/` en `.gitignore`. No se borran solas |
@@ -230,10 +231,11 @@ En IndexedDB (versión 4): `cajas` (por día) y `gastos` (con su día), para ver
 En IndexedDB (versión 5): `analisis` (el último análisis de cada período, para verlo sin red). Análisis no tiene tablas
 en el servidor: solo lee `ventas`, `items_venta`, `gastos` y `productos`.
 
-## memorias_asistente (migración 0008, D-26 en curso)
+## memorias_asistente (migración 0008, D-26, ADR-052)
 
 Lo que el Asistente recuerda del negocio: hechos cortos que el operador le pidió recordar. Vive en la base del
-proyecto; hacia el proveedor de IA viajará seudonimizado (ADR-034). Límite de 20; al pasarlo se consolida en 15.
+proyecto; hacia el proveedor de IA viaja seudonimizado (ADR-034). Límite de 20; al pasarlo el modelo la consolida en 15
+(si falla, quedan los 15 más nuevos). Entra en el respaldo y se borra al reiniciar la práctica.
 
 | Columna | Tipo | Notas |
 |---|---|---|
@@ -242,4 +244,15 @@ proyecto; hacia el proveedor de IA viajará seudonimizado (ADR-034). Límite de 
 | `texto` | texto(160) | el hecho, con nombres reales (solo en el dispositivo) |
 | `creado_en` | fecha y hora UTC | |
 
-Todavía no la usa ninguna ruta: falta conectarla al Asistente (ver D-26 en 05).
+La leen y escriben `POST /api/asistente/preguntar` (al guardar lo que se pidió recordar) y
+`GET`/`DELETE /api/asistente/recuerdos`. En IndexedDB (versión 6): `conversaciones`, la conversación con el Asistente
+(últimos 40 mensajes), para que sobreviva a una recarga.
+
+### Categoría de producto (migración 0009)
+
+| Tabla.columna | Tipo SQL | Nulo | Significado |
+|---|---|---|---|
+| `productos.categoria` | VARCHAR(40) | sí | Qué tipo de producto es ("Abarrotes", "Lácteos"). Texto libre normalizado: espacios simples y primera letra en mayúscula (ADR-054). El Análisis agrupa la ganancia por ella |
+
+El **kardex mensual** (`GET /api/analisis/kardex`) no tiene tabla: se calcula del libro `movimientos_inventario`
+(ADR-031), separando el stock al registrar (`origen_tipo = 'stock_inicial'`) de los conteos.

@@ -16,6 +16,7 @@ const base: AnalisisCable = {
   fiados_por_cobrar: '0.00',
   por_dia: [],
   mejores_productos: [],
+  por_categoria: [],
   no_disponibles: [],
 }
 

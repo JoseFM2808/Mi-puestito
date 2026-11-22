@@ -394,3 +394,15 @@
   el programa en la PC antes que el dueño lo vería: es la misma confianza que ya se da a esa PC (tiene los datos). La
   pantalla de alta de negocio de D-08 usará el mismo mecanismo.
 
+## ADR-054 · Categorías de producto como texto libre con sugerencias — Aceptada (revisable por el owner)
+
+- **Fecha**: 2026-11-22.
+- **Contexto**: Modulo-Analisis pide "rentabilidad estimada por categoría de producto" y el producto no tenía categoría.
+  Cada puesto vende cosas distintas: una lista cerrada no le sirve a todos.
+- **Decisión**: `productos.categoria` (migración 0009), opcional, texto libre normalizado (espacios simples, primera
+  letra en mayúscula: " lácteos " = "Lácteos"). La pantalla ofrece primero las que el vendedor ya usa y luego seis
+  sugeridas (Abarrotes, Bebidas, Lácteos, Carnes, Verduras y frutas, Limpieza). `PATCH` con `categoria: null` la quita.
+  El Análisis suma la ganancia estimada por categoría.
+- **Consecuencias**: no hay que migrar nada si el owner prefiere otra lista: solo cambia `CATEGORIAS_SUGERIDAS`. Dos
+  formas distintas de nombrar lo mismo ("Gaseosas" y "Bebidas") quedan separadas: lo corrige el vendedor.
+

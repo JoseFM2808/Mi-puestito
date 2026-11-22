@@ -108,3 +108,10 @@
 .nombre {
   font-weight: 600;
 }
+
+/* Kardex mensual del inventario */
+.kardex {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}

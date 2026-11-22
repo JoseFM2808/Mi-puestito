@@ -14,14 +14,14 @@ calcula la diferencia.
 
 ## Qué acciones permite
 
-| Acción                         | Botón                                             |
-| ------------------------------ | ------------------------------------------------- |
-| Registrar un producto          | **Nuevo producto** → **Guardar producto**         |
-| Corregir el stock con la vista | **Contar lo que hay** → **Guardar conteo**        |
-| Algo se perdió o venció        | **Registrar merma** → **Guardar merma**           |
-| Precio de venta y aviso        | **Cambiar precio o mínimo** → **Guardar cambios** |
-| Por qué cambió el stock        | **Ver historial**                                 |
-| Ver lo que se acaba            | **Solo lo que queda poco**                        |
+| Acción                         | Botón                                                |
+| ------------------------------ | ---------------------------------------------------- |
+| Registrar un producto          | **Nuevo producto** → **Guardar producto**            |
+| Corregir el stock con la vista | **Contar lo que hay** → **Guardar conteo**           |
+| Algo se perdió o venció        | **Registrar merma** → **Guardar merma**              |
+| Precio, aviso y categoría      | **Cambiar datos del producto** → **Guardar cambios** |
+| Por qué cambió el stock        | **Ver historial**                                    |
+| Ver lo que se acaba            | **Solo lo que queda poco**                           |
 
 Todo se guarda sin red y se envía por la cola (`sincronizacion/cola.ts`); el stock se refleja al instante y el servidor
 lo confirma.
@@ -49,7 +49,10 @@ elige el proveedor y escribe cuánto cuesta cada cosa. Nada se guarda hasta «Gu
 
 - La tarjeta dice cuánto costó en la última compra y cuánto se gana por unidad, y avisa "Vence el …: véndelo primero"
   o "Venció el …" con palabras (`inventario.vence-pronto-<uuid>`, `inventario.vencido-<uuid>`).
-- **Cambiar precio, mínimo o vencimiento** (`inventario.precio-vence`) corrige la fecha; vaciarla la borra.
+- **Cambiar datos del producto** (`inventario.precio-vence`) corrige la fecha; vaciarla la borra.
+- **Categoría** (ADR-054): al crear (`inventario.categoria`) y en **Cambiar datos del producto**
+  (`inventario.precio-categoria`): se escribe o se toca una de las que ya usa o de las sugeridas; tocar la elegida la
+  quita. La tarjeta la muestra bajo el nombre y ¿Cómo me va? suma la ganancia por categoría.
 - **Solo lo que vence pronto** (`inventario.por-vencer`) filtra; el buscador acepta el código de barras y **Nuevo
   producto** tiene el campo `inventario.codigo-barras` (un lector USB o Bluetooth lo escribe solo).
 - **Escanear con la cámara** (D-30, `componentes/escaner`): junto al buscador (`inventario.escanear-buscar`) y en Nuevo

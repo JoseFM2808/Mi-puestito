@@ -102,11 +102,17 @@ interface EstadoInventario {
     tieneVencimiento: boolean
     /** Lo que "escribe" un lector de códigos (D-22) */
     codigoBarras?: string
+    categoria?: string
   }) => Promise<void>
-  /** `venceEl: null` borra la fecha; sin `venceEl` no se toca (D-22) */
+  /** `venceEl: null` borra la fecha y `categoria: null` la quita; sin ellos no se tocan (D-22) */
   editar: (
     uuid: string,
-    cambios: { precioVenta?: string; stockMinimo?: number; venceEl?: string | null },
+    cambios: {
+      precioVenta?: string
+      stockMinimo?: number
+      venceEl?: string | null
+      categoria?: string | null
+    },
   ) => Promise<void>
   contar: (uuid: string, contado: number) => Promise<void>
   merma: (uuid: string, cantidad: number, nota?: string) => Promise<void>
@@ -115,6 +121,28 @@ interface EstadoInventario {
    * movimiento real lo hace el servidor por evento al recibir la venta (ADR-031).
    */
   ajustarLocal: (uuid: string, deltaMilesimas: number) => void
+}
+
+/** " lácteos " → "Lácteos", igual que el servidor: lo mismo escrito distinto se agrupa junto */
+export function normalizarCategoria(texto: string | null | undefined): string | null {
+  const limpio = (texto ?? '').split(/\s+/).filter(Boolean).join(' ').slice(0, 40)
+  return limpio ? limpio[0].toUpperCase() + limpio.slice(1) : null
+}
+
+/** Para empezar sin pensar: se suman a las categorías que el vendedor ya usa */
+export const CATEGORIAS_SUGERIDAS = [
+  'Abarrotes',
+  'Bebidas',
+  'Lácteos',
+  'Carnes',
+  'Verduras y frutas',
+  'Limpieza',
+]
+
+/** Las categorías que ya usa y, después, las sugeridas que aún no usa */
+export function categoriasParaElegir(productos: { categoria: string | null }[]): string[] {
+  const usadas = [...new Set(productos.map((p) => p.categoria).filter((c): c is string => Boolean(c)))].sort()
+  return [...usadas, ...CATEGORIAS_SUGERIDAS.filter((c) => !usadas.includes(c))]
 }
 
 export const useInventario = create<EstadoInventario>()((set, get) => {
@@ -208,6 +236,7 @@ export const useInventario = create<EstadoInventario>()((set, get) => {
       stockMinimo,
       tieneVencimiento,
       codigoBarras,
+      categoria,
     }) => {
       const uuid = crypto.randomUUID()
       reemplazar(
@@ -222,6 +251,7 @@ export const useInventario = create<EstadoInventario>()((set, get) => {
           tiene_vencimiento: tieneVencimiento,
           costo_ultimo: null,
           vence_el: null,
+          categoria: normalizarCategoria(categoria),
           bajo_minimo: false,
           descuadre: false,
           vence_pronto: false,
@@ -237,21 +267,24 @@ export const useInventario = create<EstadoInventario>()((set, get) => {
         stock_minimo: stockMinimo === undefined ? null : aCantidad(stockMinimo),
         tiene_vencimiento: tieneVencimiento,
         codigo_barras: codigoBarras ?? null,
+        categoria: normalizarCategoria(categoria),
       })
     },
 
-    editar: async (uuid, { precioVenta, stockMinimo, venceEl }) => {
+    editar: async (uuid, { precioVenta, stockMinimo, venceEl, categoria }) => {
       const producto = cambiarLocal(uuid, (p) => ({
         ...p,
         precio_venta: precioVenta ?? p.precio_venta,
         stock_minimo: stockMinimo === undefined ? p.stock_minimo : aCantidad(stockMinimo),
         vence_el: venceEl === undefined ? p.vence_el : venceEl,
+        categoria: categoria === undefined ? p.categoria : normalizarCategoria(categoria),
       }))
       if (!producto) return
       const cuerpo: Record<string, unknown> = {}
       if (precioVenta !== undefined) cuerpo.precio_venta = precioVenta
       if (stockMinimo !== undefined) cuerpo.stock_minimo = aCantidad(stockMinimo)
       if (venceEl !== undefined) cuerpo.vence_el = venceEl
+      if (categoria !== undefined) cuerpo.categoria = normalizarCategoria(categoria)
       await enviar(
         'PATCH',
         `/api/inventario/productos/${uuid}`,

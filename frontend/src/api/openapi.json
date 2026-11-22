@@ -97,6 +97,7 @@
       "no_disponibles",
       "pagado_a_proveedores",
       "periodo",
+      "por_categoria",
       "por_dia",
       "resultado_del_negocio",
       "vendido",
@@ -290,6 +291,18 @@
       "nota",
       "producto",
       "tipo"
+    ]
+  },
+  "GananciaPorCategoria": {
+    "required": [
+      "categoria",
+      "ganancia_estimada",
+      "vendido"
+    ],
+    "properties": [
+      "categoria",
+      "ganancia_estimada",
+      "vendido"
     ]
   },
   "GananciaPorProducto": {
@@ -490,6 +503,45 @@
       "uuid"
     ]
   },
+  "KardexDelMes": {
+    "required": [
+      "desde",
+      "hasta",
+      "mes",
+      "productos"
+    ],
+    "properties": [
+      "desde",
+      "hasta",
+      "mes",
+      "no_disponibles",
+      "productos"
+    ]
+  },
+  "KardexProducto": {
+    "required": [
+      "ajustes",
+      "compras",
+      "final",
+      "inicial",
+      "mermas",
+      "nombre",
+      "registrado",
+      "unidad",
+      "vendido"
+    ],
+    "properties": [
+      "ajustes",
+      "compras",
+      "final",
+      "inicial",
+      "mermas",
+      "nombre",
+      "registrado",
+      "unidad",
+      "vendido"
+    ]
+  },
   "LlaveEntrada": {
     "required": [
       "llave"
@@ -633,6 +685,7 @@
   "ProductoCambios": {
     "required": [],
     "properties": [
+      "categoria",
       "codigo_barras",
       "nombre",
       "precio_venta",
@@ -644,6 +697,7 @@
   "ProductoConEstado": {
     "required": [
       "bajo_minimo",
+      "categoria",
       "codigo_barras",
       "costo_ultimo",
       "descuadre",
@@ -660,6 +714,7 @@
     ],
     "properties": [
       "bajo_minimo",
+      "categoria",
       "codigo_barras",
       "costo_ultimo",
       "descuadre",
@@ -681,6 +736,7 @@
       "uuid"
     ],
     "properties": [
+      "categoria",
       "codigo_barras",
       "nombre",
       "ocurrido_en",
@@ -708,6 +764,7 @@
   },
   "ProductoSalida": {
     "required": [
+      "categoria",
       "codigo_barras",
       "costo_ultimo",
       "nombre",
@@ -720,6 +777,7 @@
       "vence_el"
     ],
     "properties": [
+      "categoria",
       "codigo_barras",
       "costo_ultimo",
       "nombre",

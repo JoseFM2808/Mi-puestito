@@ -350,3 +350,6 @@ Código: `backend/modules/analisis/`, `frontend/src/modules/analisis/`. Solo lec
 - La frase de arriba dice el resultado en palabras: "te quedó S/ X libre", "el negocio dejó S/ X pero la casa gastó
   más" o "gastaste más de lo que vendiste".
 - El Asistente recibe la semana y el mes: deja de responder "solo tengo las cifras de hoy".
+- **Por tipo de producto**: la misma ganancia estimada sumada por `productos.categoria` ("Sin categoría" si no tiene).
+- **Kardex mensual**: por producto, inicial (Σ movimientos antes del 1.º del mes, hora de Lima) + registrado + compras −
+  vendido (venta − anulación) − mermas ± conteos = final. Sale del mismo libro que el stock, así que cuadra con él.

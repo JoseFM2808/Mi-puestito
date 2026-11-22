@@ -12,13 +12,16 @@ se calcula dentro de un `try`; si un módulo falla, esa parte queda en cero y se
 - **Resultado del negocio** = vendido − proveedores − gastos del puesto; **libre** = resultado − gastos de la casa.
 - **Fiados por cobrar**: la deuda derivada de hoy (no cuenta como vendido hasta que se abona).
 - **Mejores productos**: por producto del inventario con costo, lo vendido menos cantidad × `costo_ultimo` (D-22).
-  Es un estimado. Los 5 que más dejan.
+  Es un estimado. Los 5 que más dejan, y la misma cuenta sumada por categoría (`por_categoria`).
+- **Kardex mensual** (`kardex_del_mes`): lee `movimientos_inventario` (ADR-031). Por producto: lo que había antes del
+  1.º del mes (hora de Lima), lo registrado ese mes, compras, vendido (venta − anulación), mermas, conteos y final.
 
 ## Qué acciones permite
 
 | Endpoint | Acción |
 |---|---|
-| `GET /api/analisis?periodo=semana\|mes\|mes_pasado` | El período (semana desde el lunes, mes hasta hoy, o el mes pasado completo) con `por_dia` |
+| `GET /api/analisis?periodo=semana\|mes\|mes_pasado` | El período (semana desde el lunes, mes hasta hoy, o el mes pasado completo) con `por_dia` y `por_categoria` |
+| `GET /api/analisis/kardex?mes=YYYY-MM` | Kardex del mes (sin `mes`, el actual hasta hoy); `422` para un mes futuro |
 
 ## Cómo interactúa la IA
 

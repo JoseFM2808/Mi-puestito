@@ -6,6 +6,7 @@ import { useSincronizacion } from '../../sincronizacion/cola'
 import { useSesion } from '../../stores/sesion'
 import { Aviso, Boton, Monto, Nota, Tarjeta, TituloPagina, TituloSeccion } from '../../ui/componentes'
 import estilos from './Analisis.module.css'
+import { Kardex } from './Kardex'
 
 /**
  * ¿Cómo me va? (docs/03-modulos/Modulo-Analisis.md, Fase 7): ¿el puesto es rentable?
@@ -220,8 +221,34 @@ export function Analisis() {
               ))}
             </ul>
           )}
+
+          {datos.por_categoria.length > 0 && (
+            <>
+              <TituloSeccion>Por tipo de producto</TituloSeccion>
+              <ul className={estilos.productos} data-ai-id="analisis.por-categoria">
+                {datos.por_categoria.map((grupo) => (
+                  <li key={grupo.categoria} className={estilos.producto}>
+                    <span className={estilos.nombre}>{grupo.categoria}</span>
+                    <span>
+                      {'Vendiste '}
+                      <Monto centimos={aCentimos(grupo.vendido)} />
+                      {' · ganaste más o menos '}
+                      <Monto
+                        centimos={aCentimos(grupo.ganancia_estimada)}
+                        tono={aCentimos(grupo.ganancia_estimada) < 0 ? 'deuda' : 'ingreso'}
+                      />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <Nota>
+                La categoría de cada producto se elige en Inventario, con «Cambiar datos del producto».
+              </Nota>
+            </>
+          )}
         </>
       )}
+      <Kardex />
     </main>
   )
 }

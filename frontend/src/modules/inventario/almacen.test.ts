@@ -55,6 +55,7 @@ describe('estado del producto, igual que el backend', () => {
     tiene_vencimiento: false,
     costo_ultimo: null,
     vence_el: null,
+    categoria: null,
     bajo_minimo: false,
     descuadre: false,
     vence_pronto: false,

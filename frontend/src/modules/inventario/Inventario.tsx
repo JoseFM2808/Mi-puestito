@@ -15,7 +15,14 @@ import { EscanearCodigo } from '../../componentes/escaner/EscanearCodigo'
 import { senalar } from '../../componentes/asistente/senalar'
 import { useBorradorAsistente } from '../../stores/borradorAsistente'
 import { useNavegacion } from '../../stores/navegacion'
-import { aMilesimas, formatearCantidad, leerCantidadEscrita, useInventario } from './almacen'
+import {
+  aMilesimas,
+  categoriasParaElegir,
+  formatearCantidad,
+  leerCantidadEscrita,
+  normalizarCategoria,
+  useInventario,
+} from './almacen'
 import { productoPorNombre } from './nombres'
 import estilos from './Inventario.module.css'
 
@@ -50,6 +57,52 @@ function fechaCorta(dia: string): string {
   }).format(new Date(`${dia}T12:00:00-05:00`))
 }
 
+/**
+ * Qué tipo de producto es (para ver en ¿Cómo me va? qué tipo deja más ganancia). Se escribe o se
+ * toca una de las que ya usa, o de las sugeridas. Opcional.
+ */
+function ElegirCategoria({
+  id,
+  aiId,
+  valor,
+  alCambiar,
+}: {
+  id: string
+  aiId: string
+  valor: string
+  alCambiar: (valor: string) => void
+}) {
+  const productos = useInventario((estado) => estado.productos)
+  const opciones = categoriasParaElegir(productos).slice(0, 8)
+  const elegida = normalizarCategoria(valor)
+  return (
+    <div className={estilos.bloque} data-ai-id={aiId}>
+      <Campo
+        id={id}
+        aiId={`${aiId}-texto`}
+        etiqueta="Categoría"
+        ayuda="Opcional: qué tipo de producto es"
+        valor={valor}
+        alCambiar={alCambiar}
+        maxLength={40}
+      />
+      <div className={estilos.opciones}>
+        {opciones.map((categoria, indice) => (
+          <Boton
+            key={categoria}
+            aiId={`${aiId}-${indice}`}
+            variante="secundario"
+            presionado={elegida === categoria}
+            onClick={() => alCambiar(elegida === categoria ? '' : categoria)}
+          >
+            {categoria}
+          </Boton>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function NuevoProducto({ alTerminar }: { alTerminar: () => void }) {
   const productos = useInventario((estado) => estado.productos)
   const crear = useInventario((estado) => estado.crear)
@@ -60,6 +113,7 @@ function NuevoProducto({ alTerminar }: { alTerminar: () => void }) {
   const [minimo, setMinimo] = useState('')
   const [vence, setVence] = useState(false)
   const [codigo, setCodigo] = useState('')
+  const [categoria, setCategoria] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const guardar = (evento: FormEvent) => {
@@ -84,6 +138,7 @@ function NuevoProducto({ alTerminar }: { alTerminar: () => void }) {
       stockMinimo: stockMinimo ?? undefined,
       tieneVencimiento: vence,
       codigoBarras: codigo.trim() || undefined,
+      categoria: categoria.trim() || undefined,
     })
     alTerminar()
   }
@@ -153,6 +208,12 @@ function NuevoProducto({ alTerminar }: { alTerminar: () => void }) {
         />
       </div>
       <EscanearCodigo aiId="inventario.escanear-codigo" alLeer={setCodigo} />
+      <ElegirCategoria
+        id="prod-categoria"
+        aiId="inventario.categoria"
+        valor={categoria}
+        alCambiar={setCategoria}
+      />
       <Boton
         aiId="inventario.vence"
         variante="secundario"
@@ -193,6 +254,7 @@ function AccionProducto({
   const [valor, setValor] = useState(llenado?.cantidad ?? '')
   const [minimo, setMinimo] = useState(producto.stock_minimo ?? '')
   const [venceEl, setVenceEl] = useState(producto.vence_el ?? '')
+  const [categoria, setCategoria] = useState(producto.categoria ?? '')
   const [nota, setNota] = useState(llenado?.nota ?? '')
   const [error, setError] = useState<string | null>(null)
   const [movimientos, setMovimientos] = useState<MovimientoCable[] | null>(null)
@@ -247,12 +309,15 @@ function AccionProducto({
       const nuevoMinimo = String(minimo).trim() ? leerCantidadEscrita(String(minimo)) : null
       if (String(minimo).trim() && nuevoMinimo === null) return setError('Escribe el mínimo con números.')
       const fechaCambio = venceEl !== (producto.vence_el ?? '')
-      if (!centimos && nuevoMinimo === null && !fechaCambio) return setError('No hay nada que cambiar.')
+      const categoriaCambio = normalizarCategoria(categoria) !== producto.categoria
+      if (!centimos && nuevoMinimo === null && !fechaCambio && !categoriaCambio)
+        return setError('No hay nada que cambiar.')
       void editar(producto.uuid, {
         precioVenta: centimos ? aSoles(centimos) : undefined,
         stockMinimo: nuevoMinimo ?? undefined,
         // Vaciar la fecha la borra (ya no queda ese lote); no tocarla la deja igual
         venceEl: fechaCambio ? venceEl || null : undefined,
+        categoria: categoriaCambio ? normalizarCategoria(categoria) : undefined,
       })
       return alTerminar()
     }
@@ -322,6 +387,14 @@ function AccionProducto({
           />
         )}
       </div>
+      {accion === 'precio' && (
+        <ElegirCategoria
+          id={`categoria-${producto.uuid}`}
+          aiId="inventario.precio-categoria"
+          valor={categoria}
+          alCambiar={setCategoria}
+        />
+      )}
       <div className={estilos.acciones}>
         <Boton aiId={`inventario.${accion}-guardar`} tipo="submit">
           {accion === 'contar' ? 'Guardar conteo' : accion === 'merma' ? 'Guardar merma' : 'Guardar cambios'}
@@ -351,6 +424,7 @@ function TarjetaProducto({
       <div className={estilos.fila}>
         <div>
           <div className={estilos.nombre}>{producto.nombre}</div>
+          {producto.categoria && <Nota>{producto.categoria}</Nota>}
           {producto.precio_venta && (
             <Nota>
               Precio <Monto centimos={aCentimos(producto.precio_venta)} />
@@ -439,7 +513,7 @@ function TarjetaProducto({
             variante="discreto"
             onClick={() => setAccion('precio')}
           >
-            {producto.tiene_vencimiento ? 'Cambiar precio, mínimo o vencimiento' : 'Cambiar precio o mínimo'}
+            Cambiar datos del producto
           </Boton>
           <Boton
             aiId={`inventario.historial-${producto.uuid}`}
@@ -510,16 +584,14 @@ export function Inventario() {
   /** Arma un pedido con lo que se acaba y lo abre en Compras: el operador elige el proveedor y los montos */
   const pedirLoQueSeAcaba = () => {
     if (!proyecto || seAcaban.length === 0) return
-    useBorradorAsistente
-      .getState()
-      .ponerPedido(
-        proyecto,
-        {
-          proveedor: null,
-          items: seAcaban.map((p) => ({ producto: p.nombre, cantidad: null, monto: null })),
-        },
-        'inventario',
-      )
+    useBorradorAsistente.getState().ponerPedido(
+      proyecto,
+      {
+        proveedor: null,
+        items: seAcaban.map((p) => ({ producto: p.nombre, cantidad: null, monto: null })),
+      },
+      'inventario',
+    )
     useNavegacion.getState().irA('compras')
   }
   const cuantosPorVencer = productos.filter((p) => p.vence_pronto).length

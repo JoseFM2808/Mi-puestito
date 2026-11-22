@@ -114,6 +114,7 @@ def crear_producto(sesion: Session, datos: ProductoEntrada) -> tuple[Producto, b
         precio_venta=datos.precio_venta,
         stock_minimo=datos.stock_minimo,
         tiene_vencimiento=datos.tiene_vencimiento,
+        categoria=datos.categoria,
         creado_en=momento_de_operacion(datos.ocurrido_en),
     )
     sesion.add(producto)
@@ -140,6 +141,8 @@ def editar_producto(sesion: Session, uuid: str, cambios: ProductoCambios) -> Pro
     # La fecha de vencimiento sí se puede borrar: se mira si vino en el pedido, aunque sea null
     if "vence_el" in cambios.model_fields_set:
         producto.vence_el = cambios.vence_el
+    if "categoria" in cambios.model_fields_set:
+        producto.categoria = cambios.categoria
     sesion.commit()
     return producto
 

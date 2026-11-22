@@ -437,6 +437,8 @@ export interface ProductoCable {
   costo_ultimo: string | null
   /** "2026-11-24": cuándo vence lo más antiguo que queda (D-22) */
   vence_el: string | null
+  /** "Abarrotes", "Lácteos"…: el Análisis agrupa la ganancia por categoría */
+  categoria: string | null
   bajo_minimo: boolean
   descuadre: boolean
   /** Vence en 7 días o menos (o ya venció) y aún queda stock */
@@ -520,6 +522,35 @@ export interface GananciaPorProductoCable {
   ganancia_estimada: string
 }
 
+export interface GananciaPorCategoriaCable {
+  categoria: string
+  vendido: string
+  ganancia_estimada: string
+}
+
+/** Cómo se movió un producto en el mes, en su unidad (cantidades con 3 decimales) */
+export interface KardexProductoCable {
+  nombre: string
+  unidad: string
+  inicial: string
+  /** Lo que había al registrar el producto, si se registró en el mes */
+  registrado: string
+  compras: string
+  vendido: string
+  mermas: string
+  ajustes: string
+  final: string
+}
+
+/** Kardex mensual del inventario: lo que había, entró, salió y quedó */
+export interface KardexCable {
+  mes: string
+  desde: string
+  hasta: string
+  productos: KardexProductoCable[]
+  no_disponibles: string[]
+}
+
 export interface AnalisisCable {
   periodo: PeriodoAnalisis
   desde: string
@@ -534,6 +565,7 @@ export interface AnalisisCable {
   fiados_por_cobrar: string
   por_dia: DiaDelPeriodoCable[]
   mejores_productos: GananciaPorProductoCable[]
+  por_categoria: GananciaPorCategoriaCable[]
   no_disponibles: string[]
 }
 
@@ -552,10 +584,24 @@ export const CAMPOS_DEL_CONTRATO = {
     'fiados_por_cobrar',
     'por_dia',
     'mejores_productos',
+    'por_categoria',
     'no_disponibles',
   ]),
   DiaDelPeriodo: camposDe<DiaDelPeriodoCable>()(['dia', 'vendido', 'gastado']),
   GananciaPorProducto: camposDe<GananciaPorProductoCable>()(['nombre', 'vendido', 'ganancia_estimada']),
+  GananciaPorCategoria: camposDe<GananciaPorCategoriaCable>()(['categoria', 'vendido', 'ganancia_estimada']),
+  KardexDelMes: camposDe<KardexCable>()(['mes', 'desde', 'hasta', 'productos', 'no_disponibles']),
+  KardexProducto: camposDe<KardexProductoCable>()([
+    'nombre',
+    'unidad',
+    'inicial',
+    'registrado',
+    'compras',
+    'vendido',
+    'mermas',
+    'ajustes',
+    'final',
+  ]),
   SaldoPorMedio: camposDe<SaldoPorMedioCable>()(['efectivo', 'yape_plin']),
   TotalesPorMedio: camposDe<SaldoPorMedioCable>()(['efectivo', 'yape_plin']),
   CajaDelDia: camposDe<CajaDelDiaCable>()([
@@ -668,6 +714,7 @@ export const CAMPOS_DEL_CONTRATO = {
     'tiene_vencimiento',
     'costo_ultimo',
     'vence_el',
+    'categoria',
     'bajo_minimo',
     'descuadre',
     'vence_pronto',

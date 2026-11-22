@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
 from .models import MotivoMovimiento, Unidad
 
@@ -13,6 +13,15 @@ Texto = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, ma
 CantidadPositiva = Annotated[Decimal, Field(gt=0, max_digits=12, decimal_places=3)]
 CantidadNoNegativa = Annotated[Decimal, Field(ge=0, max_digits=12, decimal_places=3)]
 Precio = Annotated[Decimal, Field(gt=0, max_digits=10, decimal_places=2)]
+
+
+def _categoria(texto: str | None) -> str | None:
+    """" lácteos " → "Lácteos": la misma categoría escrita de dos formas se agrupa junta."""
+    limpio = " ".join((texto or "").split())
+    return limpio[:1].upper() + limpio[1:] if limpio else None
+
+
+Categoria = Annotated[str | None, StringConstraints(max_length=40), AfterValidator(_categoria)]
 
 
 class ProductoEntrada(BaseModel):
@@ -24,6 +33,7 @@ class ProductoEntrada(BaseModel):
     stock_inicial: CantidadNoNegativa | None = None
     codigo_barras: Annotated[str, StringConstraints(max_length=32)] | None = None
     tiene_vencimiento: bool = False
+    categoria: Categoria = None
     ocurrido_en: datetime | None = None
 
 
@@ -35,6 +45,8 @@ class ProductoCambios(BaseModel):
     tiene_vencimiento: bool | None = None
     # Enviar `"vence_el": null` borra la fecha (ya no queda ese lote); omitirlo no la toca
     vence_el: date | None = None
+    # Igual: `"categoria": null` (o vacía) la quita
+    categoria: Categoria = None
 
 
 class ProductoSalida(BaseModel):
@@ -50,6 +62,7 @@ class ProductoSalida(BaseModel):
     tiene_vencimiento: bool
     costo_ultimo: Decimal | None
     vence_el: date | None
+    categoria: str | None
 
 
 class ProductoConEstado(ProductoSalida):
