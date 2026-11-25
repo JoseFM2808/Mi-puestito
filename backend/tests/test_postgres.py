@@ -95,3 +95,22 @@ def test_el_respaldo_de_archivo_explica_que_en_la_nube_no_hace_falta(cabeceras_a
     r = TestClient(app).get("/api/respaldo/copia", headers=cabeceras_anita)
     assert r.status_code == 409
     assert "nube" in r.json()["detail"]
+
+
+@con_postgres
+def test_en_la_nube_el_limite_de_intentos_es_comun_a_todas_las_instancias(monkeypatch):
+    """Un contador por instancia dejaría repartir intentos para adivinar el PIN (ADR-058)."""
+    import intentos_nube
+    import seguridad
+
+    monkeypatch.setattr(seguridad, "ENTORNO", "production")
+    intentos_nube.limpiar("anita")
+    try:
+        for _ in range(seguridad.INTENTOS_LIBRES):
+            assert seguridad.verificar_credenciales("anita", "000001") is None
+            seguridad._intentos.clear()  # la siguiente petición cae en otra instancia: memoria vacía
+        with pytest.raises(seguridad.DemasiadosIntentos):
+            seguridad.verificar_credenciales("anita", "999999")
+    finally:
+        intentos_nube.limpiar("anita")
+        intentos_nube.olvidar_motor()

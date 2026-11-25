@@ -13,6 +13,11 @@ from pathlib import Path
 NOMBRE_APP = "MiPuestito"
 
 
+def en_vercel() -> bool:
+    """True en una función de Vercel (la nube, ADR-058): Vercel define `VERCEL=1`."""
+    return bool(os.environ.get("VERCEL"))
+
+
 def es_ejecutable() -> bool:
     """True cuando corre dentro del ejecutable empaquetado."""
     return getattr(sys, "frozen", False)
@@ -41,8 +46,12 @@ def directorio_datos() -> Path:
 
     `MI_PUESTITO_DATOS` la fija a mano: Staging la usa para que las bases de
     prueba no queden dentro de la carpeta del repo (que puede estar en Drive).
+
+    En Vercel el proyecto es de solo lectura y solo `/tmp` se puede escribir, y se pierde
+    al apagarse la instancia: ahí no se guarda nada que deba durar (los datos van a
+    PostgreSQL y los PIN salen de variables secretas, ADR-058).
     """
-    forzada = os.environ.get("MI_PUESTITO_DATOS")
+    forzada = os.environ.get("MI_PUESTITO_DATOS") or ("/tmp/mi-puestito" if en_vercel() else None)
     if forzada:
         carpeta = Path(forzada)
         carpeta.mkdir(parents=True, exist_ok=True)

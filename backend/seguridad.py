@@ -34,8 +34,12 @@ INTENTOS_LIBRES = 5
 ESPERA_INICIAL_SEGUNDOS = 30
 ESPERA_MAXIMA_SEGUNDOS = 15 * 60
 
-# "local" = escritorio y desarrollo; "production" = servidor en la nube
-ENTORNO = os.environ.get("MI_PUESTITO_ENTORNO", "local").strip().lower()
+# "local" = escritorio y desarrollo; "production" = servidor en la nube. En Vercel, si nadie lo dijo,
+# es "production": tratarlo como local firmaría las sesiones con una llave distinta por instancia
+# y podría mostrar el PIN del primer arranque a quien llegue por el proxy (ADR-058)
+ENTORNO = (
+    os.environ.get("MI_PUESTITO_ENTORNO") or ("production" if os.environ.get("VERCEL") else "local")
+).strip().lower()
 
 
 def _hash_pin(pin: str, sal: str) -> str:
@@ -116,9 +120,19 @@ def asegurar_usuarios_iniciales() -> None:
     "demo" siempre con el mismo PIN público. El proyecto real toma su PIN de
     MI_PUESTITO_ANITA_PIN si está definida; si no, genera uno al azar que la
     pantalla de ingreso muestra una sola vez, solo en esta computadora (D-07).
+
+    En la nube (ADR-058) no hay disco que dure ni pantalla en "esta computadora": el PIN del
+    negocio real sale SIEMPRE de su variable secreta (se vuelve a leer en cada arranque, así
+    cambiarla en Vercel cambia el PIN) y, si falta, esa cuenta no se crea. `MI_PUESTITO_DEMO=0`
+    quita la cuenta de práctica.
     """
     usuarios = _cargar_usuarios()
     cambios = False
+    if ENTORNO != "local":
+        cambios = _cuentas_de_la_nube(usuarios)
+        if cambios:
+            _guardar_usuarios(usuarios)
+        return
 
     # Un PIN que nunca se llegó a mostrar (el programa se cerró antes) se reemplaza por otro
     for nombre_usuario, datos in list(usuarios.items()):
@@ -152,6 +166,31 @@ def asegurar_usuarios_iniciales() -> None:
         _guardar_usuarios(usuarios)
 
 
+def demo_habilitada() -> bool:
+    return os.environ.get("MI_PUESTITO_DEMO", "1").strip() not in ("0", "no", "false")
+
+
+def _cuentas_de_la_nube(usuarios: dict) -> bool:
+    """Cuentas en la nube: la práctica si está habilitada y el negocio real con el PIN de su secreto."""
+    antes = json.dumps(usuarios, sort_keys=True)
+    if demo_habilitada():
+        if "demo" not in usuarios:
+            sal = secrets.token_hex(16)
+            usuarios["demo"] = {"proyecto": "demo", "sal": sal, "pin_hash": _hash_pin(PIN_DEMO_FIJO, sal)}
+    else:
+        usuarios.pop("demo", None)
+    pin = os.environ.get("MI_PUESTITO_ANITA_PIN", "").strip()
+    if pin:
+        actual = usuarios.get("anita")
+        if not actual or not hmac.compare_digest(_hash_pin(pin, actual["sal"]), actual["pin_hash"]):
+            sal = secrets.token_hex(16)
+            usuarios["anita"] = {"proyecto": "anita", "sal": sal, "pin_hash": _hash_pin(pin, sal)}
+    else:
+        usuarios.pop("anita", None)
+        print("AVISO: falta MI_PUESTITO_ANITA_PIN: la cuenta del negocio real no se puede usar.")
+    return json.dumps(usuarios, sort_keys=True) != antes
+
+
 @dataclass
 class _Intentos:
     fallos: int = 0
@@ -168,7 +207,21 @@ class DemasiadosIntentos(Exception):
         self.segundos = segundos
 
 
+def _contador_compartido() -> bool:
+    """En la nube el contador de intentos vive en PostgreSQL, común a todas las instancias."""
+    from database import url_postgres
+
+    return ENTORNO != "local" and url_postgres() is not None
+
+
 def _registrar_fallo(nombre_usuario: str) -> None:
+    if _contador_compartido():
+        import intentos_nube
+
+        intentos_nube.registrar_fallo(
+            nombre_usuario, INTENTOS_LIBRES, ESPERA_INICIAL_SEGUNDOS, ESPERA_MAXIMA_SEGUNDOS
+        )
+        return
     with _candado_intentos:
         estado = _intentos.setdefault(nombre_usuario, _Intentos())
         estado.fallos += 1
@@ -184,6 +237,12 @@ def verificar_credenciales(nombre_usuario: str, pin: str) -> str | None:
     Lanza `DemasiadosIntentos` si el usuario está en espera por fallos
     seguidos (el PIN ni se evalúa: no se puede seguir adivinando).
     """
+    if _contador_compartido():
+        import intentos_nube
+
+        espera = intentos_nube.segundos_de_espera(nombre_usuario)
+        if espera:
+            raise DemasiadosIntentos(espera)
     with _candado_intentos:
         estado = _intentos.get(nombre_usuario)
         if estado is not None and estado.bloqueado_hasta > time.monotonic():
@@ -200,6 +259,10 @@ def verificar_credenciales(nombre_usuario: str, pin: str) -> str | None:
         return None
     with _candado_intentos:
         _intentos.pop(nombre_usuario, None)
+    if _contador_compartido():
+        import intentos_nube
+
+        intentos_nube.limpiar(nombre_usuario)
     if usuario.get("pin_por_mostrar"):
         marcar_pin_anotado(nombre_usuario)  # entró con él: ya lo tiene
     return usuario["proyecto"]

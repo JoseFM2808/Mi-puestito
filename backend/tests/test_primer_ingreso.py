@@ -48,12 +48,69 @@ def test_solo_esta_computadora_lo_ve(capsys):
     assert desde_otro_equipo.post("/api/auth/primer-ingreso/anita/anotado").status_code == 403
 
 
-def test_en_un_servidor_no_se_entrega_por_la_red(capsys, monkeypatch):
+def test_en_la_nube_sin_pin_secreto_no_hay_cuenta_ni_pin_en_la_consola(capsys, monkeypatch):
+    """ADR-058: en un servidor no se genera ni se imprime un PIN; la cuenta espera su secreto."""
     monkeypatch.setattr(seguridad, "ENTORNO", "production")
     consola = _arrancar(capsys)
     assert desde_el_equipo.get("/api/auth/primer-ingreso").json() == []
-    # Sin pantalla local, la consola del servidor es el único camino
-    assert seguridad.pines_por_mostrar()[0][1] in consola
+    assert seguridad.pines_por_mostrar() == []
+    assert "MI_PUESTITO_ANITA_PIN" in consola
+    assert [c["nombre_usuario"] for c in desde_el_equipo.get("/api/auth/cuentas").json()] == ["demo"]
+
+
+def test_en_la_nube_el_pin_sale_del_secreto_y_cambiarlo_lo_cambia(capsys, monkeypatch):
+    monkeypatch.setattr(seguridad, "ENTORNO", "production")
+    monkeypatch.setenv("MI_PUESTITO_ANITA_PIN", "135790")
+    _arrancar(capsys)
+    assert seguridad.verificar_credenciales("anita", "135790") == "anita"
+    monkeypatch.setenv("MI_PUESTITO_ANITA_PIN", "246802")
+    _arrancar(capsys)  # el siguiente arranque de la función
+    assert seguridad.verificar_credenciales("anita", "246802") == "anita"
+    assert seguridad.verificar_credenciales("anita", "135790") is None
+
+
+def test_en_la_nube_la_practica_se_puede_apagar(capsys, monkeypatch):
+    monkeypatch.setattr(seguridad, "ENTORNO", "production")
+    monkeypatch.setenv("MI_PUESTITO_ANITA_PIN", "135790")
+    monkeypatch.setenv("MI_PUESTITO_DEMO", "0")
+    _arrancar(capsys)
+    assert [c["nombre_usuario"] for c in desde_el_equipo.get("/api/auth/cuentas").json()] == ["anita"]
+    assert seguridad.verificar_credenciales("demo", "0000") is None
+
+
+def test_en_vercel_el_entorno_es_production_aunque_nadie_lo_diga():
+    import subprocess
+    import sys
+
+    def entorno(variables):
+        codigo = "import seguridad; print(seguridad.ENTORNO)"
+        salida = subprocess.run(
+            [sys.executable, "-c", codigo], capture_output=True, text=True, env={**variables, "PATH": ""}, cwd="."
+        )
+        return salida.stdout.strip() or salida.stderr.strip().splitlines()[-1]
+
+    secreto = {"MI_PUESTITO_SECRETO": "s" * 40}
+    assert entorno({"VERCEL": "1", **secreto}) == "production"
+    assert entorno({}) == "local"
+    assert entorno({"VERCEL": "1", "MI_PUESTITO_ENTORNO": "local"}) == "local"
+    # En Vercel sin secreto de firma no arranca: mejor que sesiones que se cierran solas
+    assert "MI_PUESTITO_SECRETO" in entorno({"VERCEL": "1"})
+
+
+def test_en_vercel_los_archivos_van_a_tmp(monkeypatch):
+    import importlib
+
+    import rutas
+
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("MI_PUESTITO_DATOS", raising=False)
+    original = rutas.directorio_datos
+    try:
+        recargado = importlib.reload(rutas)
+        assert str(recargado.directorio_datos()) == "/tmp/mi-puestito"
+    finally:
+        importlib.reload(rutas)
+        rutas.directorio_datos = original
 
 
 def test_ya_lo_anote_lo_esconde_y_el_pin_sigue_valiendo(capsys, primer_arranque):
