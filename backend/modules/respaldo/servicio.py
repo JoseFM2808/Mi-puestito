@@ -46,7 +46,11 @@ class ErrorDeRespaldo(Exception):
 
 def _exigir_sqlite(proyecto: str) -> None:
     if not _url_para(proyecto).startswith("sqlite"):
-        raise ErrorDeRespaldo("El respaldo de archivo solo existe en el programa local.", 409)
+        raise ErrorDeRespaldo(
+            "En la versión en internet tus datos ya se guardan en la nube, con copias del proveedor de "
+            "la base de datos. La copia en un archivo es solo para el programa de la computadora.",
+            409,
+        )
 
 
 def _copiar(origen: Path, destino: Path) -> None:

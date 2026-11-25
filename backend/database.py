@@ -2,18 +2,28 @@
 
 Cada proyecto (demo / anita) tiene su propio archivo SQLite: nunca comparten
 motor ni sesión, así un dato de práctica jamás puede aparecer mezclado con
-los datos reales de una empresa. El mismo código funciona con PostgreSQL en
-la nube cambiando solo la URL (ver docs/02-arquitectura/Stack-Tecnologico.md).
+los datos reales de una empresa.
+
+En la nube (Vercel, ADR-058) no hay disco que dure: con `DATABASE_URL` (la que
+inyecta Neon desde el Marketplace de Vercel) o `MI_PUESTITO_POSTGRES_URL`, cada
+proyecto vive en su propio **esquema** de PostgreSQL (`proyecto_demo`,
+`proyecto_anita`) de la misma base. Cada transacción fija su `search_path` con
+`SET LOCAL`, que funciona también a través del pooler de conexiones.
 
 Concurrencia (deuda D-02, ADR-031): FastAPI atiende cada petición en su
 propio hilo. En SQLite se activa WAL (lectores y un escritor a la vez sin
 bloquearse), `busy_timeout` (esperar en vez de fallar con "database is
 locked") y las sesiones de escritura abren con `BEGIN IMMEDIATE`: toman el
 candado de escritura al empezar, así un "leer y luego escribir" nunca se
-cruza con otro y ninguna venta pisa a otra.
+cruza con otro y ninguna venta pisa a otra. En PostgreSQL lo mismo lo da
+`pg_advisory_xact_lock` por proyecto al abrir cada transacción de escritura:
+las escrituras de un negocio se atienden de a una, como en SQLite, aunque
+lleguen a instancias distintas de la función.
 """
 
 import os
+import re
+import zlib
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -113,17 +123,47 @@ class Cantidad(_DecimalEnEntero):
     decimales = 3
 
 
+def url_postgres() -> str | None:
+    """La base PostgreSQL de la nube, si hay una configurada; si no, SQLite local."""
+    url = os.environ.get("MI_PUESTITO_POSTGRES_URL") or os.environ.get("DATABASE_URL")
+    if not url:
+        return None
+    # Neon y otros dan "postgres://" o "postgresql://": SQLAlchemy necesita el driver (psycopg 3)
+    return re.sub(r"^postgres(?:ql)?(?:\+\w+)?://", "postgresql+psycopg://", url)
+
+
+def esquema_de(proyecto: str) -> str:
+    """Esquema de PostgreSQL de un proyecto. La clave viene del registro (minúsculas y dígitos)."""
+    if not re.fullmatch(r"[a-z0-9_]{1,40}", proyecto):
+        raise ValueError(f"Clave de proyecto inválida para un esquema: {proyecto!r}")
+    return f"proyecto_{proyecto}"
+
+
+def candado_de(proyecto: str) -> int:
+    """Número estable del candado de escritura de un proyecto (pg_advisory_xact_lock)."""
+    return zlib.crc32(f"mi_puestito:{proyecto}".encode())
+
+
+def text_select_1():
+    """`SELECT 1` listo para ejecutar: abre una transacción (para pruebas y chequeos de salud)."""
+    from sqlalchemy import text
+
+    return text("SELECT 1")
+
+
 def _url_para(proyecto: str) -> str:
     # MI_PUESTITO_BD fuerza la URL de un único proyecto (usado en tests)
     forzada = os.environ.get("MI_PUESTITO_BD")
     if forzada:
         return forzada
-    return f"sqlite:///{ruta_base_datos(proyecto)}"
+    return url_postgres() or f"sqlite:///{ruta_base_datos(proyecto)}"
 
 
 def _crear_motor(proyecto: str) -> Engine:
     url = _url_para(proyecto)
     es_sqlite = url.startswith("sqlite")
+    if url.startswith("postgresql"):
+        return _crear_motor_postgres(url, proyecto)
     motor = create_engine(
         url,
         # SQLite: FastAPI atiende cada petición en su propio hilo
@@ -149,6 +189,34 @@ def _crear_motor(proyecto: str) -> Engine:
         def _abrir_transaccion(conexion):
             escritura = conexion.get_execution_options().get("escritura", False)
             conexion.exec_driver_sql("BEGIN IMMEDIATE" if escritura else "BEGIN")
+
+    return motor
+
+
+def _crear_motor_postgres(url: str, proyecto: str) -> Engine:
+    """Motor de un proyecto en PostgreSQL: su esquema y su candado de escritura.
+
+    - `prepare_threshold=None`: el pooler de Neon (PgBouncer en modo transacción) no admite
+      sentencias preparadas del lado del servidor.
+    - Pool chico con `pool_pre_ping`: en la nube cada instancia de la función atiende pocas
+      peticiones a la vez y una conexión dormida puede haberse cerrado.
+    """
+    esquema = esquema_de(proyecto)
+    motor = create_engine(
+        url,
+        connect_args={"prepare_threshold": None},
+        pool_size=2,
+        max_overflow=3,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
+
+    @event.listens_for(motor, "begin")
+    def _al_abrir(conexion):
+        # SET LOCAL dura solo la transacción: funciona aunque el pooler cambie de conexión
+        conexion.exec_driver_sql(f'SET LOCAL search_path TO "{esquema}"')
+        if conexion.get_execution_options().get("escritura", False):
+            conexion.exec_driver_sql(f"SELECT pg_advisory_xact_lock({candado_de(proyecto)})")
 
     return motor
 

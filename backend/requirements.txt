@@ -4,6 +4,9 @@ sqlalchemy>=2.0
 pydantic>=2.10
 # Migraciones del esquema, una base por proyecto (D-03)
 alembic>=1.13
+# PostgreSQL en la nube (Vercel + Neon, ADR-058). El programa local sigue con SQLite y PyInstaller
+# no lo empaqueta: SQLAlchemy solo lo importa si hay una URL de PostgreSQL
+psycopg[binary]>=3.2
 # Orquestador del Asistente en runtime (decisión 9, ia/servicio.py: grafo con estado).
 # Si faltara, el Asistente recorre los mismos nodos sin él
 langgraph>=1.0

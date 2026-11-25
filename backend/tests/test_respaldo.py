@@ -15,6 +15,12 @@ from modules.respaldo import servicio
 
 cliente = TestClient(app)
 
+# La copia de archivo es de SQLite (el programa local). Con Postgres (la nube) se prueba aparte:
+# ahí responde 409 con un mensaje claro (tests/test_postgres.py)
+pytestmark = pytest.mark.skipif(
+    database.url_postgres() is not None, reason="El respaldo de archivo es solo para SQLite"
+)
+
 
 def uuid() -> str:
     return str(uuid4())

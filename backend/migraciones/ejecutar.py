@@ -12,8 +12,14 @@ Dos cuidados propios de SQLite:
 - Las bases creadas antes de Alembic (con create_all) no tienen tabla
   `alembic_version`: se marcan en la revisión 0001, que es exactamente ese
   esquema, y desde ahí se migran.
+
+En PostgreSQL (la nube, ADR-058) cada proyecto es un esquema: se crea si falta y
+la migración toma un candado (`pg_advisory_xact_lock`): si dos instancias de la
+función arrancan a la vez, la segunda espera y encuentra el esquema ya al día.
+PostgreSQL migra dentro de una transacción: si algo falla, no queda a medias.
 """
 
+import zlib
 from pathlib import Path
 
 from alembic import command
@@ -49,6 +55,8 @@ def migrar(motor: Engine, revision: str = "head") -> None:
             crudo.execute("PRAGMA foreign_keys=OFF")
         try:
             with conexion.begin():
+                if motor.dialect.name == "postgresql":
+                    _preparar_esquema(conexion)
                 cfg.attributes["connection"] = conexion
                 tablas = set(inspect(conexion).get_table_names())
                 if tablas - {"alembic_version"} and "alembic_version" not in tablas:
@@ -61,3 +69,13 @@ def migrar(motor: Engine, revision: str = "head") -> None:
         finally:
             if es_sqlite:
                 crudo.execute("PRAGMA foreign_keys=ON")
+
+
+CANDADO_MIGRACION = zlib.crc32(b"mi_puestito:migraciones")
+
+
+def _preparar_esquema(conexion) -> None:
+    """Crea el esquema del proyecto (el `search_path` ya lo fijó el motor) y espera su turno."""
+    conexion.exec_driver_sql(f"SELECT pg_advisory_xact_lock({CANDADO_MIGRACION})")
+    esquema = conexion.exec_driver_sql("SHOW search_path").scalar().strip('"')
+    conexion.exec_driver_sql(f'CREATE SCHEMA IF NOT EXISTS "{esquema}"')
