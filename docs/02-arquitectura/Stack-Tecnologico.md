@@ -11,6 +11,8 @@
 ## Backend
 - **Python 3.11+ / FastAPI** — ligero, async nativo, OpenAPI automático, lenguaje natural del ecosistema IA.
 - **SQLAlchemy** — mismo ORM para SQLite (local/desarrollo) y PostgreSQL (nube), sin cambiar código.
+- **Nube:** Vercel (Services: la PWA y FastAPI en un proyecto) con Neon Postgres, un esquema por negocio. Ver
+  [[Despliegue-Vercel]].
 
 ## Capa de IA (runtime)
 - **LangGraph** como orquestador del [[AI-Companion]]. Ver [[Orquestacion-IA]].

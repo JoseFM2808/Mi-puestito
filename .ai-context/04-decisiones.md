@@ -447,3 +447,27 @@
   es agregar un nodo. El `.exe` pasa de ~64 MB a ~90 MB (LangGraph + langchain-core); verificado con PyInstaller en Linux
   que arranca sin módulos degradados y responde por el grafo. Falta confirmarlo en el build de Windows del CI.
 
+## ADR-058 · La versión en internet: Vercel Services + Neon Postgres, un esquema por negocio — Aceptada
+
+- **Fecha**: 2026-11-25 (pedido del owner: adaptar el proyecto a Vercel; la llave de NVIDIA irá como secreto).
+- **Contexto**: el backend guardaba todo en archivos locales (un SQLite por negocio, `usuarios.json`, `sesion.key`). En
+  Vercel el proyecto es de solo lectura, `/tmp` se pierde y cada petición puede caer en otra instancia.
+- **Decisión**:
+  1. **Vercel Services** (beta, lo que Vercel recomienda para FastAPI + frontend): `web` = `frontend/` en `/`, `api` =
+     `backend/` (`main:app`) en `/api/*`. Mismo dominio, sin CORS. Python 3.12 (`backend/.python-version`).
+  2. **Datos en PostgreSQL** cuando hay `DATABASE_URL`/`MI_PUESTITO_POSTGRES_URL`: un esquema por negocio
+     (`proyecto_<clave>`), `SET LOCAL search_path` en cada transacción (compatible con el pooler de Neon),
+     `prepare_threshold=None`. Escrituras serializadas por negocio con `pg_advisory_xact_lock` (equivale a `BEGIN
+     IMMEDIATE`). Migraciones al arrancar, con candado. Sin URL todo sigue en SQLite.
+  3. **Nada que deba durar en disco**: en Vercel (`VERCEL=1`) el entorno es `production` por defecto (exige
+     `MI_PUESTITO_SECRETO`), los archivos de trabajo van a `/tmp/mi-puestito`, el PIN del negocio real sale de
+     `MI_PUESTITO_ANITA_PIN` en cada arranque (sin ella la cuenta no existe) y `MI_PUESTITO_DEMO=0` quita la práctica.
+  4. **Límite de intentos de PIN compartido** en `public.mi_puestito_intentos` (un contador por instancia dejaría
+     repartir intentos).
+  5. `requirements.txt` solo runtime (+ `psycopg[binary]`); `requirements-dev.txt` con pytest y ruff. CI corre la suite
+     completa también sobre PostgreSQL 16.
+- **Consecuencias**: el `.exe` no cambia (SQLite, PyInstaller no empaqueta psycopg). El respaldo de archivo no aplica en la
+  nube (409 con mensaje); las copias son de Neon. Datos del vendedor fuera del Perú según la región de Neon (Ley 29733:
+  decisión y aviso del owner). La cuenta demo con PIN público en una URL pública deja usar el Asistente a cualquiera
+  (costo de la llave): decisión del owner. Verificado con `vercel dev --local` + PostgreSQL 16 y las dos suites.
+

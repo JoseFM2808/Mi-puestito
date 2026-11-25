@@ -16,6 +16,7 @@ App web tablet-first para vendedores informales en Perú, con un AI Companion in
 - [[Stack-Tecnologico]] — tecnologías elegidas y por qué
 - [[Sincronizacion-Offline]] — estrategia offline-first
 - [[Distribucion-Escritorio]] — el ejecutable para computadora (Windows)
+- [[Despliegue-Vercel]] — la versión en internet (Vercel + Neon Postgres)
 - [[Decisiones-Tecnicas]] — registro histórico de decisiones
 
 ### 3. Módulos

@@ -61,10 +61,12 @@ Copiarla a `config/.env.staging` (ignorado por git) y arrancar con
 
 | Variable | Default | Para qué |
 |---|---|---|
-| `MI_PUESTITO_BD` | un SQLite por proyecto | URL de la base de datos (PostgreSQL en nube) |
+| `MI_PUESTITO_BD` | un SQLite por proyecto | Fuerza la URL de la base de un proyecto (pruebas) |
+| `DATABASE_URL` / `MI_PUESTITO_POSTGRES_URL` | — | PostgreSQL de la nube (Neon): un esquema por negocio. Ver [`Despliegue-Vercel`](./docs/02-arquitectura/Despliegue-Vercel.md) |
+| `MI_PUESTITO_DEMO` | `1` | `0` quita la cuenta de práctica en la nube |
 | `MI_PUESTITO_DATOS` | carpeta del backend / `%LOCALAPPDATA%\MiPuestito` | Dónde se guardan los datos (Staging: fuera del repo) |
 | `MI_PUESTITO_ORIGENES` | `http://localhost:5173,http://127.0.0.1:5173` | Orígenes permitidos por CORS |
-| `MI_PUESTITO_ENTORNO` | `local` | `production` exige `MI_PUESTITO_SECRETO` de 32+ caracteres |
+| `MI_PUESTITO_ENTORNO` | `local` (`production` en Vercel) | `production` exige `MI_PUESTITO_SECRETO` de 32+ caracteres |
 | `NVIDIA_API_KEY` | — | Llave del Asistente (NVIDIA NIM). Si falta, el `.exe` la pide en pantalla y la guarda cifrada |
 | `MI_PUESTITO_IA_PROVEEDOR` | `nvidia` | `local` para Ollama / llama.cpp |
 

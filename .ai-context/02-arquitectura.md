@@ -1,6 +1,6 @@
 # 02 · Arquitectura
 
-> Entornos, dependencias, capa de IA y seguridad. Última revisión: 2026-10-08.
+> Entornos, dependencias, capa de IA y seguridad. Última revisión: 2026-11-25.
 > Stack oficial en `AGENTS.md` y `docs/02-arquitectura/Stack-Tecnologico.md`.
 
 ## 1. Entornos: Staging y Producción
@@ -9,7 +9,8 @@
 |---|---|---|---|---|
 | **Staging** | PC del desarrollador: `scripts/staging-con-ia.ps1` (uvicorn sirve API + frontend construido) o `uvicorn --reload` + Vite | `MI_PUESTITO_DATOS` → `%LOCALAPPDATA%\MiPuestito-staging` (nunca dentro del repo) | Variables de la ventana; llave de NVIDIA solo en memoria o en la variable de usuario de Windows | `pytest`, `ruff`, `npm run lint/test/build`, navegador con el proyecto **demo** |
 | **Producción local** | `MiPuestito.exe` en la PC/tablet del puesto, solo `127.0.0.1` | `%LOCALAPPDATA%\MiPuestito\` (un SQLite por proyecto) | Variables del sistema | CI `Ejecutable Windows`: humo exige `modulos_degradados == []` |
-| **Producción nube** *(futuro)* | Servidor con PostgreSQL | URL en `MI_PUESTITO_BD` | `MI_PUESTITO_ENTORNO=production` exige `MI_PUESTITO_SECRETO` ≥ 32 caracteres | Igual que Staging + migraciones con Alembic |
+| **Staging nube** | Vercel Preview (cada rama que no es `main`), ADR-058 | Neon: rama de base propia por Preview, un esquema por negocio | Variables de Preview en Vercel (Secret) | `/api/salud`, ingreso y flujo en el navegador; antes, `vercel dev --local` con PostgreSQL local |
+| **Producción nube** | Vercel Production (`main`), servicios `web` (`frontend/`) y `api` (`backend/`) | Neon Postgres (`DATABASE_URL`), `proyecto_demo` / `proyecto_anita` | `MI_PUESTITO_SECRETO`, `MI_PUESTITO_ANITA_PIN`, `NVIDIA_API_KEY` como Secret; `VERCEL=1` → `production` | CI: suite completa sobre SQLite y sobre PostgreSQL 16 |
 
 Regla: todo lo que toca dinero o stock se prueba primero en Staging con **demo**. El negocio real solo recibe código ya
 verificado. Las dependencias pesadas (venv, `node_modules`) nunca van en la carpeta de Google Drive.

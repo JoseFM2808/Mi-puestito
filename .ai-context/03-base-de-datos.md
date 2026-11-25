@@ -258,3 +258,12 @@ En IndexedDB (versión 7): `kardex`, el último kardex de cada mes, para verlo s
 
 El **kardex mensual** (`GET /api/analisis/kardex`) no tiene tabla: se calcula del libro `movimientos_inventario`
 (ADR-031), separando el stock al registrar (`origen_tipo = 'stock_inicial'`) de los conteos.
+
+## En la nube: PostgreSQL (ADR-058)
+
+| Qué | Dónde | Notas |
+|---|---|---|
+| Datos de cada negocio | Esquema `proyecto_<clave>` de la base de `DATABASE_URL` (Neon) | Mismas tablas y migraciones (0001–0009) que el SQLite local; `alembic_version` dentro de cada esquema |
+| Intentos de PIN | `public.mi_puestito_intentos (usuario PK, fallos, bloqueado_hasta)` | Común a todas las instancias de la función; un acierto borra la fila |
+| Usuarios | `/tmp/mi-puestito/usuarios.json`, rehecho en cada arranque desde `MI_PUESTITO_ANITA_PIN` | Nunca el PIN en claro |
+
