@@ -6,8 +6,9 @@ permite" (qué se hace y con qué botón). Cuando el operador pide ayuda ("¿có
 toco?"), se agregan al prompt las filas de la pantalla en la que está y de la que nombra: así el
 Asistente cita los botones tal como son hoy, sin que nadie copie el manual a mano en `GUIA_APP`.
 
-En el ejecutable los README viajan como datos (`MiPuestito.spec`, carpeta `guias/`). Si faltan, el
-Asistente sigue con la guía compacta de siempre.
+En el ejecutable los README viajan como datos (`MiPuestito.spec`, carpeta `guias/`) y en Vercel los
+copia el build (`copiar_guias.py`, a `backend/guias/`). Si faltan, el Asistente sigue con la guía
+compacta de siempre.
 """
 
 import re
@@ -61,6 +62,10 @@ MAX_CARACTERES = 1500
 def directorio_guias() -> Path:
     if rutas.es_ejecutable():
         return rutas.directorio_recursos() / "guias"
+    # En Vercel el build las copia dentro del backend (`copiar_guias.py`): el frontend no viaja
+    copiadas = Path(__file__).resolve().parents[1] / "guias"
+    if copiadas.is_dir():
+        return copiadas
     return Path(__file__).resolve().parents[2] / "frontend" / "src" / "modules"
 
 

@@ -48,7 +48,7 @@ npm run test      # tests
 npm run build     # build producción (PWA)
 
 # Backend (http://localhost:8000, OpenAPI en /docs)
-cd backend && pip install -r requirements.txt
+cd backend && pip install -r requirements-dev.txt
 uvicorn main:app --reload
 pytest            # tests
 ```

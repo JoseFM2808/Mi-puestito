@@ -1,0 +1,7 @@
+# Lo que solo hace falta para probar: no viaja a la nube ni al ejecutable (ADR-058).
+#   pip install -r requirements-dev.txt
+-r requirements.txt
+pytest>=8.3
+# Cliente del TestClient de Starlette (D-10: con httpx está obsoleto)
+httpx2>=2.16
+ruff

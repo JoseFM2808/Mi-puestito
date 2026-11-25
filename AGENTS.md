@@ -20,7 +20,7 @@ npm run build                                 # build producción
 npm run test                                  # tests
 
 # Backend
-cd backend && pip install -r requirements.txt
+cd backend && pip install -r requirements-dev.txt   # runtime + pytest y ruff
 uvicorn main:app --reload                     # desarrollo
 pytest                                        # tests
 ```

@@ -115,3 +115,10 @@ Thumbs.db
 desktop.ini
 *.gdoc
 *.gsheet
+
+# Copia de los README de pantallas que hace el build de Vercel (backend/copiar_guias.py)
+backend/guias/
+
+# Vercel CLI
+.vercel/
+.env*.local
